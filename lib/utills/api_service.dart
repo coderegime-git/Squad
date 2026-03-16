@@ -18,6 +18,7 @@ import '../model/clubAdmin/get_event_details_by_id.dart';
 import '../model/clubAdmin/get_guardians.dart';
 import '../model/clubAdmin/get_members.dart';
 import '../model/clubAdmin/get_teams.dart';
+import '../model/guardian/getGuardianEvents.dart';
 import '../model/member/get_events_members.dart';
 
 
@@ -955,15 +956,73 @@ class ParentApiService {
 
   Future<GetYourMember> getYourMembers() async {
     try {
-      final fullResponse = await _helper.get("api/members/8/members");
-      print("status status");
-      fullResponse['success'];
-      print(fullResponse['success']);
+      final myId = SharedPreferenceHelper.getId();
+      print("Guardian userId from SharedPrefs: $myId");
+
+      final fullResponse = await _helper.get("api/members/10/members");
+      print("getYourMembers response: $fullResponse");
+      print("getYourMembers success: ${fullResponse['success']}");
+      print("getYourMembers data: ${fullResponse['data']}");
+
       final jsonResponse = jsonEncode(fullResponse);
       return GetYourMemberFromJson(jsonResponse);
     } catch (e) {
-      print("Menu fetch failed: $e");
+      print("getYourMembers failed: $e");
       rethrow;
+    }
+  }
+
+  // Future<GetYourMember> getYourMembers() async {
+  //   try {
+  //     final myId = SharedPreferenceHelper.getId();
+  //     print("Guardian userId from SharedPrefs: $myId");
+  //     final fullResponse = await _helper.get("api/members/$myId/members");
+  //     print("getYourMembers response: $fullResponse");
+  //     print("getYourMembers success: ${fullResponse['success']}");
+  //     print("getYourMembers data: ${fullResponse['data']}");
+  //     final jsonResponse = jsonEncode(fullResponse);
+  //     return GetYourMemberFromJson(jsonResponse);
+  //   } catch (e) {
+  //     print("getYourMembers failed: $e");
+  //     rethrow;
+  //   }
+  // }
+  Future<GetGuardianEvents> getGuardianPendingEvents(int memberId) async {
+    try {
+      print("getGuardianPendingEvents memberId: $memberId");
+      final fullResponse =
+      await _helper.get("api/guardian/events/pending/$memberId");
+      print("getGuardianPendingEvents response: $fullResponse");
+      final jsonResponse = jsonEncode(fullResponse);
+      return getGuardianEventsFromJson(jsonResponse);
+    } catch (e) {
+      print("getGuardianPendingEvents failed: $e");
+      rethrow;
+    }
+  }
+
+  /// PUT /api/guardian/events/status — Accept or Reject event for a child
+  /// status values: "ACCEPT" or "REJECT"
+  Future<bool> updateGuardianEventStatus(
+      int memberId, int eventId, String status) async {
+    try {
+      print(
+          "updateGuardianEventStatus memberId: $memberId eventId: $eventId status: $status");
+      final fullResponse = await _helper.put(
+        "api/guardian/events/status",
+        {"memberId": memberId, "eventId": eventId, "status": status},
+      );
+      print("updateGuardianEventStatus response: $fullResponse");
+      if (fullResponse['success'] == true) {
+        print("Update guardian status success → ${fullResponse['message']}");
+        return true;
+      } else {
+        print("Update guardian status failure: ${fullResponse['message']}");
+        return false;
+      }
+    } catch (e) {
+      print("updateGuardianEventStatus failed: $e");
+      return false;
     }
   }
 }

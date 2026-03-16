@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -41,19 +43,32 @@ class _LoginScreenState extends State<LoginScreen> {
       bool success = await ClubApiService().login(data);
 
       if (success) {
+        String token = SharedPreferenceHelper.getToken() ?? '';
+        if (token.startsWith('Bearer ')) token = token.substring(7);
+        final parts = token.split('.');
+        if (parts.length == 3) {
+          final payload = parts[1];
+          final normalized = base64Url.normalize(payload);
+          final decoded = utf8.decode(base64Url.decode(normalized));
+          final Map<String, dynamic> jwtData = jsonDecode(decoded);
+          print("JWT payload: $jwtData");
+          final int userId = jwtData['userId'] ?? 0;
+          SharedPreferenceHelper.setId(userId);
+          print("userId from JWT: $userId");
+        }
+        // ──────────────────────────────────────────────────────────────
+
         final taskData = await ClubApiService().getTasks();
+        print("getTasks RAW response: $taskData");
 
         if (taskData != null) {
           final String role = taskData['role'] ?? '';
-          final int userId = taskData['userId'] ?? taskData['id'] ?? 0;
           final String username = taskData['username'] ?? mobileCtrl.text;
 
-          // ── Save role, userId, username to SharedPreferences ──────────
           SharedPreferenceHelper.setRole(role);
-          SharedPreferenceHelper.setId(userId);
           SharedPreferenceHelper.setUsername(username);
 
-          print("Saved → role: $role | userId: $userId | username: $username");
+          print("Saved → role: $role | userId: ${SharedPreferenceHelper.getId()} | username: $username");
 
           AppUI.success(context, "Login successful!");
 
@@ -96,6 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
         AppUI.error(context, "Login failed. Please check your credentials.");
       }
     } catch (e) {
+      print("Login error: $e");
       AppUI.error(context, "Login failed");
     } finally {
       if (mounted) setState(() => _isLoading = false);
