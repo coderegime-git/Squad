@@ -1,16 +1,20 @@
-MemberProfileData profileDataFromJson(Map<String,dynamic> json)=>MemberProfileData.fromJson(json);
-
+MemberProfileData profileDataFromJson(Map<String, dynamic> json) =>
+    MemberProfileData.fromJson(json);
 
 class MemberProfileData {
-
   bool? success;
   String? message;
   Data? data;
   String? errorCode;
   String? timestamp;
 
-  MemberProfileData(
-      {this.success, this.message, this.data, this.errorCode, this.timestamp});
+  MemberProfileData({
+    this.success,
+    this.message,
+    this.data,
+    this.errorCode,
+    this.timestamp,
+  });
 
   MemberProfileData.fromJson(Map<String, dynamic> json) {
     success = json['success'];
@@ -36,19 +40,20 @@ class MemberProfileData {
 class Data {
   User? user;
   Profile? profile;
-  List<Null>? addresses;
+  List<Addresses>? addresses;
   List<Memberships>? memberships;
 
   Data({this.user, this.profile, this.addresses, this.memberships});
 
   Data.fromJson(Map<String, dynamic> json) {
     user = json['user'] != null ? new User.fromJson(json['user']) : null;
-    profile =
-    json['profile'] != null ? new Profile.fromJson(json['profile']) : null;
+    profile = json['profile'] != null
+        ? new Profile.fromJson(json['profile'])
+        : null;
     if (json['addresses'] != null) {
-      addresses = <Null>[];
+      addresses = <Addresses>[];
       json['addresses'].forEach((v) {
-       // addresses!.add(new Null.fromJson(v));
+        addresses!.add(new Addresses.fromJson(v));
       });
     }
     if (json['memberships'] != null) {
@@ -111,14 +116,15 @@ class Profile {
   String? emergencyContactName;
   String? emergencyContactPhone;
 
-  Profile(
-      {this.firstName,
-        this.lastName,
-        this.dateOfBirth,
-        this.gender,
-        this.profileImageUrl,
-        this.emergencyContactName,
-        this.emergencyContactPhone});
+  Profile({
+    this.firstName,
+    this.lastName,
+    this.dateOfBirth,
+    this.gender,
+    this.profileImageUrl,
+    this.emergencyContactName,
+    this.emergencyContactPhone,
+  });
 
   Profile.fromJson(Map<String, dynamic> json) {
     firstName = json['firstName'];
@@ -151,13 +157,14 @@ class Memberships {
   String? membershipEndDate;
   String? status;
 
-  Memberships(
-      {this.clubId,
-        this.clubName,
-        this.role,
-        this.membershipStartDate,
-        this.membershipEndDate,
-        this.status});
+  Memberships({
+    this.clubId,
+    this.clubName,
+    this.role,
+    this.membershipStartDate,
+    this.membershipEndDate,
+    this.status,
+  });
 
   Memberships.fromJson(Map<String, dynamic> json) {
     clubId = json['clubId'];
@@ -176,6 +183,48 @@ class Memberships {
     data['membershipStartDate'] = this.membershipStartDate;
     data['membershipEndDate'] = this.membershipEndDate;
     data['status'] = this.status;
+    return data;
+  }
+}
+
+class Addresses {
+  String? type;
+  String? addressLine1;
+  String? addressLine2;
+  String? city;
+  String? state;
+  String? country;
+  String? postalCode;
+
+  Addresses({
+    this.type,
+    this.addressLine1,
+    this.addressLine2,
+    this.city,
+    this.state,
+    this.country,
+    this.postalCode,
+  });
+
+  Addresses.fromJson(Map<String, dynamic> json) {
+    type = json['type'];
+    addressLine1 = json['addressLine1'];
+    addressLine2 = json['addressLine2'];
+    city = json['city'];
+    state = json['state'];
+    country = json['country'];
+    postalCode = json['postalCode'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['type'] = this.type;
+    data['addressLine1'] = this.addressLine1;
+    data['addressLine2'] = this.addressLine2;
+    data['city'] = this.city;
+    data['state'] = this.state;
+    data['country'] = this.country;
+    data['postalCode'] = this.postalCode;
     return data;
   }
 }

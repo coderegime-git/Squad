@@ -527,8 +527,8 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                                 left: 80,
                                 right: 0,
                                 child: GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
+                                  onTap: () async {
+                                    await Navigator.push(
                                       context,
                                       MaterialPageRoute(
                                         builder: (context) => EditProfilePage(
@@ -536,6 +536,10 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                                         ),
                                       ),
                                     );
+                                    memberProfileData = await memberApiService
+                                        .getMemberProfile();
+                                    if (!mounted) return;
+                                    setState(() {});
                                   },
                                   child: CircleAvatar(
                                     radius: 12.r,

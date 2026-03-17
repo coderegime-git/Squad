@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sports/utills/api_service.dart';
 
+import '../../config/colors.dart';
 import '../../model/member/profile_data.dart';
 
 class AddressData {
@@ -36,7 +37,7 @@ class AddressData {
     state: json['state'] ?? '',
     postalCode: json['postalCode'] ?? '',
     country: json['country'] ?? '',
-    addressType: json['addressType'] ?? 'HOME',
+    addressType: json['type'] ?? 'HOME',
     isDefault: json['isDefault'] ?? false,
   );
 
@@ -48,7 +49,7 @@ class AddressData {
       'state': state,
       'postalCode': postalCode,
       'country': country,
-      'addressType': addressType,
+      'type': addressType,
       'isDefault': isDefault,
     };
     if (id != null) map['id'] = id;
@@ -143,17 +144,16 @@ class AddressControllers {
   bool isDefault;
   int? id;
 
-  AddressControllers({AddressData? from})
-    : addressType = from?.addressType ?? 'HOME',
-      isDefault = from?.isDefault ?? false,
-      id = from?.id {
+  AddressControllers({Addresses? from})
+    : addressType = from?.type ?? 'HOME',
+      isDefault = false {
     if (from != null) {
-      line1.text = from.addressLine1;
-      line2.text = from.addressLine2;
-      city.text = from.city;
-      state.text = from.state;
-      postalCode.text = from.postalCode;
-      country.text = from.country;
+      line1.text = from.addressLine1 ?? "";
+      line2.text = from.addressLine2 ?? "";
+      city.text = from.city ?? "";
+      state.text = from.state ?? "";
+      postalCode.text = from.postalCode ?? "";
+      country.text = from.country ?? "";
     }
   }
 
@@ -209,7 +209,7 @@ class _EditProfilePageState extends State<EditProfilePage>
   late AnimationController _saveAnimCtrl;
 
   // ── Theme ──
-  static const _primary = Color(0xFF2563EB);
+  static const _primary = primaryColour;
   static const _primaryLight = Color(0xFFEFF6FF);
   static const _danger = Color(0xFFDC2626);
   static const _dangerLight = Color(0xFFFEF2F2);
@@ -235,9 +235,9 @@ class _EditProfilePageState extends State<EditProfilePage>
     );
     _selectedGender = p.gender != null ? p.gender ?? "" : 'MALE';
 
-    // for (final addr in widget.memberProfileData.data.addresses) {
-    //   _addressControllers.add(AddressControllers(from: addr));
-    // }
+    for (final addr in widget.memberProfileData!.data!.addresses ?? []) {
+      _addressControllers.add(AddressControllers(from: addr));
+    }
 
     _saveAnimCtrl = AnimationController(
       vsync: this,
@@ -273,6 +273,7 @@ class _EditProfilePageState extends State<EditProfilePage>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
           'Delete Address',
@@ -319,11 +320,7 @@ class _EditProfilePageState extends State<EditProfilePage>
 
   void _addAddress() {
     setState(() {
-      _addressControllers.add(
-        AddressControllers(
-          from: AddressData(isDefault: _addressControllers.isEmpty),
-        ),
-      );
+      _addressControllers.add(AddressControllers(from: Addresses()));
     });
     // Scroll to bottom after frame
     WidgetsBinding.instance.addPostFrameCallback((_) {});
@@ -633,54 +630,54 @@ class _EditProfilePageState extends State<EditProfilePage>
                 ),
                 const Spacer(),
                 // Default badge / button
-                if (isDefault)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _primary,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.check_circle, color: Colors.white, size: 13),
-                        SizedBox(width: 4),
-                        Text(
-                          'Default',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  GestureDetector(
-                    onTap: () => _setDefault(index),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: _primary),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        'Set Default',
-                        style: TextStyle(
-                          color: _primary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
+                // if (isDefault)
+                //   Container(
+                //     padding: const EdgeInsets.symmetric(
+                //       horizontal: 10,
+                //       vertical: 4,
+                //     ),
+                //     decoration: BoxDecoration(
+                //       color: _primary,
+                //       borderRadius: BorderRadius.circular(20),
+                //     ),
+                //     child: const Row(
+                //       mainAxisSize: MainAxisSize.min,
+                //       children: [
+                //         Icon(Icons.check_circle, color: Colors.white, size: 13),
+                //         SizedBox(width: 4),
+                //         Text(
+                //           'Default',
+                //           style: TextStyle(
+                //             color: Colors.white,
+                //             fontSize: 11,
+                //             fontWeight: FontWeight.w600,
+                //           ),
+                //         ),
+                //       ],
+                //     ),
+                //   )
+                // else
+                //   GestureDetector(
+                //     onTap: () => _setDefault(index),
+                //     child: Container(
+                //       padding: const EdgeInsets.symmetric(
+                //         horizontal: 10,
+                //         vertical: 4,
+                //       ),
+                //       decoration: BoxDecoration(
+                //         border: Border.all(color: _primary),
+                //         borderRadius: BorderRadius.circular(20),
+                //       ),
+                //       child: const Text(
+                //         'Set Default',
+                //         style: TextStyle(
+                //           color: _primary,
+                //           fontSize: 11,
+                //           fontWeight: FontWeight.w600,
+                //         ),
+                //       ),
+                //     ),
+                //   ),
                 const SizedBox(width: 8),
                 // Delete button
                 GestureDetector(
@@ -900,39 +897,39 @@ class _EditProfilePageState extends State<EditProfilePage>
           child: Container(height: 1, color: _border),
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: _isSaving
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: _primary,
-                    ),
-                  )
-                : TextButton(
-                    onPressed: _save,
-                    style: TextButton.styleFrom(
-                      backgroundColor: _primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 8,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text(
-                      'Save',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-          ),
+          // Padding(
+          //   padding: const EdgeInsets.only(right: 16),
+          //   child: _isSaving
+          //       ? const SizedBox(
+          //           width: 22,
+          //           height: 22,
+          //           child: CircularProgressIndicator(
+          //             strokeWidth: 2,
+          //             color: _primary,
+          //           ),
+          //         )
+          //       : TextButton(
+          //           onPressed: _save,
+          //           style: TextButton.styleFrom(
+          //             backgroundColor: _primary,
+          //             foregroundColor: Colors.white,
+          //             padding: const EdgeInsets.symmetric(
+          //               horizontal: 18,
+          //               vertical: 8,
+          //             ),
+          //             shape: RoundedRectangleBorder(
+          //               borderRadius: BorderRadius.circular(8),
+          //             ),
+          //           ),
+          //           child: const Text(
+          //             'Save',
+          //             style: TextStyle(
+          //               fontWeight: FontWeight.w600,
+          //               fontSize: 14,
+          //             ),
+          //           ),
+          //         ),
+          // ),
         ],
       ),
       body: Form(
@@ -998,7 +995,7 @@ class _GenderChip extends StatelessWidget {
     required this.onTap,
   });
 
-  static const _primary = Color(0xFF2563EB);
+  static const _primary = primaryColour;
   static const _primaryLight = Color(0xFFEFF6FF);
   static const _border = Color(0xFFE2E8F0);
   static const _textPrimary = Color(0xFF0F172A);
@@ -1060,12 +1057,10 @@ class _AddressTypeSelector extends StatelessWidget {
             margin: const EdgeInsets.only(right: 8),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: isSelected ? const Color(0xFF2563EB) : Colors.white,
+              color: isSelected ? primaryColour : Colors.white,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isSelected
-                    ? const Color(0xFF2563EB)
-                    : const Color(0xFFE2E8F0),
+                color: isSelected ? primaryColour : const Color(0xFFE2E8F0),
               ),
             ),
             child: Row(
