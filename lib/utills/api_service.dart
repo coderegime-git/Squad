@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sports/model/clubAdmin/add_guardians.dart';
 import 'package:sports/model/clubAdmin/get_groups.dart';
 import 'package:sports/model/guardian/get_your_member.dart';
+import 'package:sports/model/member/profile_data.dart';
 import 'package:sports/utills/shared_preference.dart';
 
 import '../model/clubAdmin/getSubGroups.dart';
@@ -944,6 +945,28 @@ class ClubApiService {
     }
   }
 }
+class CoachApiService {
+  CoachApiService();
+
+  initApiService(GlobalKey<NavigatorState> navigatorKey) {
+    _navigatorKey = navigatorKey;
+  }
+
+  final ApiBaseHelper _helper = ApiBaseHelper();
+
+
+  Future<MemberProfileData> getCouchProfile() async {
+    try {
+      final fullResponse = await _helper.get("api/profile");
+      print("getMemberEvents success: ${fullResponse['success']}");
+      final jsonResponse = jsonEncode(fullResponse);
+      return profileDataFromJson(fullResponse);
+    } catch (e) {
+      print("getMemberEvents failed: $e");
+      rethrow;
+    }
+  }
+}
 
 class ParentApiService {
   ParentApiService();
@@ -971,7 +994,17 @@ class ParentApiService {
       rethrow;
     }
   }
-
+  Future<MemberProfileData> getParentProfile() async {
+    try {
+      final fullResponse = await _helper.get("api/profile");
+      print("getMemberEvents success: ${fullResponse['success']}");
+      final jsonResponse = jsonEncode(fullResponse);
+      return profileDataFromJson(fullResponse);
+    } catch (e) {
+      print("getMemberEvents failed: $e");
+      rethrow;
+    }
+  }
   // Future<GetYourMember> getYourMembers() async {
   //   try {
   //     final myId = SharedPreferenceHelper.getId();
@@ -1050,6 +1083,16 @@ class MemberApiService {
       print("getMemberEvents success: ${fullResponse['success']}");
       final jsonResponse = jsonEncode(fullResponse);
       return getMemberEventsFromJson(jsonResponse);
+    } catch (e) {
+      print("getMemberEvents failed: $e");
+      rethrow;
+    }
+  }  Future<MemberProfileData> getMemberProfile() async {
+    try {
+      final fullResponse = await _helper.get("api/profile");
+      print("getMemberEvents success: ${fullResponse['success']}");
+      final jsonResponse = jsonEncode(fullResponse);
+      return profileDataFromJson(fullResponse);
     } catch (e) {
       print("getMemberEvents failed: $e");
       rethrow;

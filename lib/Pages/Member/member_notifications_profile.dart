@@ -4,11 +4,21 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nb_utils/nb_utils.dart';
+import 'package:sports/model/member/profile_data.dart';
+import 'package:sports/utills/api_service.dart';
 
 import '../../config/colors.dart';
 
-class MemberNotificationsScreen extends StatelessWidget {
+class MemberNotificationsScreen extends StatefulWidget {
   const MemberNotificationsScreen({super.key});
+
+  @override
+  State<MemberNotificationsScreen> createState() => _MemberNotificationsScreenState();
+}
+
+class _MemberNotificationsScreenState extends State<MemberNotificationsScreen> {
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -293,6 +303,26 @@ class MemberProfileScreen extends StatefulWidget {
 }
 
 class _MemberProfileScreenState extends State<MemberProfileScreen> {
+
+  late MemberProfileData memberProfileData;
+  bool isLoad=true;
+  final memberApiService = MemberApiService();
+  @override
+  void initState() {
+    getProfileData();    super.initState();
+  }
+  void getProfileData()async{
+
+    setState(() {
+      isLoad=true;
+    });
+
+    memberProfileData =await memberApiService.getMemberProfile();
+    setState(() {
+      isLoad=false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -303,7 +333,7 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
         ),
       child: Scaffold(
         backgroundColor: scaffoldDark,
-        body: Column(
+        body:isLoad? Center(child: Loader(),): Column(
           children: [
             // Container(
             //   height: 80.h,
@@ -421,29 +451,32 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                           ),
                           child: Column(
                             children: [
-                              Text(
-                                "Abinesh Kumar",
-                                style: GoogleFonts.montserrat(
-                                  fontSize: 20.sp,
-                                  fontWeight: FontWeight.w800,
-                                  color: accentGreen,
+                              if(memberProfileData.data!=null)...[
+                                Text(
+                                  memberProfileData.data!.user!.username??"",
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: 20.sp,
+                                    fontWeight: FontWeight.w800,
+                                    color: accentGreen,
+                                  ),
                                 ),
-                              ),
-                              6.height,
-                              Text(
-                                "Member • +91 98765 43210",
-                                style: GoogleFonts.poppins(fontSize: 15.sp, color: Colors.black),
-                              ),
-                              4.height,
-                              Text(
-                                "abinesh@gmail.com",
-                                style: GoogleFonts.poppins(fontSize: 14.sp, color: textSecondary),
-                              ),
-                              4.height,
-                              Text(
-                                "Member since Jan 2024",
-                                style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary),
-                              ),
+                                6.height,
+                                Text(
+                                  "Member • ${ memberProfileData.data!.user!.mobile??""}",
+                                  style: GoogleFonts.poppins(fontSize: 15.sp, color: Colors.black),
+                                ),
+                                4.height,
+                                Text(
+                                  memberProfileData.data!.user!.email??"",
+                                  style: GoogleFonts.poppins(fontSize: 14.sp, color: textSecondary),
+                                ),
+                                4.height,
+                                // Text(
+                                //   "Member since ${ memberProfileData.data!.user!.username}",
+                                //   style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary),
+                                // ),
+                              ]
+
                             ],
                           ),
                         ),
@@ -453,7 +486,9 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                             radius: 50.r,
                             backgroundColor: Colors.grey.shade200,
                             child: Text(
-                              "AK",
+                              memberProfileData.data?.user?.username?.isNotEmpty == true
+                                  ? memberProfileData.data!.user!.username![0]
+                                  : 'U', // default value
                               style: Theme.of(context).textTheme.headlineLarge,
                             ),
                           ),
@@ -476,27 +511,23 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                     ),
 
                     15.height,
-                    _buildSectionTitle("Membership Status"),
-                    12.height,
 
+
+if(memberProfileData.data!=null&&memberProfileData.data!.memberships!=null)...[
+  _buildSectionTitle("Membership Status"),
+  12.height,
+...List.generate(memberProfileData.data!.memberships!.length, (index){
+  Memberships member= memberProfileData.data!.memberships![index];
+  return _MembershipStatusCard(
+    clubName: member.clubName??"",
+    activity: member.role??"",
+    validUntil:member.membershipEndDate??"",
+    status: member.status??"",
+    statusColor: accentGreen,
+  );
+})
                     // XYZ FC Membership
-                    _MembershipStatusCard(
-                      clubName: "XYZ FC",
-                      activity: "Football",
-                      validUntil: "Feb 15, 2026",
-                      status: "No Dues",
-                      statusColor: accentGreen,
-                    ),
-                    12.height,
-
-                    // ABC Sports Membership
-                    _MembershipStatusCard(
-                      clubName: "ABC Sports",
-                      activity: "Swimming",
-                      validUntil: "Mar 20, 2026",
-                      status: "No Dues",
-                      statusColor: accentGreen,
-                    ),
+                 ] ,
 
                     20.height,
                     _buildSectionTitle("Settings"),

@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nb_utils/nb_utils.dart';
+import 'package:sports/utills/api_service.dart';
 
 import '../../config/colors.dart';
+import '../../model/member/profile_data.dart';
 import '../../routes/app_routes.dart';
 // lib/pages/guardian/guardian_profile.dart
 import 'package:flutter/material.dart';
@@ -23,11 +25,29 @@ class GuardianProfileScreen extends StatefulWidget {
 }
 
 class _GuardianProfileScreenState extends State<GuardianProfileScreen> {
+  late MemberProfileData memberProfileData;
+  bool isLoad=true;
+  final apiService = ParentApiService();
+  @override
+  void initState() {
+    getProfileData();    super.initState();
+  }
+  void getProfileData()async{
+
+    setState(() {
+      isLoad=true;
+    });
+
+    memberProfileData =await apiService.getParentProfile();
+    setState(() {
+      isLoad=false;
+    });
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
-      body: Column(
+      body:isLoad?Center(child: Loader(),): Column(
         children: [
           // Header
           // Container(
@@ -149,30 +169,33 @@ class _GuardianProfileScreenState extends State<GuardianProfileScreen> {
                         ),
                         child: Column(
                           children: [
-                            Text(
-                              "Nandha Kumar",
-                              style: GoogleFonts.montserrat(
-                                fontSize: 20.sp,
-                                fontWeight: FontWeight.w800,
-                                color: accentGreen,
+                            if( memberProfileData.data!=null&&memberProfileData.data!.user!=null)...[
+                              Text(
+                                memberProfileData.data!.user!.username??"",
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 20.sp,
+                                  fontWeight: FontWeight.w800,
+                                  color: accentGreen,
+                                ),
                               ),
-                            ),
-                            6.height,
-                            Text(
-                              "Parent • +91 98765 43210",
-                              style: GoogleFonts.poppins(
-                                fontSize: 15.sp,
-                                color: Colors.black,
+                              6.height,
+                              Text(
+                                "Parent • ${  memberProfileData.data!.user!.mobile??""}",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 15.sp,
+                                  color: Colors.black,
+                                ),
                               ),
-                            ),
-                            4.height,
-                            Text(
-                              "Nandha@gmail.com",
-                              style: GoogleFonts.poppins(
-                                fontSize: 14.sp,
-                                color: textSecondary,
+                              4.height,
+                              Text(
+                                memberProfileData.data!.user!.email??"",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  color: textSecondary,
+                                ),
                               ),
-                            ),
+                            ],
+
                           ],
                         ),
                       ),
@@ -184,7 +207,9 @@ class _GuardianProfileScreenState extends State<GuardianProfileScreen> {
                               radius: 50.r,
                               backgroundColor: Colors.grey.shade200,
                               child: Text(
-                                "NK",
+                                  memberProfileData.data?.user?.username?.isNotEmpty == true
+                                      ? memberProfileData.data!.user!.username![0]
+                                      : 'U',
                                 style: Theme.of(context).textTheme.headlineLarge,
                               ),
                             ),
@@ -228,91 +253,108 @@ class _GuardianProfileScreenState extends State<GuardianProfileScreen> {
                   20.height,
 
                   // Membership Status - Improved Section
-                  _buildSectionTitle("Membership Status"),
-                  12.height,
+                  if(memberProfileData.data!=null&&memberProfileData.data!.memberships!=null)...[
+                    _buildSectionTitle("Membership Status"),
+                    12.height,
+                    ...List.generate(memberProfileData.data!.memberships!.length, (index){
+                      Memberships member= memberProfileData.data!.memberships![index];
+                      return _MembershipRow(
+                        clubName: member.clubName??"",
+                        activity: member.role??"",
+                        validUntil:member.membershipEndDate??"",
+                        status: member.status??"",
+                        statusColor: accentGreen,
+                      );
+                    })
+                    // XYZ FC Membership
+                  ] ,
 
-                  // Abinesh Card
-                  Container(
-                    padding: EdgeInsets.all(16.w),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20.r),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 20.r,
-                              backgroundColor: accentGreen.withOpacity(0.2),
-                              child: Icon(Icons.person_rounded, color: accentGreen, size: 20.sp),
-                            ),
-                            12.width,
-                            Text(
-                              "Abinesh",
-                              style: GoogleFonts.montserrat(
-                                fontSize: 16.sp,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ],
-                        ),
-                        16.height,
-                        _MembershipRow(
-                          clubName: "XYZ FC",
-                          activity: "Football",
-                          validUntil: "Feb 15, 2026",
-                          status: "No Dues",
-                          statusColor: accentGreen,
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  12.height,
-                  // Gopal Card
-                  Container(
-                    padding: EdgeInsets.all(16.w),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20.r),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 20.r,
-                              backgroundColor: accentGreen.withOpacity(0.2),
-                              child: Icon(Icons.person_rounded, color: accentGreen, size: 20.sp),
-                            ),
-                            12.width,
-                            Text(
-                              "Gopal",
-                              style: GoogleFonts.montserrat(
-                                fontSize: 16.sp,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ],
-                        ),
-                        16.height,
-                        _MembershipRow(
-                          clubName: "ABC Sports",
-                          activity: "Swimming",
-                          validUntil: "Mar 20, 2026",
-                          status: "No Dues",
-                          statusColor: accentGreen,
-                        ),
-                      ],
-                    ),
-                  ),
+                  20.height,
+                  // _buildSectionTitle("Membership Status"),
+                  // 12.height,
+                  //
+                  // // Abinesh Card
+                  // Container(
+                  //   padding: EdgeInsets.all(16.w),
+                  //   decoration: BoxDecoration(
+                  //     color: Colors.white,
+                  //     borderRadius: BorderRadius.circular(20.r),
+                  //     border: Border.all(color: Colors.grey.shade300),
+                  //   ),
+                  //   child: Column(
+                  //     crossAxisAlignment: CrossAxisAlignment.start,
+                  //     children: [
+                  //       Row(
+                  //         children: [
+                  //           CircleAvatar(
+                  //             radius: 20.r,
+                  //             backgroundColor: accentGreen.withOpacity(0.2),
+                  //             child: Icon(Icons.person_rounded, color: accentGreen, size: 20.sp),
+                  //           ),
+                  //           12.width,
+                  //           Text(
+                  //             "Abinesh",
+                  //             style: GoogleFonts.montserrat(
+                  //               fontSize: 16.sp,
+                  //               fontWeight: FontWeight.w700,
+                  //               color: Colors.black,
+                  //             ),
+                  //           ),
+                  //         ],
+                  //       ),
+                  //       16.height,
+                  //       _MembershipRow(
+                  //         clubName: "XYZ FC",
+                  //         activity: "Football",
+                  //         validUntil: "Feb 15, 2026",
+                  //         status: "No Dues",
+                  //         statusColor: accentGreen,
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
+                  //
+                  // 12.height,
+                  // // Gopal Card
+                  // Container(
+                  //   padding: EdgeInsets.all(16.w),
+                  //   decoration: BoxDecoration(
+                  //     color: Colors.white,
+                  //     borderRadius: BorderRadius.circular(20.r),
+                  //     border: Border.all(color: Colors.grey.shade300),
+                  //   ),
+                  //   child: Column(
+                  //     crossAxisAlignment: CrossAxisAlignment.start,
+                  //     children: [
+                  //       Row(
+                  //         children: [
+                  //           CircleAvatar(
+                  //             radius: 20.r,
+                  //             backgroundColor: accentGreen.withOpacity(0.2),
+                  //             child: Icon(Icons.person_rounded, color: accentGreen, size: 20.sp),
+                  //           ),
+                  //           12.width,
+                  //           Text(
+                  //             "Gopal",
+                  //             style: GoogleFonts.montserrat(
+                  //               fontSize: 16.sp,
+                  //               fontWeight: FontWeight.w700,
+                  //               color: Colors.black,
+                  //             ),
+                  //           ),
+                  //         ],
+                  //       ),
+                  //       16.height,
+                  //       _MembershipRow(
+                  //         clubName: "ABC Sports",
+                  //         activity: "Swimming",
+                  //         validUntil: "Mar 20, 2026",
+                  //         status: "No Dues",
+                  //         statusColor: accentGreen,
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
 
                   20.height,
 

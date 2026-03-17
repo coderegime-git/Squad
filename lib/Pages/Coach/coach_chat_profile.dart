@@ -4,8 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nb_utils/nb_utils.dart';
+import 'package:sports/utills/api_service.dart';
 
 import '../../config/colors.dart';
+import '../../model/member/profile_data.dart';
 
 class CoachChatScreen extends StatelessWidget {
   const CoachChatScreen({super.key});
@@ -224,11 +226,29 @@ class CoachProfileScreen extends StatefulWidget {
 }
 
 class _CoachProfileScreenState extends State<CoachProfileScreen> {
+  late MemberProfileData memberProfileData;
+  bool isLoad=true;
+  final apiService = CoachApiService();
+  @override
+  void initState() {
+    getProfileData();    super.initState();
+  }
+  void getProfileData()async{
+
+    setState(() {
+      isLoad=true;
+    });
+
+    memberProfileData =await apiService.getCouchProfile();
+    setState(() {
+      isLoad=false;
+    });
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: scaffoldDark,
-      body: Column(
+      body:isLoad?Center(child: Loader(),): Column(
         children: [
           Container(
             height: 85.h,                      // slightly taller → better proportions
@@ -323,29 +343,33 @@ class _CoachProfileScreenState extends State<CoachProfileScreen> {
                         ),
                         child: Column(
                           children: [
-                            Text(
-                              "Coach Raj Kumar",
-                              style: GoogleFonts.montserrat(
-                                fontSize: 20.sp,
-                                fontWeight: FontWeight.w800,
-                                color: accentGreen,
+                            if( memberProfileData.data!=null&&memberProfileData.data!.user!=null)...[
+                              Text(
+                                memberProfileData.data!.user!.username??"",
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 20.sp,
+                                  fontWeight: FontWeight.w800,
+                                  color: accentGreen,
+                                ),
                               ),
-                            ),
-                            6.height,
-                            Text(
-                              "Head Football Coach",
-                              style: GoogleFonts.poppins(fontSize: 15.sp, color: Colors.black),
-                            ),
-                            4.height,
-                            Text(
-                              "+91 98765 43210",
-                              style: GoogleFonts.poppins(fontSize: 14.sp, color: textSecondary),
-                            ),
-                            4.height,
-                            Text(
-                              "raj@xyzfc.com",
-                              style: GoogleFonts.poppins(fontSize: 14.sp, color: textSecondary),
-                            ),
+                              6.height,
+                              Text(
+                                "Parent • ${  memberProfileData.data!.user!.mobile??""}",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 15.sp,
+                                  color: Colors.black,
+                                ),
+                              ),
+                              4.height,
+                              Text(
+                                memberProfileData.data!.user!.email??"",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  color: textSecondary,
+                                ),
+                              ),
+                            ],
+
                           ],
                         ),
                       ),
@@ -355,7 +379,9 @@ class _CoachProfileScreenState extends State<CoachProfileScreen> {
                           radius: 50.r,
                           backgroundColor: Colors.grey.shade200,
                           child: Text(
-                            "RK",
+                            memberProfileData.data?.user?.username?.isNotEmpty == true
+                                ? memberProfileData.data!.user!.username![0]
+                                : 'U',
                             style: Theme.of(context).textTheme.headlineLarge,
                           ),
                         ),
