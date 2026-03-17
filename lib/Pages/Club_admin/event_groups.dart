@@ -27,7 +27,7 @@ class _EventGroupsScreenState extends State<EventGroupsScreen> {
   final Set<int> _deletingGroupIds = {};
   final ageCategoryCtrl = TextEditingController();
 
-
+bool load=true;
   @override
   void initState() {
     super.initState();
@@ -36,12 +36,18 @@ class _EventGroupsScreenState extends State<EventGroupsScreen> {
 
   Future<List<GroupData>> _fetchGroups() async {
     final result = await _apiService.getGroupsByEvent(widget.event.eventId);
+    setState(() {
+      load=false;
+    });
     return result.data;
   }
 
-  void _refresh() {
-    setState(() => _groupsFuture = _fetchGroups());
-  }
+   refreshData() {
+     final future = _fetchGroups();
+
+     setState(() {
+       _groupsFuture = future;
+     });  }
 
   // ── Confirm Delete ─────────────────────────────────────────────────────────
   Future<void> _confirmDeleteGroup(GroupData group) async {
@@ -82,7 +88,7 @@ class _EventGroupsScreenState extends State<EventGroupsScreen> {
       setState(() => _deletingGroupIds.remove(group.groupId));
       if (success) {
         toast('Group "${group.name}" deleted');
-        _refresh();
+        refreshData();
       } else {
         AppUI.error(context, 'Failed to delete group. Try again.');
       }
@@ -163,7 +169,7 @@ class _EventGroupsScreenState extends State<EventGroupsScreen> {
                       Navigator.pop(ctx);
                       AppUI.success(context,
                           'Group "${nameCtrl.text}" created!');
-                      _refresh();
+                      refreshData();
                     } else {
                       AppUI.error(
                           context, 'Failed to create group. Try again.');
@@ -298,9 +304,15 @@ class _EventGroupsScreenState extends State<EventGroupsScreen> {
                     );
                     setSheet(() => isLoading = false);
                     if (success) {
+
+                      if(!mounted) return;
                       Navigator.pop(ctx);
+
                       AppUI.success(context, 'Group updated!');
-                      _refresh();
+
+                      if(!mounted) return;
+
+                      refreshData();
                     } else {
                       AppUI.error(
                           context, 'Failed to update group. Try again.');
@@ -683,7 +695,7 @@ class _EventGroupsScreenState extends State<EventGroupsScreen> {
               child: FutureBuilder<List<GroupData>>(
                 future: _groupsFuture,
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
+                  if (snapshot.connectionState == ConnectionState.waiting&&load) {
                     return const Center(
                         child: CircularProgressIndicator(color: accentGreen));
                   }
@@ -700,7 +712,7 @@ class _EventGroupsScreenState extends State<EventGroupsScreen> {
                               GoogleFonts.poppins(color: textSecondary)),
                           12.height,
                           ElevatedButton(
-                            onPressed: _refresh,
+                            onPressed: refreshData,
                             style: ElevatedButton.styleFrom(
                                 backgroundColor: accentGreen,
                                 foregroundColor: Colors.white),
@@ -714,7 +726,7 @@ class _EventGroupsScreenState extends State<EventGroupsScreen> {
                   final groups = snapshot.data ?? [];
 
                   return RefreshIndicator(
-                    onRefresh: () async => _refresh(),
+                    onRefresh: () async => refreshData(),
                     color: accentGreen,
                     child: groups.isEmpty
                         ? ListView(
@@ -746,13 +758,14 @@ class _EventGroupsScreenState extends State<EventGroupsScreen> {
                       padding: EdgeInsets.symmetric(
                           horizontal: 20.w, vertical: 8.h),
                       itemCount: groups.length,
-                      separatorBuilder: (_, __) => 10.height,
+                      separatorBuilder: (_, __) => 15.height,
                       itemBuilder: (_, i) => _groupCard(groups[i]),
                     ),
                   );
                 },
               ),
             ),
+            SizedBox(height: 30,)
           ],
         ),
 

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nb_utils/nb_utils.dart';
+import 'package:sports/Pages/Member/edit_profile.dart';
 import 'package:sports/model/member/profile_data.dart';
 import 'package:sports/utills/api_service.dart';
 
@@ -13,13 +14,11 @@ class MemberNotificationsScreen extends StatefulWidget {
   const MemberNotificationsScreen({super.key});
 
   @override
-  State<MemberNotificationsScreen> createState() => _MemberNotificationsScreenState();
+  State<MemberNotificationsScreen> createState() =>
+      _MemberNotificationsScreenState();
 }
 
 class _MemberNotificationsScreenState extends State<MemberNotificationsScreen> {
-
-
-
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -110,7 +109,7 @@ class _MemberNotificationsScreenState extends State<MemberNotificationsScreen> {
             //   ),
             // ),
             Container(
-              height: 85.h,                      // slightly taller → better proportions
+              height: 85.h, // slightly taller → better proportions
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.black,
@@ -128,21 +127,18 @@ class _MemberNotificationsScreenState extends State<MemberNotificationsScreen> {
               ),
               child: SafeArea(
                 child: Padding(
-                  padding: EdgeInsets.only(
-                    top: 5.h,
-                    left: 20.w,
-                    right: 20.w,
-                  ),
+                  padding: EdgeInsets.only(top: 5.h, left: 20.w, right: 20.w),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
                         "Notifications",
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: Colors.white,
-                          fontSize: 20.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
+                              color: Colors.white,
+                              fontSize: 20.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                       //const Spacer(),
 
@@ -187,19 +183,22 @@ class _MemberNotificationsScreenState extends State<MemberNotificationsScreen> {
                 children: [
                   _NotificationTile(
                     title: "New event scheduled",
-                    subtitle: "Coach Raj scheduled a training session for Saturday",
+                    subtitle:
+                        "Coach Raj scheduled a training session for Saturday",
                     time: "2h ago",
                     isUnread: true,
                   ),
                   _NotificationTile(
                     title: "Performance feedback received",
-                    subtitle: "Coach Sarah added feedback on your swimming technique",
+                    subtitle:
+                        "Coach Sarah added feedback on your swimming technique",
                     time: "1d ago",
                     isUnread: true,
                   ),
                   _NotificationTile(
                     title: "Match reminder",
-                    subtitle: "Weekend match starts in 2 days. Confirm availability.",
+                    subtitle:
+                        "Weekend match starts in 2 days. Confirm availability.",
                     time: "2d ago",
                     isUnread: false,
                   ),
@@ -293,7 +292,6 @@ class _NotificationTile extends StatelessWidget {
   }
 }
 
-
 // screens/member/member_profile.dart
 class MemberProfileScreen extends StatefulWidget {
   const MemberProfileScreen({super.key});
@@ -303,278 +301,345 @@ class MemberProfileScreen extends StatefulWidget {
 }
 
 class _MemberProfileScreenState extends State<MemberProfileScreen> {
-
   late MemberProfileData memberProfileData;
-  bool isLoad=true;
+  bool isLoad = true;
   final memberApiService = MemberApiService();
+
   @override
   void initState() {
-    getProfileData();    super.initState();
+    getProfileData();
+    super.initState();
   }
-  void getProfileData()async{
 
+  void getProfileData() async {
     setState(() {
-      isLoad=true;
+      isLoad = true;
     });
 
-    memberProfileData =await memberApiService.getMemberProfile();
+    memberProfileData = await memberApiService.getMemberProfile();
     setState(() {
-      isLoad=false;
+      isLoad = false;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
-        value: const SystemUiOverlayStyle(
-          statusBarColor: Colors.white,
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: Brightness.dark,
-        ),
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.white,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+      ),
       child: Scaffold(
         backgroundColor: scaffoldDark,
-        body:isLoad? Center(child: Loader(),): Column(
-          children: [
-            // Container(
-            //   height: 80.h,
-            //   width: double.infinity,
-            //   padding: EdgeInsets.symmetric(horizontal: 20.w),
-            //   decoration: BoxDecoration(
-            //     color: Colors.black.withOpacity(0.9),
-            //     border: Border(
-            //       bottom: BorderSide(
-            //         color: Colors.white.withOpacity(0.08),
-            //         width: 0.5,
-            //       ),
-            //     ),
-            //   ),
-            //   child: Padding(
-            //     padding: EdgeInsets.only(top: 20),
-            //     child: Row(
-            //       children: [
-            //         Text("My Profile",style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: cardDark,fontSize: 20.sp,fontWeight: FontWeight.bold,),),
-            //         const Spacer(),
-            //       ],
-            //     ),
-            //   ),
-            // ),
-            Container(
-              height: 85.h,                      // slightly taller → better proportions
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(16),
-                  bottomRight: Radius.circular(16),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.25),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    top: 5.h,
-                    left: 20.w,
-                    right: 20.w,
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        "My Profile",
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: Colors.white,
-                          fontSize: 20.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
+        body: isLoad
+            ? Center(child: Loader())
+            : Column(
+                children: [
+                  // Container(
+                  //   height: 80.h,
+                  //   width: double.infinity,
+                  //   padding: EdgeInsets.symmetric(horizontal: 20.w),
+                  //   decoration: BoxDecoration(
+                  //     color: Colors.black.withOpacity(0.9),
+                  //     border: Border(
+                  //       bottom: BorderSide(
+                  //         color: Colors.white.withOpacity(0.08),
+                  //         width: 0.5,
+                  //       ),
+                  //     ),
+                  //   ),
+                  //   child: Padding(
+                  //     padding: EdgeInsets.only(top: 20),
+                  //     child: Row(
+                  //       children: [
+                  //         Text("My Profile",style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: cardDark,fontSize: 20.sp,fontWeight: FontWeight.bold,),),
+                  //         const Spacer(),
+                  //       ],
+                  //     ),
+                  //   ),
+                  // ),
+                  Container(
+                    height: 85.h, // slightly taller → better proportions
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(16),
+                        bottomRight: Radius.circular(16),
                       ),
-                      //const Spacer(),
-
-                      // GestureDetector(
-                      //   onTap: () {
-                      //     //Navigator.pushNamed(context, AppRoutes.guardianNotifications);
-                      //   },
-                      //   child: Stack(
-                      //     children: [
-                      //       Icon(
-                      //         Icons.notifications_none_rounded,
-                      //         color: Colors.white,
-                      //         size: 26.sp,
-                      //       ),
-                      //       Positioned(
-                      //         right: 0,
-                      //         top: 0,
-                      //         child: Container(
-                      //           width: 10.r,
-                      //           height: 10.r,
-                      //           decoration: BoxDecoration(
-                      //             color: accentOrange,
-                      //             shape: BoxShape.circle,
-                      //             border: Border.all(
-                      //               color: Colors.black,
-                      //               width: 1.5,
-                      //             ),
-                      //           ),
-                      //         ),
-                      //       ),
-                      //     ],
-                      //   ),
-                      // ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.symmetric(horizontal: 20.w),
-                child: Column(
-                  children: [
-                    55.height,
-                    Stack(
-                      clipBehavior: Clip.none,
-                      alignment: Alignment.center,
-                      children: [
-                        Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.fromLTRB(20.w, 60.h, 20.w, 24.h),
-                          decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade300),
-                              borderRadius: BorderRadius.circular(24.r),
-                              color: Colors.white
-                          ),
-                          child: Column(
-                            children: [
-                              if(memberProfileData.data!=null)...[
-                                Text(
-                                  memberProfileData.data!.user!.username??"",
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: 20.sp,
-                                    fontWeight: FontWeight.w800,
-                                    color: accentGreen,
-                                  ),
-                                ),
-                                6.height,
-                                Text(
-                                  "Member • ${ memberProfileData.data!.user!.mobile??""}",
-                                  style: GoogleFonts.poppins(fontSize: 15.sp, color: Colors.black),
-                                ),
-                                4.height,
-                                Text(
-                                  memberProfileData.data!.user!.email??"",
-                                  style: GoogleFonts.poppins(fontSize: 14.sp, color: textSecondary),
-                                ),
-                                4.height,
-                                // Text(
-                                //   "Member since ${ memberProfileData.data!.user!.username}",
-                                //   style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary),
-                                // ),
-                              ]
-
-                            ],
-                          ),
-                        ),
-                        Positioned(
-                          top: -40.h,
-                          child: CircleAvatar(
-                            radius: 50.r,
-                            backgroundColor: Colors.grey.shade200,
-                            child: Text(
-                              memberProfileData.data?.user?.username?.isNotEmpty == true
-                                  ? memberProfileData.data!.user!.username![0]
-                                  : 'U', // default value
-                              style: Theme.of(context).textTheme.headlineLarge,
-                            ),
-                          ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.25),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
                         ),
                       ],
                     ),
-                    20.height,
-
-                    _buildSectionTitle("My Activities"),
-                    12.height,
-                    _ActivityTile(
-                      clubName: "XYZ FC",
-                      activity: "Football",
-                      group: "Under-14 A",
-                    ),
-                    _ActivityTile(
-                      clubName: "ABC Sports",
-                      activity: "Swimming",
-                      group: "Intermediate B",
-                    ),
-
-                    15.height,
-
-
-if(memberProfileData.data!=null&&memberProfileData.data!.memberships!=null)...[
-  _buildSectionTitle("Membership Status"),
-  12.height,
-...List.generate(memberProfileData.data!.memberships!.length, (index){
-  Memberships member= memberProfileData.data!.memberships![index];
-  return _MembershipStatusCard(
-    clubName: member.clubName??"",
-    activity: member.role??"",
-    validUntil:member.membershipEndDate??"",
-    status: member.status??"",
-    statusColor: accentGreen,
-  );
-})
-                    // XYZ FC Membership
-                 ] ,
-
-                    20.height,
-                    _buildSectionTitle("Settings"),
-                    12.height,
-                    _SettingsTile(
-                      icon: Icons.security_rounded,
-                      title: "Privacy & Security",
-                      subtitle: "Manage data & permissions",
-                      onTap: () => toast("Privacy settings – coming soon"),
-                    ),
-                    12.height,
-                    _SettingsTile(
-                      icon: Icons.help_center_rounded,
-                      title: "Help & Support",
-                      subtitle: "FAQ, contact club, report issue",
-                      onTap: () => toast("Support options"),
-                    ),
-                    30.height,
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.symmetric(vertical: 10.h),
-                      decoration: BoxDecoration(
-                        color: Colors.redAccent.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(20.r),
-                        border: Border.all(color: Colors.redAccent.withOpacity(0.4)),
-                      ),
-                      child: ListTile(
-                        leading: Icon(Icons.logout_rounded, color: Colors.redAccent, size: 28.sp),
-                        title: Text(
-                          "Logout",
-                          style: GoogleFonts.poppins(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.redAccent,
-                          ),
+                    child: SafeArea(
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          top: 5.h,
+                          left: 20.w,
+                          right: 20.w,
                         ),
-                        trailing: Icon(Icons.chevron_right_rounded, color: Colors.redAccent),
-                        onTap: () => toast("Logging out..."),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              "My Profile",
+                              style: Theme.of(context).textTheme.headlineMedium
+                                  ?.copyWith(
+                                    color: Colors.white,
+                                    fontSize: 20.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            //const Spacer(),
+
+                            // GestureDetector(
+                            //   onTap: () {
+                            //     //Navigator.pushNamed(context, AppRoutes.guardianNotifications);
+                            //   },
+                            //   child: Stack(
+                            //     children: [
+                            //       Icon(
+                            //         Icons.notifications_none_rounded,
+                            //         color: Colors.white,
+                            //         size: 26.sp,
+                            //       ),
+                            //       Positioned(
+                            //         right: 0,
+                            //         top: 0,
+                            //         child: Container(
+                            //           width: 10.r,
+                            //           height: 10.r,
+                            //           decoration: BoxDecoration(
+                            //             color: accentOrange,
+                            //             shape: BoxShape.circle,
+                            //             border: Border.all(
+                            //               color: Colors.black,
+                            //               width: 1.5,
+                            //             ),
+                            //           ),
+                            //         ),
+                            //       ),
+                            //     ],
+                            //   ),
+                            // ),
+                          ],
+                        ),
                       ),
                     ),
-                    100.height,
-                  ],
-                ),
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.symmetric(horizontal: 20.w),
+                      child: Column(
+                        children: [
+                          55.height,
+                          Stack(
+                            clipBehavior: Clip.none,
+                            alignment: Alignment.center,
+                            children: [
+                              Container(
+                                width: double.infinity,
+                                padding: EdgeInsets.fromLTRB(
+                                  20.w,
+                                  60.h,
+                                  20.w,
+                                  24.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                  borderRadius: BorderRadius.circular(24.r),
+                                  color: Colors.white,
+                                ),
+                                child: Column(
+                                  children: [
+                                    if (memberProfileData.data != null) ...[
+                                      Text(
+                                        memberProfileData
+                                                .data!
+                                                .user!
+                                                .username ??
+                                            "",
+                                        style: GoogleFonts.montserrat(
+                                          fontSize: 20.sp,
+                                          fontWeight: FontWeight.w800,
+                                          color: accentGreen,
+                                        ),
+                                      ),
+                                      6.height,
+                                      Text(
+                                        "Member • ${memberProfileData.data!.user!.mobile ?? ""}",
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 15.sp,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                      4.height,
+                                      Text(
+                                        memberProfileData.data!.user!.email ??
+                                            "",
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14.sp,
+                                          color: textSecondary,
+                                        ),
+                                      ),
+                                      4.height,
+                                      // Text(
+                                      //   "Member since ${ memberProfileData.data!.user!.username}",
+                                      //   style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary),
+                                      // ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              Positioned(
+                                top: -40.h,
+                                child: CircleAvatar(
+                                  radius: 50.r,
+                                  backgroundColor: Colors.grey.shade200,
+                                  child: Text(
+                                    memberProfileData
+                                                .data
+                                                ?.user
+                                                ?.username
+                                                ?.isNotEmpty ==
+                                            true
+                                        ? memberProfileData
+                                              .data!
+                                              .user!
+                                              .username![0]
+                                        : 'U', // default value
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.headlineLarge,
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                top: 20.h,
+                                left: 80,
+                                right: 0,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => EditProfilePage(
+                                          memberProfileData: memberProfileData,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: CircleAvatar(
+                                    radius: 12.r,
+                                    backgroundColor: Colors.grey.shade800,
+                                    child: Icon(Icons.edit, size: 14),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          20.height,
+
+                          _buildSectionTitle("My Activities"),
+                          12.height,
+                          _ActivityTile(
+                            clubName: "XYZ FC",
+                            activity: "Football",
+                            group: "Under-14 A",
+                          ),
+                          _ActivityTile(
+                            clubName: "ABC Sports",
+                            activity: "Swimming",
+                            group: "Intermediate B",
+                          ),
+
+                          15.height,
+
+                          if (memberProfileData.data != null &&
+                              memberProfileData.data!.memberships != null) ...[
+                            _buildSectionTitle("Membership Status"),
+                            12.height,
+                            ...List.generate(
+                              memberProfileData.data!.memberships!.length,
+                              (index) {
+                                Memberships member =
+                                    memberProfileData.data!.memberships![index];
+                                return _MembershipStatusCard(
+                                  clubName: member.clubName ?? "",
+                                  activity: member.role ?? "",
+                                  validUntil: member.membershipEndDate ?? "",
+                                  status: member.status ?? "",
+                                  statusColor: accentGreen,
+                                );
+                              },
+                            ),
+                            // XYZ FC Membership
+                          ],
+
+                          20.height,
+                          _buildSectionTitle("Settings"),
+                          12.height,
+                          _SettingsTile(
+                            icon: Icons.security_rounded,
+                            title: "Privacy & Security",
+                            subtitle: "Manage data & permissions",
+                            onTap: () =>
+                                toast("Privacy settings – coming soon"),
+                          ),
+                          12.height,
+                          _SettingsTile(
+                            icon: Icons.help_center_rounded,
+                            title: "Help & Support",
+                            subtitle: "FAQ, contact club, report issue",
+                            onTap: () => toast("Support options"),
+                          ),
+                          30.height,
+                          Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.symmetric(vertical: 10.h),
+                            decoration: BoxDecoration(
+                              color: Colors.redAccent.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(20.r),
+                              border: Border.all(
+                                color: Colors.redAccent.withOpacity(0.4),
+                              ),
+                            ),
+                            child: ListTile(
+                              leading: Icon(
+                                Icons.logout_rounded,
+                                color: Colors.redAccent,
+                                size: 28.sp,
+                              ),
+                              title: Text(
+                                "Logout",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.redAccent,
+                                ),
+                              ),
+                              trailing: Icon(
+                                Icons.chevron_right_rounded,
+                                color: Colors.redAccent,
+                              ),
+                              onTap: () => toast("Logging out..."),
+                            ),
+                          ),
+                          100.height,
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -617,7 +682,7 @@ class _MembershipStatusCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20.r),
         border: Border.all(color: statusColor.withOpacity(0.35)),
-        color: Colors.white
+        color: Colors.white,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -645,8 +710,13 @@ class _MembershipStatusCard extends StatelessWidget {
                       ),
                     ),
                     4.height,
-                    Text("Active",style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: accentGreen,fontWeight: FontWeight.bold),)
-
+                    Text(
+                      "Active",
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: accentGreen,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -670,11 +740,18 @@ class _MembershipStatusCard extends StatelessWidget {
           16.height,
           Row(
             children: [
-              Icon(Icons.calendar_today_rounded, size: 16.sp, color: textSecondary),
+              Icon(
+                Icons.calendar_today_rounded,
+                size: 16.sp,
+                color: textSecondary,
+              ),
               8.width,
               Text(
                 "Valid until $validUntil",
-                style: GoogleFonts.poppins(fontSize: 13.sp, color: textSecondary),
+                style: GoogleFonts.poppins(
+                  fontSize: 13.sp,
+                  color: textSecondary,
+                ),
               ),
             ],
           ),
@@ -709,7 +786,11 @@ class _ActivityTile extends StatelessWidget {
           CircleAvatar(
             radius: 24.r,
             backgroundColor: accentGreen.withOpacity(0.2),
-            child: Icon(Icons.sports_soccer_rounded, color: accentGreen, size: 24.sp),
+            child: Icon(
+              Icons.sports_soccer_rounded,
+              color: accentGreen,
+              size: 24.sp,
+            ),
           ),
           12.width,
           Expanded(
@@ -718,11 +799,17 @@ class _ActivityTile extends StatelessWidget {
               children: [
                 Text(
                   clubName,
-                  style: GoogleFonts.poppins(fontSize: 13.sp, fontWeight: FontWeight.w600),
+                  style: GoogleFonts.poppins(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 Text(
                   "$activity • $group",
-                  style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary),
+                  style: GoogleFonts.poppins(
+                    fontSize: 11.sp,
+                    color: textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -765,13 +852,30 @@ class _SettingsTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: GoogleFonts.poppins(fontSize: 13.sp, fontWeight: FontWeight.w600, color: Colors.black)),
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
+                  ),
                   2.height,
-                  Text(subtitle, style: GoogleFonts.poppins(fontSize: 13.sp, color: textSecondary)),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13.sp,
+                      color: textSecondary,
+                    ),
+                  ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: textSecondary, size: 24.sp),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: textSecondary,
+              size: 24.sp,
+            ),
           ],
         ),
       ),

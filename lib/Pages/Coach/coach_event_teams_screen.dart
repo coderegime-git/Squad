@@ -144,8 +144,8 @@ class _CoachEventTeamsScreenState extends State<CoachEventTeamsScreen> {
                 final myUserId = SharedPreferenceHelper.getId() ?? 0;
                 print("Logged in userId: $myUserId");
                 final teams = allTeams
-                    .where((t) => t.coachIds.contains(myUserId))
-                    .toList();
+                   /* .where((t) => t.coachIds.contains(myUserId))
+                    .toList()*/;
 
                 if (teams.isEmpty) {
                   return Center(
