@@ -6,6 +6,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sports/model/clubAdmin/activities_data.dart';
 import 'package:sports/model/clubAdmin/add_guardians.dart';
 import 'package:sports/model/clubAdmin/get_groups.dart';
 import 'package:sports/model/coach/event_attendance_data.dart';
@@ -708,6 +709,68 @@ class ClubApiService {
     } catch (e) {
       print("Update group failed: $e");
       return false;
+    }
+  }
+
+  Future<ActivityData> addActivities(String clubId, dynamic body) async {
+    try {
+      final fullResponse = await _helper.post(
+        "api/clubs/$clubId/activities",
+        body,
+      );
+      print("getMemberEvents success: ${fullResponse}");
+      final jsonResponse = jsonEncode(fullResponse);
+      return activityDataFromJson(fullResponse);
+    } catch (e) {
+      print("getMemberEvents failed: $e");
+      rethrow;
+    }
+  }
+
+  Future<ActivityData> updateActivities(String activityId, dynamic body) async {
+    try {
+      final fullResponse = await _helper.put(
+        "api/activities/$activityId",
+        body,
+      );
+      print("getMemberEvents success: ${fullResponse}");
+      final jsonResponse = jsonEncode(fullResponse);
+      return activityDataFromJson(fullResponse);
+    } catch (e) {
+      print("getMemberEvents failed: $e");
+      rethrow;
+    }
+  }
+
+  Future<dynamic> deleteActivities(String activityId) async {
+    try {
+      final fullResponse = await _helper.delete("api/activities/$activityId");
+      final jsonResponse = jsonEncode(fullResponse);
+      print(jsonResponse);
+      return fullResponse;
+    } catch (e) {
+      print("getMemberEvents failed: $e");
+      rethrow;
+    }
+  }
+
+  Future<List<ActivityListData>> getActivities(String clubId) async {
+    try {
+      final fullResponse = await _helper.get("api/clubs/$clubId/activities");
+
+      print("getMemberEvents success: $fullResponse");
+
+      List<ActivityListData> data = [];
+      final jsonResponse = jsonEncode(fullResponse);
+
+      for (var item in fullResponse['data']) {
+        data.add(ActivityListData.fromJson(item));
+      }
+
+      return data;
+    } catch (e) {
+      print("getMemberEvents failed: $e");
+      rethrow;
     }
   }
 

@@ -53,7 +53,9 @@ class _LoginScreenState extends State<LoginScreen> {
           final Map<String, dynamic> jwtData = jsonDecode(decoded);
           print("JWT payload: $jwtData");
           final int userId = jwtData['userId'] ?? 0;
+
           SharedPreferenceHelper.setId(userId);
+          SharedPreferenceHelper.setClubId(jwtData['clubId'].toString());
           print("userId from JWT: $userId");
         }
         // ──────────────────────────────────────────────────────────────
@@ -68,7 +70,9 @@ class _LoginScreenState extends State<LoginScreen> {
           SharedPreferenceHelper.setRole(role);
           SharedPreferenceHelper.setUsername(username);
 
-          print("Saved → role: $role | userId: ${SharedPreferenceHelper.getId()} | username: $username");
+          print(
+            "Saved → role: $role | userId: ${SharedPreferenceHelper.getId()} | username: $username",
+          );
 
           AppUI.success(context, "Login successful!");
 
@@ -77,28 +81,28 @@ class _LoginScreenState extends State<LoginScreen> {
               Navigator.pushNamedAndRemoveUntil(
                 context,
                 AppRoutes.guardianBar,
-                    (route) => false,
+                (route) => false,
               );
               break;
             case 'MEMBER':
               Navigator.pushNamedAndRemoveUntil(
                 context,
                 AppRoutes.memberBar,
-                    (route) => false,
+                (route) => false,
               );
               break;
             case 'CLUB_ADMIN':
               Navigator.pushNamedAndRemoveUntil(
                 context,
                 AppRoutes.clubAdmin,
-                    (route) => false,
+                (route) => false,
               );
               break;
             case 'COACH':
               Navigator.pushNamedAndRemoveUntil(
                 context,
                 AppRoutes.coachBar,
-                    (route) => false,
+                (route) => false,
               );
               break;
             default:
@@ -171,7 +175,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         Text(
                           "Access your club dashboard",
                           style: secondaryTextStyle(
-                              size: 14, color: textSecondary),
+                            size: 14,
+                            color: textSecondary,
+                          ),
                         ),
                         40.height,
                         AppTextField(
@@ -179,43 +185,51 @@ class _LoginScreenState extends State<LoginScreen> {
                           textFieldType: TextFieldType.USERNAME,
                           textStyle: primaryTextStyle(color: textPrimary),
                           keyboardType: TextInputType.name,
-                          decoration: inputDecoration(
-                            context,
-                            hintText: 'User name',
-                            prefixIcon:
-                            Icon(Icons.person, color: accentGreen),
-                          ).copyWith(
-                            hintStyle: secondaryTextStyle(
-                                color: textSecondary),
-                          ),
+                          decoration:
+                              inputDecoration(
+                                context,
+                                hintText: 'User name',
+                                prefixIcon: Icon(
+                                  Icons.person,
+                                  color: accentGreen,
+                                ),
+                              ).copyWith(
+                                hintStyle: secondaryTextStyle(
+                                  color: textSecondary,
+                                ),
+                              ),
                           validator: (v) =>
-                          (v == null) ? 'Enter your username' : null,
+                              (v == null) ? 'Enter your username' : null,
                         ),
                         20.height,
                         TextField(
                           controller: passwordCtrl,
                           obscureText: _obscurePassword,
                           style: primaryTextStyle(color: textPrimary),
-                          decoration: inputDecoration(
-                            context,
-                            hintText: 'Password',
-                            prefixIcon: Icon(
-                                Icons.lock_outline_rounded,
-                                color: accentGreen),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off
-                                    : Icons.visibility,
-                                color: Colors.grey.shade600,
+                          decoration:
+                              inputDecoration(
+                                context,
+                                hintText: 'Password',
+                                prefixIcon: Icon(
+                                  Icons.lock_outline_rounded,
+                                  color: accentGreen,
+                                ),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscurePassword
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                  onPressed: () => setState(
+                                    () => _obscurePassword = !_obscurePassword,
+                                  ),
+                                ),
+                              ).copyWith(
+                                hintStyle: secondaryTextStyle(
+                                  color: textSecondary,
+                                ),
                               ),
-                              onPressed: () => setState(
-                                      () => _obscurePassword = !_obscurePassword),
-                            ),
-                          ).copyWith(
-                            hintStyle: secondaryTextStyle(
-                                color: textSecondary),
-                          ),
                         ),
                         12.height,
                         Align(
@@ -226,8 +240,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: TextButton.styleFrom(
                               padding: EdgeInsets.zero,
                               minimumSize: Size.zero,
-                              tapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
                             child: Text(
                               'Forgot Password?',
@@ -255,27 +268,32 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: _isLoading
                                 ? AppUI.buttonSpinner()
                                 : Text(
-                              'SIGN IN',
-                              style: boldTextStyle(
-                                  color: Colors.white, size: 16),
-                            ),
+                                    'SIGN IN',
+                                    style: boldTextStyle(
+                                      color: Colors.white,
+                                      size: 16,
+                                    ),
+                                  ),
                           ),
                         ),
                         40.height,
                         Center(
                           child: GestureDetector(
                             onTap: () => Navigator.pushNamed(
-                                context, AppRoutes.roleSelection),
+                              context,
+                              AppRoutes.roleSelection,
+                            ),
                             child: RichText(
                               text: TextSpan(
                                 style: secondaryTextStyle(
-                                    color: textSecondary, size: 14),
+                                  color: textSecondary,
+                                  size: 14,
+                                ),
                                 children: [
                                   const TextSpan(text: "New to SQUAD? "),
                                   TextSpan(
                                     text: "Create account",
-                                    style:
-                                    boldTextStyle(color: Colors.black),
+                                    style: boldTextStyle(color: Colors.black),
                                   ),
                                 ],
                               ),
