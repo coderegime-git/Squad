@@ -27,7 +27,8 @@ class _EventGroupsScreenState extends State<EventGroupsScreen> {
   final Set<int> _deletingGroupIds = {};
   final ageCategoryCtrl = TextEditingController();
 
-bool load=true;
+  bool load = true;
+
   @override
   void initState() {
     super.initState();
@@ -37,17 +38,18 @@ bool load=true;
   Future<List<GroupData>> _fetchGroups() async {
     final result = await _apiService.getGroupsByEvent(widget.event.eventId);
     setState(() {
-      load=false;
+      load = false;
     });
     return result.data;
   }
 
-   refreshData() {
-     final future = _fetchGroups();
+  refreshData() {
+    final future = _fetchGroups();
 
-     setState(() {
-       _groupsFuture = future;
-     });  }
+    setState(() {
+      _groupsFuture = future;
+    });
+  }
 
   // ── Confirm Delete ─────────────────────────────────────────────────────────
   Future<void> _confirmDeleteGroup(GroupData group) async {
@@ -55,11 +57,16 @@ bool load=true;
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: Colors.grey.shade200,
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-        title: Text('Delete Group',
-            style: GoogleFonts.montserrat(
-                fontWeight: FontWeight.w700, fontSize: 16.sp)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.r),
+        ),
+        title: Text(
+          'Delete Group',
+          style: GoogleFonts.montserrat(
+            fontWeight: FontWeight.w700,
+            fontSize: 16.sp,
+          ),
+        ),
         content: Text(
           'Are you sure you want to delete "${group.name}"?',
           style: GoogleFonts.poppins(fontSize: 13.sp, color: textSecondary),
@@ -67,15 +74,23 @@ bool load=true;
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel',
-                style: GoogleFonts.poppins(
-                    color: textSecondary, fontWeight: FontWeight.w500)),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(
+                color: textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text('Delete',
-                style: GoogleFonts.poppins(
-                    color: Colors.red, fontWeight: FontWeight.w700)),
+            child: Text(
+              'Delete',
+              style: GoogleFonts.poppins(
+                color: Colors.red,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
@@ -83,8 +98,10 @@ bool load=true;
 
     if (confirmed == true) {
       setState(() => _deletingGroupIds.add(group.groupId));
-      final success =
-      await _apiService.deleteGroup(widget.event.eventId, group.groupId);
+      final success = await _apiService.deleteGroup(
+        widget.event.eventId,
+        group.groupId,
+      );
       setState(() => _deletingGroupIds.remove(group.groupId));
       if (success) {
         toast('Group "${group.name}" deleted');
@@ -94,6 +111,7 @@ bool load=true;
       }
     }
   }
+
   void _showCreateGroupSheet() {
     final nameCtrl = TextEditingController();
     final descCtrl = TextEditingController();
@@ -104,7 +122,8 @@ bool load=true;
       isScrollControlled: true,
       backgroundColor: cardDark,
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+      ),
       builder: (_) => StatefulBuilder(
         builder: (ctx, setSheet) => Padding(
           padding: EdgeInsets.only(
@@ -122,29 +141,46 @@ bool load=true;
                   width: 40.w,
                   height: 4.h,
                   decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2.r)),
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
                 ),
               ),
               16.height,
-              Text('Create Group',
-                  style: GoogleFonts.montserrat(
-                      fontSize: 18.sp, fontWeight: FontWeight.bold)),
+              Text(
+                'Create Group',
+                style: GoogleFonts.montserrat(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               6.height,
-              Text('Event: ${widget.event.eventName}',
-                  style:
-                  GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary)),
+              Text(
+                'Event: ${widget.event.eventName}',
+                style: GoogleFonts.poppins(
+                  fontSize: 12.sp,
+                  color: textSecondary,
+                ),
+              ),
               20.height,
-              _sheetField('Group Name *', nameCtrl, Icons.group_rounded,
-                  hint: 'e.g., Under 14'),
+              _sheetField(
+                'Group Name *',
+                nameCtrl,
+                Icons.group_rounded,
+                hint: 'e.g., Under 14',
+              ),
               12.height,
               // _sheetField('Description (optional)', descCtrl,
               //     Icons.description_rounded,
               //     hint: 'e.g., Group for U14 category',
               //     required: false,
               //     maxLines: 2),
-              _sheetField('Age Category *', ageCategoryCtrl, Icons.cake_rounded,
-                  hint: 'e.g., U14, U16, Senior'),
+              _sheetField(
+                'Age Category *',
+                ageCategoryCtrl,
+                Icons.cake_rounded,
+                hint: 'e.g., U14, U16, Senior',
+              ),
               20.height,
               SizedBox(
                 width: double.infinity,
@@ -152,42 +188,49 @@ bool load=true;
                   onPressed: isLoading
                       ? null
                       : () async {
-                    if (nameCtrl.text.trim().isEmpty) {
-                      toast('Please enter group name');
-                      return;
-                    }
-                    setSheet(() => isLoading = true);
-                    final success = await _apiService.createGroup(
-                      widget.event.eventId,
-                        {
-                          "name": nameCtrl.text.trim(),
-                          "ageCategory": ageCategoryCtrl.text.trim(),
-                        }
-                    );
-                    setSheet(() => isLoading = false);
-                    if (success) {
-                      Navigator.pop(ctx);
-                      AppUI.success(context,
-                          'Group "${nameCtrl.text}" created!');
-                      refreshData();
-                    } else {
-                      AppUI.error(
-                          context, 'Failed to create group. Try again.');
-                    }
-                  },
+                          if (nameCtrl.text.trim().isEmpty) {
+                            toast('Please enter group name');
+                            return;
+                          }
+                          setSheet(() => isLoading = true);
+                          final success = await _apiService
+                              .createGroup(widget.event.eventId, {
+                                "name": nameCtrl.text.trim(),
+                                "ageCategory": ageCategoryCtrl.text.trim(),
+                              });
+                          setSheet(() => isLoading = false);
+                          if (success) {
+                            Navigator.pop(ctx);
+                            AppUI.success(
+                              context,
+                              'Group "${nameCtrl.text}" created!',
+                            );
+                            refreshData();
+                          } else {
+                            AppUI.error(
+                              context,
+                              'Failed to create group. Try again.',
+                            );
+                          }
+                        },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: accentGreen,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     padding: EdgeInsets.symmetric(vertical: 14.h),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14.r)),
+                      borderRadius: BorderRadius.circular(14.r),
+                    ),
                   ),
                   child: isLoading
                       ? AppUI.buttonSpinner()
-                      : Text('Create Group',
-                      style: GoogleFonts.poppins(
-                          fontSize: 14.sp, fontWeight: FontWeight.w700)),
+                      : Text(
+                          'Create Group',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                 ),
               ),
             ],
@@ -209,7 +252,8 @@ bool load=true;
       isScrollControlled: true,
       backgroundColor: cardDark,
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+      ),
       builder: (_) => StatefulBuilder(
         builder: (ctx, setSheet) => Padding(
           padding: EdgeInsets.only(
@@ -227,27 +271,43 @@ bool load=true;
                   width: 40.w,
                   height: 4.h,
                   decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2.r)),
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
                 ),
               ),
               16.height,
-              Text('Edit Group',
-                  style: GoogleFonts.montserrat(
-                      fontSize: 18.sp, fontWeight: FontWeight.bold)),
+              Text(
+                'Edit Group',
+                style: GoogleFonts.montserrat(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               6.height,
-              Text('Group ID: ${group.groupId}',
-                  style:
-                  GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary)),
+              Text(
+                'Group ID: ${group.groupId}',
+                style: GoogleFonts.poppins(
+                  fontSize: 12.sp,
+                  color: textSecondary,
+                ),
+              ),
               20.height,
-              _sheetField('Group Name *', nameCtrl, Icons.group_rounded,
-                  hint: 'e.g., Under 14'),
+              _sheetField(
+                'Group Name *',
+                nameCtrl,
+                Icons.group_rounded,
+                hint: 'e.g., Under 14',
+              ),
               12.height,
-              _sheetField('Description (optional)', descCtrl,
-                  Icons.description_rounded,
-                  hint: 'e.g., Group for U14 category',
-                  required: false,
-                  maxLines: 2),
+              _sheetField(
+                'Description (optional)',
+                descCtrl,
+                Icons.description_rounded,
+                hint: 'e.g., Group for U14 category',
+                required: false,
+                maxLines: 2,
+              ),
               12.height,
               // Text('Status',
               //     style: GoogleFonts.poppins(
@@ -288,49 +348,55 @@ bool load=true;
                   onPressed: isLoading
                       ? null
                       : () async {
-                    if (nameCtrl.text.trim().isEmpty) {
-                      toast('Please enter group name');
-                      return;
-                    }
-                    setSheet(() => isLoading = true);
-                    final success = await _apiService.updateGroup(
-                      widget.event.eventId,
-                      group.groupId,
-                      {
-                        "name": nameCtrl.text.trim(),
-                        "description": descCtrl.text.trim(),
-                        "status": selectedStatus,
-                      },
-                    );
-                    setSheet(() => isLoading = false);
-                    if (success) {
+                          if (nameCtrl.text.trim().isEmpty) {
+                            toast('Please enter group name');
+                            return;
+                          }
+                          setSheet(() => isLoading = true);
+                          final success = await _apiService.updateGroup(
+                            widget.event.eventId,
+                            group.groupId,
+                            {
+                              "name": nameCtrl.text.trim(),
+                              "description": descCtrl.text.trim(),
+                              "status": selectedStatus,
+                            },
+                          );
+                          setSheet(() => isLoading = false);
+                          if (success) {
+                            if (!mounted) return;
+                            Navigator.pop(ctx);
 
-                      if(!mounted) return;
-                      Navigator.pop(ctx);
+                            AppUI.success(context, 'Group updated!');
 
-                      AppUI.success(context, 'Group updated!');
+                            if (!mounted) return;
 
-                      if(!mounted) return;
-
-                      refreshData();
-                    } else {
-                      AppUI.error(
-                          context, 'Failed to update group. Try again.');
-                    }
-                  },
+                            refreshData();
+                          } else {
+                            AppUI.error(
+                              context,
+                              'Failed to update group. Try again.',
+                            );
+                          }
+                        },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: accentGreen,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     padding: EdgeInsets.symmetric(vertical: 14.h),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14.r)),
+                      borderRadius: BorderRadius.circular(14.r),
+                    ),
                   ),
                   child: isLoading
                       ? AppUI.buttonSpinner()
-                      : Text('Update Group',
-                      style: GoogleFonts.poppins(
-                          fontSize: 14.sp, fontWeight: FontWeight.w700)),
+                      : Text(
+                          'Update Group',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                 ),
               ),
             ],
@@ -343,11 +409,11 @@ bool load=true;
   // ── Group Card ─────────────────────────────────────────────────────────────
   Widget _groupCard(GroupData group) {
     final isDeleting = _deletingGroupIds.contains(group.groupId);
-    final statusColor =
-    group.status == 'ACTIVE' ? accentGreen : Colors.grey;
+    final statusColor = group.status == 'ACTIVE' ? accentGreen : Colors.grey;
 
     return GestureDetector(
       onTap: () {
+        print("event page");
         // Navigate to sub-groups for this group
         Navigator.push(
           context,
@@ -379,9 +445,10 @@ bool load=true;
                 child: Text(
                   group.name.isNotEmpty ? group.name[0].toUpperCase() : 'G',
                   style: GoogleFonts.montserrat(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.w800,
-                      color: accentGreen),
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w800,
+                    color: accentGreen,
+                  ),
                 ),
               ),
             ),
@@ -390,45 +457,64 @@ bool load=true;
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(group.name,
-                      style: GoogleFonts.montserrat(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black)),
+                  Text(
+                    group.name,
+                    style: GoogleFonts.montserrat(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
+                    ),
+                  ),
                   4.height,
                   if (group.description.isNotEmpty)
-                    Text(group.description,
-                        style: GoogleFonts.poppins(
-                            fontSize: 11.sp, color: textSecondary),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis),
+                    Text(
+                      group.description,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.sp,
+                        color: textSecondary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   4.height,
                   Row(
                     children: [
                       Container(
-                        padding:
-                        EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 8.w,
+                          vertical: 3.h,
+                        ),
                         decoration: BoxDecoration(
                           color: statusColor.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(20.r),
                         ),
-                        child: Text(group.status,
-                            style: GoogleFonts.poppins(
-                                fontSize: 10.sp,
-                                color: statusColor,
-                                fontWeight: FontWeight.w600)),
+                        child: Text(
+                          group.status,
+                          style: GoogleFonts.poppins(
+                            fontSize: 10.sp,
+                            color: statusColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                       8.width,
-                      Icon(Icons.arrow_forward_ios_rounded,
-                          size: 10.sp, color: textSecondary),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 10.sp,
+                        color: textSecondary,
+                      ),
                       4.width,
                       // AFTER (fixed):
                       Flexible(
-                        child: Text('Tap to manage sub-groups',
-                            style: GoogleFonts.poppins(
-                                fontSize: 10.sp, color: textSecondary),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1),
+                        child: Text(
+                          'Tap to manage sub-groups',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10.sp,
+                            color: textSecondary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
                       ),
                     ],
                   ),
@@ -439,16 +525,19 @@ bool load=true;
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Container(
-                  padding:
-                  EdgeInsets.symmetric(horizontal: 9.w, vertical: 4.h),
+                  padding: EdgeInsets.symmetric(horizontal: 9.w, vertical: 4.h),
                   decoration: BoxDecoration(
-                      color: accentGreen.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(20.r)),
-                  child: Text('ID: ${group.groupId}',
-                      style: GoogleFonts.poppins(
-                          fontSize: 10.sp,
-                          color: accentGreen,
-                          fontWeight: FontWeight.w600)),
+                    color: accentGreen.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                  child: Text(
+                    'ID: ${group.groupId}',
+                    style: GoogleFonts.poppins(
+                      fontSize: 10.sp,
+                      color: accentGreen,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
                 12.height,
                 Row(
@@ -463,8 +552,11 @@ bool load=true;
                           color: Colors.blue.withOpacity(0.12),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.edit_rounded,
-                            color: Colors.blue, size: 16.sp),
+                        child: Icon(
+                          Icons.edit_rounded,
+                          color: Colors.blue,
+                          size: 16.sp,
+                        ),
                       ),
                     ),
                     8.width,
@@ -482,11 +574,14 @@ bool load=true;
                         ),
                         child: isDeleting
                             ? Padding(
-                          padding: EdgeInsets.all(7.w),
-                          child: AppUI.buttonSpinner(),
-                        )
-                            : Icon(Icons.delete_forever,
-                            color: Colors.red.shade600, size: 18.sp),
+                                padding: EdgeInsets.all(7.w),
+                                child: AppUI.buttonSpinner(),
+                              )
+                            : Icon(
+                                Icons.delete_forever,
+                                color: Colors.red.shade600,
+                                size: 18.sp,
+                              ),
                       ),
                     ),
                   ],
@@ -501,21 +596,24 @@ bool load=true;
 
   // ── Sheet Field ────────────────────────────────────────────────────────────
   Widget _sheetField(
-      String label,
-      TextEditingController ctrl,
-      IconData icon, {
-        String? hint,
-        bool required = true,
-        int maxLines = 1,
-      }) {
+    String label,
+    TextEditingController ctrl,
+    IconData icon, {
+    String? hint,
+    bool required = true,
+    int maxLines = 1,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: GoogleFonts.poppins(
-                fontSize: 12.sp,
-                color: textSecondary,
-                fontWeight: FontWeight.w500)),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 12.sp,
+            color: textSecondary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         6.height,
         TextFormField(
           controller: ctrl,
@@ -524,21 +622,28 @@ bool load=true;
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: GoogleFonts.poppins(
-                fontSize: 12.sp, color: textSecondary.withOpacity(0.5)),
+              fontSize: 12.sp,
+              color: textSecondary.withOpacity(0.5),
+            ),
             prefixIcon: Icon(icon, color: textSecondary, size: 18.sp),
             filled: true,
             fillColor: Colors.grey.shade100,
-            contentPadding:
-            EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: 14.w,
+              vertical: 13.h,
+            ),
             border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide(color: Colors.grey.shade300)),
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
             enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide(color: Colors.grey.shade300)),
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
             focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: const BorderSide(color: accentGreen, width: 1.5)),
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: const BorderSide(color: accentGreen, width: 1.5),
+            ),
           ),
         ),
       ],
@@ -582,8 +687,11 @@ bool load=true;
                     children: [
                       GestureDetector(
                         onTap: () => Navigator.pop(context),
-                        child: Icon(Icons.arrow_back_ios_rounded,
-                            color: Colors.white, size: 20.sp),
+                        child: Icon(
+                          Icons.arrow_back_ios_rounded,
+                          color: Colors.white,
+                          size: 20.sp,
+                        ),
                       ),
                       16.width,
                       Expanded(
@@ -593,20 +701,19 @@ bool load=true;
                           children: [
                             Text(
                               'Event Groups',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineMedium
+                              style: Theme.of(context).textTheme.headlineMedium
                                   ?.copyWith(
-                                color: Colors.white,
-                                fontSize: 20.sp,
-                                fontWeight: FontWeight.bold,
-                              ),
+                                    color: Colors.white,
+                                    fontSize: 20.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                             ),
                             Text(
                               widget.event.eventName,
                               style: GoogleFonts.poppins(
-                                  fontSize: 11.sp,
-                                  color: Colors.grey.shade400),
+                                fontSize: 11.sp,
+                                color: Colors.grey.shade400,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -636,38 +743,58 @@ bool load=true;
                       color: accentGreen.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(12.r),
                     ),
-                    child: Icon(Icons.event_rounded,
-                        color: accentGreen, size: 20.sp),
+                    child: Icon(
+                      Icons.event_rounded,
+                      color: accentGreen,
+                      size: 20.sp,
+                    ),
                   ),
                   14.width,
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(widget.event.eventName,
-                            style: GoogleFonts.montserrat(
-                                fontSize: 13.sp,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.black)),
+                        Text(
+                          widget.event.eventName,
+                          style: GoogleFonts.montserrat(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black,
+                          ),
+                        ),
                         4.height,
                         Row(
                           children: [
-                            Icon(Icons.calendar_today_rounded,
-                                size: 11.sp, color: textSecondary),
+                            Icon(
+                              Icons.calendar_today_rounded,
+                              size: 11.sp,
+                              color: textSecondary,
+                            ),
                             4.width,
-                            Text(widget.event.eventDate,
-                                style: GoogleFonts.poppins(
-                                    fontSize: 11.sp, color: textSecondary)),
+                            Text(
+                              widget.event.eventDate,
+                              style: GoogleFonts.poppins(
+                                fontSize: 11.sp,
+                                color: textSecondary,
+                              ),
+                            ),
                             10.width,
-                            Icon(Icons.location_on_rounded,
-                                size: 11.sp, color: textSecondary),
+                            Icon(
+                              Icons.location_on_rounded,
+                              size: 11.sp,
+                              color: textSecondary,
+                            ),
                             4.width,
                             Expanded(
-                              child: Text(widget.event.location,
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 11.sp, color: textSecondary),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis),
+                              child: Text(
+                                widget.event.location,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11.sp,
+                                  color: textSecondary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ],
                         ),
@@ -675,16 +802,22 @@ bool load=true;
                     ),
                   ),
                   Container(
-                    padding:
-                    EdgeInsets.symmetric(horizontal: 9.w, vertical: 4.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 9.w,
+                      vertical: 4.h,
+                    ),
                     decoration: BoxDecoration(
-                        color: Colors.purple.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20.r)),
-                    child: Text(widget.event.eventType,
-                        style: GoogleFonts.poppins(
-                            fontSize: 10.sp,
-                            color: Colors.purple,
-                            fontWeight: FontWeight.w700)),
+                      color: Colors.purple.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20.r),
+                    ),
+                    child: Text(
+                      widget.event.eventType,
+                      style: GoogleFonts.poppins(
+                        fontSize: 10.sp,
+                        color: Colors.purple,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -695,27 +828,34 @@ bool load=true;
               child: FutureBuilder<List<GroupData>>(
                 future: _groupsFuture,
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting&&load) {
+                  if (snapshot.connectionState == ConnectionState.waiting &&
+                      load) {
                     return const Center(
-                        child: CircularProgressIndicator(color: accentGreen));
+                      child: CircularProgressIndicator(color: accentGreen),
+                    );
                   }
                   if (snapshot.hasError) {
                     return Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.error_outline_rounded,
-                              size: 48.sp, color: Colors.red.shade300),
+                          Icon(
+                            Icons.error_outline_rounded,
+                            size: 48.sp,
+                            color: Colors.red.shade300,
+                          ),
                           12.height,
-                          Text('Failed to load groups',
-                              style:
-                              GoogleFonts.poppins(color: textSecondary)),
+                          Text(
+                            'Failed to load groups',
+                            style: GoogleFonts.poppins(color: textSecondary),
+                          ),
                           12.height,
                           ElevatedButton(
                             onPressed: refreshData,
                             style: ElevatedButton.styleFrom(
-                                backgroundColor: accentGreen,
-                                foregroundColor: Colors.white),
+                              backgroundColor: accentGreen,
+                              foregroundColor: Colors.white,
+                            ),
                             child: Text('Retry', style: GoogleFonts.poppins()),
                           ),
                         ],
@@ -730,42 +870,52 @@ bool load=true;
                     color: accentGreen,
                     child: groups.isEmpty
                         ? ListView(
-                      children: [
-                        SizedBox(height: 100.h),
-                        Center(
-                          child: Column(
                             children: [
-                              Icon(Icons.group_off_rounded,
-                                  size: 60.sp,
-                                  color: Colors.grey.shade400),
-                              16.height,
-                              Text('No groups yet',
-                                  style: GoogleFonts.montserrat(
-                                      fontSize: 16.sp,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.grey.shade500)),
-                              8.height,
-                              Text('Tap + to create the first group',
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 12.sp,
-                                      color: textSecondary)),
+                              SizedBox(height: 100.h),
+                              Center(
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.group_off_rounded,
+                                      size: 60.sp,
+                                      color: Colors.grey.shade400,
+                                    ),
+                                    16.height,
+                                    Text(
+                                      'No groups yet',
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 16.sp,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.grey.shade500,
+                                      ),
+                                    ),
+                                    8.height,
+                                    Text(
+                                      'Tap + to create the first group',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12.sp,
+                                        color: textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ],
-                          ),
-                        ),
-                      ],
-                    )
+                          )
                         : ListView.separated(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 20.w, vertical: 8.h),
-                      itemCount: groups.length,
-                      separatorBuilder: (_, __) => 15.height,
-                      itemBuilder: (_, i) => _groupCard(groups[i]),
-                    ),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 20.w,
+                              vertical: 8.h,
+                            ),
+                            itemCount: groups.length,
+                            separatorBuilder: (_, __) => 15.height,
+                            itemBuilder: (_, i) => _groupCard(groups[i]),
+                          ),
                   );
                 },
               ),
             ),
-            SizedBox(height: 30,)
+            SizedBox(height: 30),
           ],
         ),
 
@@ -774,9 +924,13 @@ bool load=true;
           onPressed: _showCreateGroupSheet,
           backgroundColor: accentGreen,
           icon: Icon(Icons.add_rounded, color: Colors.white, size: 22.sp),
-          label: Text('Add Group',
-              style: GoogleFonts.poppins(
-                  color: Colors.white, fontWeight: FontWeight.w600)),
+          label: Text(
+            'Add Group',
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           elevation: 4,
         ),
       ),

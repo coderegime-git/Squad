@@ -7,6 +7,7 @@ import 'package:nb_utils/nb_utils.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/colors.dart';
+import 'coach_attendance_screen.dart';
 
 class CoachGroupsScreen extends StatefulWidget {
   const CoachGroupsScreen({super.key});
@@ -86,10 +87,16 @@ class _CoachGroupsScreenState extends State<CoachGroupsScreen> {
                     //   size: 20.sp,
                     // ),
                     // 10.width,
-
-                    Text("My groups",style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: cardDark,fontSize: 20.sp,fontWeight: FontWeight.bold,),),
+                    Text(
+                      "My groups",
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            color: cardDark,
+                            fontSize: 20.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
                     //const Spacer(),
-
 
                     //20.width,
 
@@ -179,7 +186,10 @@ class _GroupCard extends StatelessWidget {
                     4.height,
                     Text(
                       group.activity,
-                      style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary),
+                      style: GoogleFonts.poppins(
+                        fontSize: 12.sp,
+                        color: textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -232,8 +242,17 @@ class _GroupCard extends StatelessWidget {
               _ActionButton(
                 label: "Attendance",
                 icon: Icons.assignment_turned_in_rounded,
-                onTap: () => toast("Take attendance for ${group.name}"),
+                onTap: () {} /*Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CoachAttendanceScreen(
+                      groupName: group.name,
+                      eventName: group.activity,
+                      groupId: group.id,
+                    ),
+                  ),*/,
               ),
+
               _ActionButton(
                 label: "Feedback",
                 icon: Icons.rate_review_rounded,
@@ -252,7 +271,11 @@ class _StatItem extends StatelessWidget {
   final String value;
   final IconData icon;
 
-  const _StatItem({required this.label, required this.value, required this.icon});
+  const _StatItem({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -287,7 +310,11 @@ class _ActionButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
 
-  const _ActionButton({required this.label, required this.icon, required this.onTap});
+  const _ActionButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -329,7 +356,6 @@ class Group {
     required this.attendanceRate,
   });
 }
-
 
 // screens/coach/coach_events.dart
 // class CoachEventsScreen extends StatefulWidget {
@@ -630,22 +656,36 @@ class _EventCard extends StatelessWidget {
           8.height,
           Row(
             children: [
-              Icon(Icons.calendar_today_rounded, size: 14.sp, color: textSecondary),
+              Icon(
+                Icons.calendar_today_rounded,
+                size: 14.sp,
+                color: textSecondary,
+              ),
               6.width,
               Text(
                 "In ${event.dateTime.difference(DateTime.now()).inDays} days",
-                style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary),
+                style: GoogleFonts.poppins(
+                  fontSize: 11.sp,
+                  color: textSecondary,
+                ),
               ),
             ],
           ),
           4.height,
           Row(
             children: [
-              Icon(Icons.location_on_rounded, size: 14.sp, color: textSecondary),
+              Icon(
+                Icons.location_on_rounded,
+                size: 14.sp,
+                color: textSecondary,
+              ),
               6.width,
               Text(
                 event.location,
-                style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary),
+                style: GoogleFonts.poppins(
+                  fontSize: 11.sp,
+                  color: textSecondary,
+                ),
               ),
             ],
           ),
@@ -659,7 +699,9 @@ class _EventCard extends StatelessWidget {
                     //backgroundColor: Colors.white,
                     side: BorderSide(color: Colors.deepOrangeAccent, width: 1),
                     padding: EdgeInsets.symmetric(vertical: 10.h),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
                   ),
                   child: Text(
                     "View Details",
@@ -679,7 +721,9 @@ class _EventCard extends StatelessWidget {
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: accentGreen, width: 1),
                       padding: EdgeInsets.symmetric(vertical: 10.h),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
                     ),
                     child: Text(
                       "Attendance",
@@ -719,6 +763,7 @@ class CoachEventDetail {
     required this.attendanceStatus,
   });
 }
+
 class CreateEventScreen extends StatefulWidget {
   const CreateEventScreen({Key? key}) : super(key: key);
 
@@ -737,9 +782,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar:  AppBar(
-        title: Text('Create Event'),
-      ),
+      appBar: AppBar(title: Text('Create Event')),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -784,8 +827,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 labelText: 'Group',
                 prefixIcon: Icon(Icons.groups),
               ),
-              items: ['Under-14 A', 'Under-16', 'Under-12']
-                  .map((String value) {
+              items: ['Under-14 A', 'Under-16', 'Under-12'].map((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
                   child: Text(value),

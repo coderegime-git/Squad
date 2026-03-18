@@ -7,6 +7,7 @@ import 'package:nb_utils/nb_utils.dart';
 import '../../config/colors.dart';
 import '../../model/clubAdmin/get_groups.dart';
 import '../../utills/api_service.dart';
+import 'coach_attendance_screen.dart';
 import 'coach_event_subgroups_screen.dart';
 
 class CoachEventGroupsScreen extends StatefulWidget {
@@ -71,8 +72,10 @@ class _CoachEventGroupsScreenState extends State<CoachEventGroupsScreen> {
                   children: [
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
-                      child: const Icon(Icons.arrow_back_ios_new_rounded,
-                          color: Colors.white),
+                      child: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: Colors.white,
+                      ),
                     ),
                     16.width,
                     Expanded(
@@ -82,14 +85,12 @@ class _CoachEventGroupsScreenState extends State<CoachEventGroupsScreen> {
                         children: [
                           Text(
                             "Groups",
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineMedium
+                            style: Theme.of(context).textTheme.headlineMedium
                                 ?.copyWith(
-                              color: Colors.white,
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
+                                  color: Colors.white,
+                                  fontSize: 20.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
                           ),
                           Text(
                             widget.eventName,
@@ -121,15 +122,21 @@ class _CoachEventGroupsScreenState extends State<CoachEventGroupsScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.error_outline,
-                            color: Colors.red, size: 40.sp),
+                        Icon(
+                          Icons.error_outline,
+                          color: Colors.red,
+                          size: 40.sp,
+                        ),
                         12.height,
-                        Text("Failed to load groups",
-                            style: GoogleFonts.poppins(color: Colors.grey)),
+                        Text(
+                          "Failed to load groups",
+                          style: GoogleFonts.poppins(color: Colors.grey),
+                        ),
                         12.height,
                         ElevatedButton(
-                            onPressed: _refresh,
-                            child: const Text("Retry")),
+                          onPressed: _refresh,
+                          child: const Text("Retry"),
+                        ),
                       ],
                     ),
                   );
@@ -149,13 +156,16 @@ class _CoachEventGroupsScreenState extends State<CoachEventGroupsScreen> {
                   onRefresh: () async => _refresh(),
                   color: accentGreen,
                   child: ListView.builder(
-                    padding:
-                    EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16.w,
+                      vertical: 12.h,
+                    ),
                     itemCount: groups.length,
                     itemBuilder: (_, i) {
                       final group = groups[i];
                       return GestureDetector(
                         onTap: () {
+                          print("event pagee");
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -174,8 +184,9 @@ class _CoachEventGroupsScreenState extends State<CoachEventGroupsScreen> {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(16.r),
                             border: Border.all(
-                                color: accentGreen.withOpacity(0.3),
-                                width: 1.2),
+                              color: accentGreen.withOpacity(0.3),
+                              width: 1.2,
+                            ),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.04),
@@ -192,8 +203,11 @@ class _CoachEventGroupsScreenState extends State<CoachEventGroupsScreen> {
                                   color: accentGreen.withOpacity(0.12),
                                   borderRadius: BorderRadius.circular(12.r),
                                 ),
-                                child: Icon(Icons.group_rounded,
-                                    color: accentGreen, size: 24.sp),
+                                child: Icon(
+                                  Icons.group_rounded,
+                                  color: accentGreen,
+                                  size: 24.sp,
+                                ),
                               ),
                               14.width,
                               Expanded(
@@ -212,14 +226,37 @@ class _CoachEventGroupsScreenState extends State<CoachEventGroupsScreen> {
                                       Text(
                                         group.description,
                                         style: GoogleFonts.poppins(
-                                            fontSize: 12.sp,
-                                            color: Colors.grey.shade600),
+                                          fontSize: 12.sp,
+                                          color: Colors.grey.shade600,
+                                        ),
                                       ),
                                   ],
                                 ),
                               ),
-                              Icon(Icons.chevron_right_rounded,
-                                  color: Colors.grey.shade400),
+                              // GestureDetector(
+                              //   onTap: () {
+                              //     // Navigator.push(
+                              //     //   context,
+                              //     //   MaterialPageRoute(
+                              //     //     builder: (context) =>
+                              //     //         CoachAttendanceScreen(
+                              //     //           groupName: group.name,
+                              //     //           eventName: group.description,
+                              //     //           groupId: group.groupId.toString(),
+                              //     //         ),
+                              //     //   ),
+                              //     // );
+                              //   },
+                              //
+                              //   child: Icon(
+                              //     Icons.checklist_sharp,
+                              //     color: Colors.grey.shade400,
+                              //   ),
+                              // ),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                color: Colors.grey.shade400,
+                              ),
                             ],
                           ),
                         ),

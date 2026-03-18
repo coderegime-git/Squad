@@ -8,6 +8,8 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sports/model/clubAdmin/add_guardians.dart';
 import 'package:sports/model/clubAdmin/get_groups.dart';
+import 'package:sports/model/coach/event_attendance_data.dart';
+import 'package:sports/model/coach/group_memebers_data.dart';
 import 'package:sports/model/guardian/get_your_member.dart';
 import 'package:sports/model/member/profile_data.dart';
 import 'package:sports/utills/shared_preference.dart';
@@ -1003,6 +1005,49 @@ class CoachApiService {
       rethrow;
     }
   }
+
+  Future<GroupMembersData> getGroupMember(String groupId) async {
+    try {
+      final fullResponse = await _helper.get("api/groups/$groupId/members");
+      print("getMemberEvents success: ${fullResponse}");
+      final jsonResponse = jsonEncode(fullResponse);
+      return groupMembersDataFromJson(fullResponse);
+    } catch (e) {
+      print("getMemberEvents failed: $e");
+      rethrow;
+    }
+  }
+
+  Future<EventAttendanceData> getEventAttendance(String eventId) async {
+    try {
+      final fullResponse = await _helper.get("api/events/$eventId/attendance");
+      print("getMemberEvents success: ${fullResponse}");
+      final jsonResponse = jsonEncode(fullResponse);
+      return eventAttendanceDataFromJson(fullResponse);
+    } catch (e) {
+      print("getMemberEvents failed: $e");
+      rethrow;
+    }
+  }
+
+  Future<EventAttendanceData> saveAttendance(
+    final eventId,
+    dynamic payload,
+  ) async {
+    print(payload);
+    try {
+      final fullResponse = await _helper.post(
+        "api/events/$eventId/attendance",
+        payload,
+      );
+      print("getMemberEvents success: ${fullResponse['success']}");
+      final jsonResponse = jsonEncode(fullResponse);
+      return eventAttendanceDataFromJson(fullResponse);
+    } catch (e) {
+      print("getMemberEvents failed: $e");
+      rethrow;
+    }
+  }
 }
 
 class ParentApiService {
@@ -1184,7 +1229,7 @@ class MemberApiService {
     }
   }
 
-  Future<bool> updateProfile(dynamic payload) async {
+  Future<dynamic> updateProfile(dynamic payload) async {
     try {
       print(jsonEncode(payload));
       final fullResponse = await _helper.put("api/profile", payload);

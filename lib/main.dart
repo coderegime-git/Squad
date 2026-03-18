@@ -19,7 +19,7 @@ Future<void> main() async {
   //   ),
   // );
   await SharedPreferenceHelper.init();
-  final helper = ApiBaseHelper();
+
   runApp(const MyApp());
 }
 
@@ -31,7 +31,16 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  final GlobalKey<NavigatorState> navigatorKey = GlobalKey(debugLabel: 'Main Navigator');
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey(
+    debugLabel: 'Main Navigator',
+  );
+
+  @override
+  void initState() {
+    final helper = ApiBaseHelper();
+    helper.initApiService(navigatorKey);
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,13 +73,25 @@ class _MyAppState extends State<MyApp> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColour,
                 foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
             textTheme: TextTheme(
-              bodyLarge: GoogleFonts.montserrat(fontSize: 16.sp, color: textPrimary),
-              bodyMedium: GoogleFonts.montserrat(fontSize: 14.sp, color: textSecondary),
-              titleLarge: GoogleFonts.montserrat(fontSize: 24.sp, fontWeight: FontWeight.bold, color: textPrimary),
+              bodyLarge: GoogleFonts.montserrat(
+                fontSize: 16.sp,
+                color: textPrimary,
+              ),
+              bodyMedium: GoogleFonts.montserrat(
+                fontSize: 14.sp,
+                color: textSecondary,
+              ),
+              titleLarge: GoogleFonts.montserrat(
+                fontSize: 24.sp,
+                fontWeight: FontWeight.bold,
+                color: textPrimary,
+              ),
             ),
             appBarTheme: AppBarTheme(
               backgroundColor: scaffoldDark,
@@ -85,11 +106,13 @@ class _MyAppState extends State<MyApp> {
               backgroundColor: cardDark,
               selectedItemColor: accentGreen,
               unselectedItemColor: textSecondary,
-              selectedLabelStyle: GoogleFonts.poppins(fontSize: 12.sp, fontWeight: FontWeight.w600),
+              selectedLabelStyle: GoogleFonts.poppins(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w600,
+              ),
             ),
 
             inputDecorationTheme: InputDecorationTheme(
-
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -100,10 +123,13 @@ class _MyAppState extends State<MyApp> {
               ),
               hintStyle: GoogleFonts.poppins(color: textSecondary),
             ),
-            cardTheme: CardThemeData(                 // ← Changed here
+            cardTheme: CardThemeData(
+              // ← Changed here
               color: cardDark,
               elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
           ),
           initialRoute: AppRoutes.initialRoute,
