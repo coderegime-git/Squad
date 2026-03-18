@@ -4,10 +4,20 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:nb_utils/nb_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:sports/Pages/Coach/CoachCreateEditEventSheet.dart';
+import 'package:sports/Pages/Coach/club_events_list_screen.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/colors.dart';
+import '../../model/coach/club.dart';
+import '../../model/coach/coach_event.dart';
 import '../../routes/app_routes.dart';
+import '../../utills/api_service.dart';
+import '../../utills/helper.dart';
+import 'club_members_list_screen.dart';
+import 'coach_create_event_sheet.dart';
+import 'coach_events_screen.dart';
+import 'event_details_screen.dart';
 
 class CoachDashboard extends StatefulWidget {
   const CoachDashboard({super.key});
@@ -17,10 +27,169 @@ class CoachDashboard extends StatefulWidget {
 }
 
 class _CoachDashboardState extends State<CoachDashboard> {
+  int _totalMembers = 0;
+  bool _isLoadingMembers = false;
   late Future<CoachProfile> _profileFuture;
   late Future<List<TodaySession>> _todaySessionsFuture;
   late Future<List<CoachEvent>> _upcomingEventsFuture;
   late Future<AttendanceSummary> _attendanceSummaryFuture;
+  late Future<List<Club>> _clubsFuture;
+
+  final CoachApiService _coachApiService = CoachApiService();
+
+  Future<void> _fetchTotalMembers() async {
+    setState(() => _isLoadingMembers = true);
+    try {
+      final clubs = await _coachApiService.getCoachClubs();
+      if (clubs.isNotEmpty) {
+        final members = await _coachApiService.getClubMembers(clubs.first.clubId);
+        setState(() => _totalMembers = members.length);
+      }
+    } catch (e) {
+      print("Error fetching total members: $e");
+    } finally {
+      setState(() => _isLoadingMembers = false);
+    }
+  }
+
+  void _navigateToMembersList() async {
+    final clubs = await _coachApiService.getCoachClubs();
+    if (clubs.isEmpty) {
+      toast("No clubs available");
+      return;
+    }
+
+    if (clubs.length == 1) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ClubMembersListScreen(
+            clubId: clubs.first.clubId,
+            clubName: clubs.first.clubName,
+          ),
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+        ),
+        builder: (context) {
+          return Container(
+            padding: EdgeInsets.all(20.w),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40.w,
+                  height: 4.h,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+                16.height,
+                Text(
+                  "Select Club",
+                  style: GoogleFonts.montserrat(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                16.height,
+                ...clubs.map((club) => ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: accentGreen.withOpacity(0.1),
+                    child: Text(
+                      club.clubName[0].toUpperCase(),
+                      style: TextStyle(color: accentGreen),
+                    ),
+                  ),
+                  title: Text(club.clubName),
+                  subtitle: Text(club.description),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ClubMembersListScreen(
+                          clubId: club.clubId,
+                          clubName: club.clubName,
+                        ),
+                      ),
+                    );
+                  },
+                )).toList(),
+              ],
+            ),
+          );
+        },
+      );
+    }
+  }
+
+  void _navigateToGroupsList() async {
+    final clubs = await _coachApiService.getCoachClubs();
+    if (clubs.isEmpty) {
+      toast("No clubs available");
+      return;
+    }
+
+    if (clubs.length == 1) {
+      // You'll need to create this screen
+      toast("Navigate to groups for ${clubs.first.clubName}");
+    } else {
+      showModalBottomSheet(
+        context: context,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+        ),
+        builder: (context) {
+          return Container(
+            padding: EdgeInsets.all(20.w),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40.w,
+                  height: 4.h,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+                16.height,
+                Text(
+                  "Select Club",
+                  style: GoogleFonts.montserrat(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                16.height,
+                ...clubs.map((club) => ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: accentGreen.withOpacity(0.1),
+                    child: Text(
+                      club.clubName[0].toUpperCase(),
+                      style: TextStyle(color: accentGreen),
+                    ),
+                  ),
+                  title: Text(club.clubName),
+                  subtitle: Text(club.description),
+                  onTap: () {
+                    Navigator.pop(context);
+                    toast("Navigate to groups for ${club.clubName}");
+                  },
+                )).toList(),
+              ],
+            ),
+          );
+        },
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -29,6 +198,8 @@ class _CoachDashboardState extends State<CoachDashboard> {
     _todaySessionsFuture = _fetchTodaySessions();
     _upcomingEventsFuture = _fetchUpcomingEvents();
     _attendanceSummaryFuture = _fetchAttendanceSummary();
+    _clubsFuture = _fetchClubs();
+    _fetchTotalMembers();
   }
 
   Future<CoachProfile> _fetchProfile() async {
@@ -55,21 +226,36 @@ class _CoachDashboardState extends State<CoachDashboard> {
   }
 
   Future<List<CoachEvent>> _fetchUpcomingEvents() async {
-    await Future.delayed(const Duration(milliseconds: 600));
-    return [
-      CoachEvent(
-        title: "Weekend Tournament",
-        date: DateTime.now().add(const Duration(days: 3)),
-        groupName: "Under-14 A",
-        type: "Match",
-      ),
-      CoachEvent(
-        title: "Team Practice",
-        date: DateTime.now().add(const Duration(days: 1)),
-        groupName: "Under-12 B",
-        type: "Training",
-      ),
-    ];
+    try {
+      final clubs = await _coachApiService.getCoachClubs();
+      if (clubs.isEmpty) return [];
+
+      // Get events from first club (or you can aggregate from all clubs)
+      final events = await _coachApiService.getClubEvents(clubs.first.clubId);
+
+      // Filter upcoming events and convert to CoachEvent model
+      return events
+          .where((e) => e.eventDate.isAfter(DateTime.now().subtract(const Duration(days: 1))))
+          .take(3) // Show only first 3 upcoming events
+          .map((e) => CoachEvent(
+        eventId: e.eventId,
+        title: e.eventName,
+        date: e.eventDate,
+        location: e.location,
+        type: e.eventType,
+        clubId: e.clubId,
+        startTime: e.startTime,
+        endTime: e.endTime,
+        status: e.status,
+        createdByUserId: e.createdByUserId,
+        createdByUsername: e.createdByUsername,
+        coachIds: e.coachIds,
+      ))
+          .toList();
+    } catch (e) {
+      print("Error fetching upcoming events: $e");
+      return [];
+    }
   }
 
   Future<AttendanceSummary> _fetchAttendanceSummary() async {
@@ -79,6 +265,261 @@ class _CoachDashboardState extends State<CoachDashboard> {
       completedToday: 1,
       totalSessions: 5,
     );
+  }
+
+  Future<List<Club>> _fetchClubs() async {
+    try {
+      // Call the actual API
+      final clubs = await _coachApiService.getCoachClubs();
+      return clubs;
+    } catch (e) {
+      print("Error fetching clubs: $e");
+      return []; // Return empty list on error
+    }
+  }
+
+  void _navigateToAllEvents() {
+    _showClubSelectionForEvents();
+  }
+
+  void _showClubSelectionForEvents() async {
+    final clubs = await _coachApiService.getCoachClubs();
+    if (clubs.isEmpty) {
+      toast("No clubs available");
+      return;
+    }
+
+    if (clubs.length == 1) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ClubEventsListScreen(
+            clubId: clubs.first.clubId,
+            clubName: clubs.first.clubName,
+          ),
+        ),
+      ).then((_) {
+        setState(() {
+          _upcomingEventsFuture = _fetchUpcomingEvents();
+        });
+      });
+    } else {
+      showModalBottomSheet(
+        context: context,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+        ),
+        builder: (context) {
+          return Container(
+            padding: EdgeInsets.all(20.w),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40.w,
+                  height: 4.h,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+                16.height,
+                Text(
+                  "Select Club",
+                  style: GoogleFonts.montserrat(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                16.height,
+                ...clubs.map((club) => ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: accentGreen.withOpacity(0.1),
+                    child: Text(
+                      club.clubName[0].toUpperCase(),
+                      style: TextStyle(color: accentGreen),
+                    ),
+                  ),
+                  title: Text(club.clubName),
+                  subtitle: Text(club.description),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ClubEventsListScreen(
+                          clubId: club.clubId,
+                          clubName: club.clubName,
+                        ),
+                      ),
+                    ).then((_) {
+                      setState(() {
+                        _upcomingEventsFuture = _fetchUpcomingEvents();
+                      });
+                    });
+                  },
+                )).toList(),
+              ],
+            ),
+          );
+        },
+      );
+    }
+  }
+
+  // Handle create event
+  void _handleCreateEvent() {
+    _showClubSelectionForCreateEvent();
+  }
+
+  void _showClubSelectionForCreateEvent() async {
+    final clubs = await _coachApiService.getCoachClubs();
+    if (clubs.isEmpty) {
+      toast("No clubs available");
+      return;
+    }
+
+    if (clubs.length == 1) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => CoachCreateEditEventSheet(
+          clubId: clubs.first.clubId,
+          clubName: clubs.first.clubName,
+          onSuccess: () {
+            setState(() {
+              _upcomingEventsFuture = _fetchUpcomingEvents();
+            });
+            AppUI.success(context, "Event created successfully!");
+          },
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+        ),
+        builder: (context) {
+          return Container(
+            padding: EdgeInsets.all(20.w),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40.w,
+                  height: 4.h,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+                16.height,
+                Text(
+                  "Select Club for Event",
+                  style: GoogleFonts.montserrat(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                16.height,
+                ...clubs.map((club) => ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: accentGreen.withOpacity(0.1),
+                    child: Text(
+                      club.clubName[0].toUpperCase(),
+                      style: TextStyle(color: accentGreen),
+                    ),
+                  ),
+                  title: Text(club.clubName),
+                  subtitle: Text(club.description),
+                  onTap: () {
+                    Navigator.pop(context);
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => CoachCreateEditEventSheet(
+                        clubId: club.clubId,
+                        clubName: club.clubName,
+                        onSuccess: () {
+                          setState(() {
+                            _upcomingEventsFuture = _fetchUpcomingEvents();
+                          });
+                          AppUI.success(context, "Event created successfully!");
+                        },
+                      ),
+                    );
+                  },
+                )).toList(),
+              ],
+            ),
+          );
+        },
+      );
+    }
+  }
+
+  // Handle event tap for editing/viewing
+  void _handleEventTap(CoachEvent event) async {
+    if (event.clubId == null || event.eventId == null) {
+      toast("Event information not available");
+      return;
+    }
+
+    // Get club details to get club name
+    final clubs = await _coachApiService.getCoachClubs();
+    final club = clubs.firstWhere(
+          (c) => c.clubId == event.clubId,
+      orElse: () => Club(clubId: event.clubId!, clubName: "Club", description: ""),
+    );
+
+    // Fetch full event details
+    try {
+      final fullEvent = await _coachApiService.getEventDetails(event.clubId!, event.eventId!);
+
+      if (fullEvent != null) {
+        // Convert CoachEvent to CoachEventModel
+        final eventModel = CoachEventModel(
+          eventId: fullEvent.eventId,
+          eventName: fullEvent.eventName,
+          eventDate: fullEvent.eventDate,
+          startTime: fullEvent.startTime,
+          endTime: fullEvent.endTime,
+          location: fullEvent.location,
+          eventType: fullEvent.eventType,
+          status: fullEvent.status,
+          clubId: fullEvent.clubId,
+          createdByUserId: fullEvent.createdByUserId,
+          createdByUsername: fullEvent.createdByUsername,
+          coachIds: fullEvent.coachIds,
+          createdAt: fullEvent.createdAt,
+        );
+
+        // Open edit sheet
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => CoachCreateEditEventSheet(
+            clubId: event.clubId!,
+            clubName: club.clubName,
+            event: eventModel,
+            onSuccess: () {
+              setState(() {
+                _upcomingEventsFuture = _fetchUpcomingEvents();
+              });
+            },
+          ),
+        );
+      } else {
+        toast("Could not load event details");
+      }
+    } catch (e) {
+      print("Error loading event details: $e");
+      toast("Error loading event details");
+    }
   }
 
   @override
@@ -204,6 +645,10 @@ class _CoachDashboardState extends State<CoachDashboard> {
                     //     );
                     //   },
                     // ),
+                    24.height,
+
+                    // MY CLUBS SECTION - Place this right after header
+                    _buildMyClubsSection(),
 
                     24.height,
                     Text(
@@ -270,20 +715,26 @@ class _CoachDashboardState extends State<CoachDashboard> {
                     Row(
                       children: [
                         Expanded(
-                          child: StatCard(
-                            title: 'Total Members',
-                            value: '32',
-                            icon: Icons.people_outline,
-                            color: AppColors.green,
+                          child: GestureDetector(
+                            onTap: _navigateToMembersList,
+                            child: StatCard(
+                              title: 'Total Members',
+                              value: _isLoadingMembers ? '...' : '$_totalMembers',
+                              icon: Icons.people_outline,
+                              color: AppColors.green,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: StatCard(
-                            title: 'Groups',
-                            value: '3',
-                            icon: Icons.groups_outlined,
-                            color: AppColors.orange,
+                          child: GestureDetector(
+                            onTap: _navigateToGroupsList,
+                            child: StatCard(
+                              title: 'Groups',
+                              value: '3',
+                              icon: Icons.groups_outlined,
+                              color: AppColors.orange,
+                            ),
                           ),
                         ),
                       ],
@@ -338,7 +789,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
                           ),
                         ),
                         TextButton(
-                          onPressed: () => toast("View all events"),
+                          onPressed: _navigateToAllEvents,
                           child: Text(
                             "See All",
                             style: GoogleFonts.montserrat(
@@ -354,12 +805,57 @@ class _CoachDashboardState extends State<CoachDashboard> {
                     FutureBuilder<List<CoachEvent>>(
                       future: _upcomingEventsFuture,
                       builder: (context, snapshot) {
-                        if (!snapshot.hasData) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
                           return const _EventCardShimmer();
                         }
+
+                        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+                          return Container(
+                            padding: EdgeInsets.all(20.w),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16.r),
+                            ),
+                            child: Center(
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.event_busy,
+                                    size: 40.sp,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                  12.height,
+                                  Text(
+                                    "No upcoming events",
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14.sp,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                  8.height,
+                                  ElevatedButton(
+                                    onPressed: _handleCreateEvent,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: accentGreen,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 20.w,
+                                        vertical: 8.h,
+                                      ),
+                                    ),
+                                    child: Text("Create Event"),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
                         final events = snapshot.data!;
                         return Column(
-                          children: events.map((e) => _UpcomingEventCard(event: e)).toList(),
+                          children: events.map((event) => _UpcomingEventCard(
+                            event: event,
+                            onTap: () => _handleEventTap(event),
+                          )).toList(),
                         );
                       },
                     ),
@@ -383,7 +879,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
                         _QuickActionButton(
                           icon: Icons.add_circle_outline_rounded,
                           label: "Create Event",
-                          onTap: () => toast("Create new event"),
+                          onTap: _handleCreateEvent,
                         ),
                         _QuickActionButton(
                           icon: Icons.assignment_turned_in_rounded,
@@ -407,6 +903,390 @@ class _CoachDashboardState extends State<CoachDashboard> {
         ),
       ),
     );
+  }
+
+  Widget _buildMyClubsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "My Clubs",
+              style: GoogleFonts.montserrat(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w700,
+                color: Colors.grey.shade800,
+              ),
+            ),
+            // TextButton(
+            //   onPressed: () => toast("View all clubs"),
+            //   style: TextButton.styleFrom(
+            //     padding: EdgeInsets.zero,
+            //     minimumSize: Size(50.w, 30.h),
+            //   ),
+            //   child: Text(
+            //     "View All",
+            //     style: GoogleFonts.montserrat(
+            //       color: accentGreen,
+            //       fontSize: 12.sp,
+            //       fontWeight: FontWeight.w600,
+            //     ),
+            //   ),
+            // ),
+          ],
+        ),
+        12.height,
+
+        // Clubs List from API
+        FutureBuilder<List<Club>>(
+          future: _clubsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return _buildClubShimmer();
+            }
+
+            if (snapshot.hasError) {
+              return Container(
+                padding: EdgeInsets.all(16.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16.r),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(Icons.error_outline, color: Colors.red, size: 32.sp),
+                      8.height,
+                      Text(
+                        "Failed to load clubs",
+                        style: GoogleFonts.poppins(
+                          color: Colors.red,
+                          fontSize: 14.sp,
+                        ),
+                      ),
+                      4.height,
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _clubsFuture = _fetchClubs();
+                          });
+                        },
+                        child: Text("Retry"),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return Container(
+                padding: EdgeInsets.all(20.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16.r),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.sports_soccer,
+                        size: 48.sp,
+                        color: Colors.grey.shade400,
+                      ),
+                      12.height,
+                      Text(
+                        "No clubs assigned yet",
+                        style: GoogleFonts.poppins(
+                          fontSize: 14.sp,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      4.height,
+                      Text(
+                        "You'll be assigned to clubs soon",
+                        style: GoogleFonts.poppins(
+                          fontSize: 12.sp,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            final clubs = snapshot.data!;
+
+            // If there are clubs, show them in a horizontal scrollable list
+            // or in a column based on how many clubs
+            if (clubs.length > 2) {
+              return SizedBox(
+                height: 160.h,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: clubs.length,
+                  itemBuilder: (context, index) {
+                    return _buildClubCard(clubs[index], index);
+                  },
+                ),
+              );
+            } else {
+              return Column(
+                children: clubs.map((club) => _buildClubCard(club, clubs.indexOf(club))).toList(),
+              );
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildClubCard(Club club, int index) {
+    // Generate different gradient colors for each club
+    final List<List<Color>> gradients = [
+      [Color(0xFF667eea), Color(0xFF764ba2)], // Purple
+      [Color(0xFFf093fb), Color(0xFFf5576c)], // Pink/Red
+      [Color(0xFF4facfe), Color(0xFF00f2fe)], // Blue
+      [Color(0xFF43e97b), Color(0xFF38f9d7)], // Green
+      [Color(0xFFfa709a), Color(0xFFfee140)], // Orange/Yellow
+    ];
+
+    final gradient = gradients[index % gradients.length];
+
+    return Container(
+      width: 350.w, // Fixed width for horizontal scrolling
+      margin: EdgeInsets.only(right: 12.w, bottom: 8.h),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: gradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20.r),
+        boxShadow: [
+          BoxShadow(
+            color: gradient[0].withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Top row with club icon and arrow
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Icon(
+                  Icons.sports_soccer,
+                  color: Colors.white,
+                  size: 20.sp,
+                ),
+              ),
+              const Spacer(),
+              // Icon(
+              //   Icons.arrow_forward_ios_rounded,
+              //   color: Colors.white.withOpacity(0.7),
+              //   size: 16.sp,
+              // ),
+            ],
+          ),
+
+          // Club name and description
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                club.clubName,
+                style: GoogleFonts.montserrat(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              4.height,
+              Text(
+                club.description,
+                style: GoogleFonts.poppins(
+                  fontSize: 11.sp,
+                  color: Colors.white.withOpacity(0.9),
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              8.height,
+              // Member since if available
+              if (club.createdAt != null)
+                Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today_rounded,
+                      size: 10.sp,
+                      color: Colors.white.withOpacity(0.7),
+                    ),
+                    4.width,
+                    Text(
+                      "Since ${_formatDate(club.createdAt!)}",
+                      style: GoogleFonts.poppins(
+                        fontSize: 9.sp,
+                        color: Colors.white.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+
+          // Quick stats for the club (you can add more details here)
+          8.height,
+          // Row(
+          //   children: [
+          //     _buildClubStat(icon: Icons.group, value: "12", label: "Teams"),
+          //     12.width,
+          //     _buildClubStat(icon: Icons.people, value: "45", label: "Members"),
+          //   ],
+          // ),
+        ],
+      ),
+    );
+  }
+
+  // Helper method for club stats
+  Widget _buildClubStat({required IconData icon, required String value, required String label}) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          color: Colors.white.withOpacity(0.9),
+          size: 12.sp,
+        ),
+        4.width,
+        Text(
+          value,
+          style: GoogleFonts.montserrat(
+            fontSize: 11.sp,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+        2.width,
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 9.sp,
+            color: Colors.white.withOpacity(0.7),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // NEW METHOD: Build shimmer for clubs
+  Widget _buildClubShimmer() {
+    return SizedBox(
+      height: 160.h,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: 2,
+        itemBuilder: (context, index) {
+          return Container(
+            width: 280.w,
+            margin: EdgeInsets.only(right: 12.w),
+            padding: EdgeInsets.all(16.w),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 36.w,
+                      height: 36.w,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      width: 20.w,
+                      height: 20.w,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ],
+                ),
+                12.height,
+                Container(
+                  width: 180.w,
+                  height: 16.h,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4.r),
+                  ),
+                ),
+                8.height,
+                Container(
+                  width: double.infinity,
+                  height: 12.h,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4.r),
+                  ),
+                ),
+                8.height,
+                Container(
+                  width: 120.w,
+                  height: 10.h,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4.r),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // Helper method to format date
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date).inDays;
+
+    if (difference < 30) {
+      return '$difference days';
+    } else if (difference < 365) {
+      final months = (difference / 30).floor();
+      return '$months ${months == 1 ? 'month' : 'months'}';
+    } else {
+      final years = (difference / 365).floor();
+      return '$years ${years == 1 ? 'year' : 'years'}';
+    }
   }
 
   Widget _buildStatCard({
@@ -548,73 +1428,218 @@ class _TodaySessionCard extends StatelessWidget {
 }
 
 // Upcoming Event Card
+// class _UpcomingEventCard extends StatelessWidget {
+//   final CoachEvent event;
+//
+//   const _UpcomingEventCard({required this.event});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return Container(
+//       margin: EdgeInsets.only(bottom: 12.h),
+//       padding: EdgeInsets.all(16.w),
+//       decoration: BoxDecoration(
+//         color: cardDark,
+//         borderRadius: BorderRadius.circular(20.r),
+//         border: Border.all(color: accentGreen.withOpacity(0.3), width: 1.5),
+//       ),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           Row(
+//             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//             children: [
+//               Expanded(
+//                 child: Text(
+//                   event.title,
+//                   style: Theme.of(context).textTheme.displayMedium?.copyWith(fontSize: 13.sp),
+//                 ),
+//               ),
+//               Container(
+//                 padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+//                 decoration: BoxDecoration(
+//                   color: accentGreen.withOpacity(0.15),
+//                   borderRadius: BorderRadius.circular(20.r),
+//                 ),
+//                 child: Text(
+//                   event.type,
+//                   style: GoogleFonts.poppins(
+//                     fontSize: 11.sp,
+//                     color: accentGreen,
+//                     fontWeight: FontWeight.w600,
+//                   ),
+//                 ),
+//               ),
+//             ],
+//           ),
+//           8.height,
+//           Text(
+//             event.groupName,
+//             style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary),
+//           ),
+//           4.height,
+//           Row(
+//             children: [
+//               Icon(Icons.calendar_today_rounded, size: 14.sp, color: textSecondary),
+//               6.width,
+//               Text(
+//                 "In ${event.date.difference(DateTime.now()).inDays} days",
+//                 style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary),
+//               ),
+//             ],
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
+
+// Quick Action Button
+
 class _UpcomingEventCard extends StatelessWidget {
   final CoachEvent event;
+  final VoidCallback onTap;
 
-  const _UpcomingEventCard({required this.event});
+  const _UpcomingEventCard({
+    required this.event,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: cardDark,
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: accentGreen.withOpacity(0.3), width: 1.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  event.title,
-                  style: Theme.of(context).textTheme.displayMedium?.copyWith(fontSize: 13.sp),
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                decoration: BoxDecoration(
-                  color: accentGreen.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20.r),
-                ),
-                child: Text(
-                  event.type,
-                  style: GoogleFonts.poppins(
-                    fontSize: 11.sp,
-                    color: accentGreen,
-                    fontWeight: FontWeight.w600,
+    // Calculate days difference
+    final daysDiff = event.date.difference(DateTime.now()).inDays;
+    final daysText = daysDiff == 0
+        ? "Today"
+        : daysDiff == 1
+        ? "Tomorrow"
+        : "In $daysDiff days";
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: EdgeInsets.only(bottom: 12.h),
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          color: cardDark,
+          borderRadius: BorderRadius.circular(20.r),
+          border: Border.all(color: accentGreen.withOpacity(0.3), width: 1.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    event.title,
+                    style: Theme.of(context).textTheme.displayMedium?.copyWith(fontSize: 14.sp, fontWeight: FontWeight.w600),
                   ),
                 ),
-              ),
-            ],
-          ),
-          8.height,
-          Text(
-            event.groupName,
-            style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary),
-          ),
-          4.height,
-          Row(
-            children: [
-              Icon(Icons.calendar_today_rounded, size: 14.sp, color: textSecondary),
-              6.width,
-              Text(
-                "In ${event.date.difference(DateTime.now()).inDays} days",
-                style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary),
-              ),
-            ],
-          ),
-        ],
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(event.status).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                  child: Text(
+                    event.status,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11.sp,
+                      color: _getStatusColor(event.status),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            8.height,
+            Text(
+              event.location,
+              style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary),
+            ),
+            4.height,
+            Row(
+              children: [
+                Icon(Icons.calendar_today_rounded, size: 14.sp, color: textSecondary),
+                6.width,
+                Text(
+                  daysText,
+                  style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary),
+                ),
+                12.width,
+                if (event.startTime.isNotEmpty)
+                  Row(
+                    children: [
+                      Icon(Icons.access_time, size: 14.sp, color: textSecondary),
+                      4.width,
+                      Text(
+                        _formatTime(event.startTime),
+                        style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+            8.height,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  "Tap to view details",
+                  style: GoogleFonts.poppins(
+                    fontSize: 10.sp,
+                    color: accentGreen,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                4.width,
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 10.sp,
+                  color: accentGreen,
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'SCHEDULED':
+        return Colors.blue;
+      case 'ONGOING':
+        return Colors.green;
+      case 'COMPLETED':
+        return Colors.grey;
+      case 'CANCELLED':
+        return Colors.red;
+      default:
+        return accentGreen;
+    }
+  }
+
+  String _formatTime(String time) {
+    try {
+      if (time.isEmpty) return '';
+      final parts = time.split(':');
+      if (parts.length < 2) return time;
+
+      final hour = int.parse(parts[0]);
+      final minute = parts[1];
+      final period = hour >= 12 ? 'PM' : 'AM';
+      final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+      return '$displayHour:$minute $period';
+    } catch (e) {
+      return time.length >= 5 ? time.substring(0, 5) : time;
+    }
+  }
 }
 
-// Quick Action Button
 class _QuickActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -706,17 +1731,55 @@ class TodaySession {
 }
 
 class CoachEvent {
-  final String title;
-  final DateTime date;
-  final String groupName;
-  final String type;
+  final int? eventId;
+  final String title;  // maps to eventName in API
+  final DateTime date; // maps to eventDate in API
+  final String location;
+  final String type;   // maps to eventType in API
+  final int? clubId;
+  final String startTime;
+  final String endTime;
+  final String status;
+  final int? createdByUserId;
+  final String? createdByUsername;
+  final List<int>? coachIds;
 
   CoachEvent({
+    this.eventId,
     required this.title,
     required this.date,
-    required this.groupName,
+    required this.location,
     required this.type,
+    this.clubId,
+    this.startTime = '',
+    this.endTime = '',
+    this.status = 'SCHEDULED',
+    this.createdByUserId,
+    this.createdByUsername,
+    this.coachIds,
   });
+
+  // Convert from API response
+  factory CoachEvent.fromJson(Map<String, dynamic> json) {
+    return CoachEvent(
+      eventId: json['eventId'] ?? 0,
+      title: json['eventName'] ?? '',
+      date: json['eventDate'] != null
+          ? DateTime.parse(json['eventDate'])
+          : DateTime.now(),
+      location: json['location'] ?? '',
+      type: json['eventType'] ?? '',
+      clubId: json['clubId'] ?? 0,
+      startTime: json['startTime'] ?? '',
+      endTime: json['endTime'] ?? '',
+      status: json['status'] ?? 'SCHEDULED',
+      createdByUserId: json['createdByUserId'],
+      createdByUsername: json['createdByUsername'],
+      coachIds: json['coachIds'] != null
+          ? List<int>.from(json['coachIds'])
+          : [],
+    );
+  }
 }
 
 class AttendanceSummary {

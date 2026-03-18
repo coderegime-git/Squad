@@ -1,4 +1,3 @@
-// lib/screens/coach/coach_assign_members_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -77,6 +76,14 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
     } catch (e) {
       setState(() => _loadingAssigned = false);
     }
+  }
+
+  int? _getMemberId(dynamic member) {
+    final id = member.memberId;
+    if (id == null) return null;
+    if (id is int) return id;
+    if (id is String) return int.tryParse(id);
+    return null;
   }
 
   Set<int> get _alreadyAssignedIds {
@@ -420,7 +427,11 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
                   itemCount: available.length,
                   itemBuilder: (_, i) {
                     final member = available[i];
-                    final memberId = member.memberId as int;
+                    // final memberId = member.memberId as int;
+                    // final isSelected = _selectedIds.contains(memberId);
+                    final int? memberId = _getMemberId(member);
+                    if (memberId == null) return const SizedBox.shrink();
+
                     final isSelected = _selectedIds.contains(memberId);
 
                     return GestureDetector(
@@ -557,7 +568,9 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
         itemCount: _assignedMembers.length,
         itemBuilder: (_, i) {
           final member = _assignedMembers[i];
-          final memberId = member.memberId as int;
+          // final memberId = member.memberId as int;
+          final int? memberId = _getMemberId(member);
+          if (memberId == null) return const SizedBox.shrink();
 
           return Container(
             margin: EdgeInsets.only(bottom: 10.h),

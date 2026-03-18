@@ -31,6 +31,7 @@ class SubGroupData {
   final String name;
   final String description;
   final String status;
+  final String? ageCategory;
 
   SubGroupData({
     required this.subGroupId,
@@ -38,6 +39,7 @@ class SubGroupData {
     required this.name,
     required this.description,
     required this.status,
+    this.ageCategory,
   });
 
   factory SubGroupData.fromJson(Map<String, dynamic> json) => SubGroupData(
@@ -46,5 +48,6 @@ class SubGroupData {
     name: json['name'] ?? '',
     description: json['description'] ?? '',
     status: json['status'] ?? 'ACTIVE',
+    ageCategory: json['ageCategory'],
   );
 }

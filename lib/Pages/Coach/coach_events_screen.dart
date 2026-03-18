@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nb_utils/nb_utils.dart';
-import 'package:sports/Pages/Coach/coach_attendance_screen.dart';
 
 import '../../config/colors.dart';
 import '../../model/clubAdmin/get_event_details.dart';
@@ -42,7 +41,9 @@ class _CoachEventsScreenState extends State<CoachEventsScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => CoachCreateEventSheet(onSuccess: _refresh),
+      builder: (_) => CoachCreateEventSheet(
+        onSuccess: _refresh, clubId: 0, clubName: '',
+      ),
     );
   }
 
@@ -56,10 +57,7 @@ class _CoachEventsScreenState extends State<CoachEventsScreen> {
         icon: const Icon(Icons.add, color: Colors.white),
         label: Text(
           "Create Event",
-          style: GoogleFonts.poppins(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
+          style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
       body: Column(
@@ -90,12 +88,11 @@ class _CoachEventsScreenState extends State<CoachEventsScreen> {
                   children: [
                     Text(
                       "Events",
-                      style: Theme.of(context).textTheme.headlineMedium
-                          ?.copyWith(
-                            color: Colors.white,
-                            fontSize: 20.sp,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: Colors.white,
+                        fontSize: 20.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -117,10 +114,7 @@ class _CoachEventsScreenState extends State<CoachEventsScreen> {
                   onTap: () => setState(() => _selectedFilter = f),
                   child: Container(
                     margin: EdgeInsets.only(right: 8.w),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 16.w,
-                      vertical: 6.h,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
                     decoration: BoxDecoration(
                       color: selected ? accentGreen : Colors.white,
                       borderRadius: BorderRadius.circular(20.r),
@@ -133,9 +127,7 @@ class _CoachEventsScreenState extends State<CoachEventsScreen> {
                       style: GoogleFonts.poppins(
                         fontSize: 12.sp,
                         color: selected ? Colors.white : Colors.black,
-                        fontWeight: selected
-                            ? FontWeight.w600
-                            : FontWeight.normal,
+                        fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
                       ),
                     ),
                   ),
@@ -157,21 +149,12 @@ class _CoachEventsScreenState extends State<CoachEventsScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.error_outline,
-                          color: Colors.red,
-                          size: 40.sp,
-                        ),
+                        Icon(Icons.error_outline, color: Colors.red, size: 40.sp),
                         12.height,
-                        Text(
-                          "Failed to load events",
-                          style: GoogleFonts.poppins(color: Colors.grey),
-                        ),
+                        Text("Failed to load events",
+                            style: GoogleFonts.poppins(color: Colors.grey)),
                         12.height,
-                        ElevatedButton(
-                          onPressed: _refresh,
-                          child: const Text("Retry"),
-                        ),
+                        ElevatedButton(onPressed: _refresh, child: const Text("Retry")),
                       ],
                     ),
                   );
@@ -181,12 +164,9 @@ class _CoachEventsScreenState extends State<CoachEventsScreen> {
                 final filtered = _selectedFilter == 'All'
                     ? allEvents
                     : allEvents
-                          .where(
-                            (e) =>
-                                (e.status ?? '').toUpperCase() ==
-                                _selectedFilter,
-                          )
-                          .toList();
+                    .where((e) =>
+                (e.status ?? '').toUpperCase() == _selectedFilter)
+                    .toList();
 
                 if (filtered.isEmpty) {
                   return Center(
@@ -206,7 +186,6 @@ class _CoachEventsScreenState extends State<CoachEventsScreen> {
                     itemBuilder: (_, i) => _CoachEventCard(
                       event: filtered[i],
                       onTap: () {
-                        print("evnt id ${filtered[i].eventId}");
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -230,7 +209,7 @@ class _CoachEventsScreenState extends State<CoachEventsScreen> {
 }
 
 class _CoachEventCard extends StatelessWidget {
-  final Data event;
+  final dynamic event;
   final VoidCallback onTap;
 
   const _CoachEventCard({required this.event, required this.onTap});
@@ -284,10 +263,7 @@ class _CoachEventCard extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 10.w,
-                    vertical: 4.h,
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(20.r),
@@ -306,36 +282,19 @@ class _CoachEventCard extends StatelessWidget {
             10.height,
             Row(
               children: [
-                GestureDetector(
-                  onTap: () {},
-                  child: Icon(
-                    Icons.calendar_today_rounded,
-                    size: 14.sp,
-                    color: Colors.grey,
-                  ),
-                ),
+                Icon(Icons.calendar_today_rounded, size: 14.sp, color: Colors.grey),
                 6.width,
                 Text(
                   event.eventDate ?? '',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12.sp,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: GoogleFonts.poppins(fontSize: 12.sp, color: Colors.grey.shade600),
                 ),
                 16.width,
-                Icon(
-                  Icons.location_on_outlined,
-                  size: 14.sp,
-                  color: Colors.grey,
-                ),
+                Icon(Icons.location_on_outlined, size: 14.sp, color: Colors.grey),
                 6.width,
                 Flexible(
                   child: Text(
                     event.location ?? '',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12.sp,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: GoogleFonts.poppins(fontSize: 12.sp, color: Colors.grey.shade600),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -345,29 +304,6 @@ class _CoachEventCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (content) => CoachAttendanceScreen(
-                          groupName: event.eventName,
-                          eventName: event.eventName,
-                          eventId: event.eventId.toString(),
-                        ),
-                      ),
-                    );
-                  },
-                  child: Text(
-                    "Attendance",
-                    style: GoogleFonts.poppins(
-                      fontSize: 11.sp,
-                      color: accentGreen,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                SizedBox(width: 10),
                 Text(
                   "Tap to manage →",
                   style: GoogleFonts.poppins(

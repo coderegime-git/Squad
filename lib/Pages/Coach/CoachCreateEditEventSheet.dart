@@ -2,29 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nb_utils/nb_utils.dart';
-
 import '../../config/colors.dart';
+import '../../model/coach/coach_event.dart';
 import '../../utills/api_service.dart';
 import '../../utills/helper.dart';
 
-class CoachCreateEventSheet extends StatefulWidget {
+class CoachCreateEditEventSheet extends StatefulWidget {
   final VoidCallback onSuccess;
-  final int clubId; // Add clubId
-  final String clubName; // Add clubName for display
+  final int clubId;
+  final String clubName;
+  final CoachEventModel? event; // If provided, we're editing
 
-  const CoachCreateEventSheet({
-    super.key,
+  const CoachCreateEditEventSheet({
+    Key? key,
     required this.onSuccess,
     required this.clubId,
     required this.clubName,
-  });
+    this.event,
+  }) : super(key: key);
 
   @override
-  State<CoachCreateEventSheet> createState() => _CoachCreateEventSheetState();
+  State<CoachCreateEditEventSheet> createState() => _CoachCreateEditEventSheetState();
 }
 
-class _CoachCreateEventSheetState extends State<CoachCreateEventSheet> {
-  final CoachApiService _api = CoachApiService(); // Use CoachApiService instead of ClubApiService
+class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
+  final CoachApiService _api = CoachApiService();
   final _formKey = GlobalKey<FormState>();
 
   final _nameController = TextEditingController();
@@ -51,11 +53,55 @@ class _CoachCreateEventSheetState extends State<CoachCreateEventSheet> {
     'CANCELLED',
   ];
 
+  bool get _isEditing => widget.event != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isEditing) {
+      _populateFields();
+    }
+  }
+
+  void _populateFields() {
+    final event = widget.event!;
+    _nameController.text = event.eventName;
+    _locationController.text = event.location;
+    _selectedDate = event.eventDate;
+    _selectedType = event.eventType;
+    _selectedStatus = event.status;
+
+    // Parse time strings
+    try {
+      if (event.startTime.isNotEmpty) {
+        final startParts = event.startTime.split(':');
+        if (startParts.length >= 2) {
+          _startTime = TimeOfDay(
+            hour: int.parse(startParts[0]),
+            minute: int.parse(startParts[1]),
+          );
+        }
+      }
+
+      if (event.endTime.isNotEmpty) {
+        final endParts = event.endTime.split(':');
+        if (endParts.length >= 2) {
+          _endTime = TimeOfDay(
+            hour: int.parse(endParts[0]),
+            minute: int.parse(endParts[1]),
+          );
+        }
+      }
+    } catch (e) {
+      print("Error parsing time: $e");
+    }
+  }
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
-      firstDate: DateTime.now(),
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
     if (picked != null) setState(() => _selectedDate = picked);
@@ -77,35 +123,56 @@ class _CoachCreateEventSheetState extends State<CoachCreateEventSheet> {
     if (picked != null) setState(() => _endTime = picked);
   }
 
+  String _formatTimeForApi(TimeOfDay time) {
+    return "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}";
+  }
+
+  String _formatDateForApi(DateTime date) {
+    return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _loading = true);
     try {
-      // Format data according to API requirements
       final data = {
         "eventName": _nameController.text.trim(),
-        "eventDate": "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}",
-        "startTime": "${_startTime.hour.toString().padLeft(2, '0')}:${_startTime.minute.toString().padLeft(2, '0')}",
-        "endTime": "${_endTime.hour.toString().padLeft(2, '0')}:${_endTime.minute.toString().padLeft(2, '0')}",
+        "eventDate": _formatDateForApi(_selectedDate),
+        "startTime": _formatTimeForApi(_startTime),
+        "endTime": _formatTimeForApi(_endTime),
         "location": _locationController.text.trim(),
         "eventType": _selectedType,
         "status": _selectedStatus,
-        "coachIds": [], // You can add coach selection later
       };
 
       print("Submitting event data: $data");
-      final eventId = await _api.createEvent(data);
 
-      if (eventId > 0) {
-        AppUI.success(context, "Event created successfully!");
-        Navigator.pop(context);
+      bool success = false;
+
+      if (_isEditing) {
+        // Update existing event
+        success = await _api.updateEvent(widget.clubId, widget.event!.eventId, data);
+        if (success) {
+          AppUI.success(context, "Event updated successfully!");
+        }
+      } else {
+        // Create new event
+        final eventId = await _api.createEvent(data);
+        success = eventId > 0;
+        if (success) {
+          AppUI.success(context, "Event created successfully!");
+        }
+      }
+
+      if (success) {
+        Navigator.pop(context, true);
         widget.onSuccess();
       } else {
-        AppUI.error(context, "Failed to create event");
+        AppUI.error(context, _isEditing ? "Failed to update event" : "Failed to create event");
       }
     } catch (e) {
-      print("Error creating event: $e");
+      print("Error submitting event: $e");
       AppUI.error(context, "Something went wrong: ${e.toString()}");
     } finally {
       setState(() => _loading = false);
@@ -155,7 +222,7 @@ class _CoachCreateEventSheetState extends State<CoachCreateEventSheet> {
                     Row(
                       children: [
                         Text(
-                          "Create Event",
+                          _isEditing ? "Edit Event" : "Create Event",
                           style: GoogleFonts.montserrat(
                             fontSize: 18.sp,
                             fontWeight: FontWeight.w700,
@@ -347,7 +414,7 @@ class _CoachCreateEventSheetState extends State<CoachCreateEventSheet> {
 
                       16.height,
 
-                      // Club ID Info (hidden field concept)
+                      // Club Info
                       Container(
                         padding: EdgeInsets.all(12.w),
                         decoration: BoxDecoration(
@@ -360,7 +427,9 @@ class _CoachCreateEventSheetState extends State<CoachCreateEventSheet> {
                             8.width,
                             Expanded(
                               child: Text(
-                                "Event will be created for ${widget.clubName}",
+                                _isEditing
+                                    ? "Editing event for ${widget.clubName}"
+                                    : "Event will be created for ${widget.clubName}",
                                 style: GoogleFonts.poppins(
                                   fontSize: 12.sp,
                                   color: Colors.grey.shade700,
@@ -388,7 +457,7 @@ class _CoachCreateEventSheetState extends State<CoachCreateEventSheet> {
                           child: _loading
                               ? AppUI.buttonSpinner()
                               : Text(
-                            "Create Event",
+                            _isEditing ? "Update Event" : "Create Event",
                             style: GoogleFonts.poppins(
                               fontSize: 15.sp,
                               fontWeight: FontWeight.w600,

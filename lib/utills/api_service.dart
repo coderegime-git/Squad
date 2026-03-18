@@ -23,17 +23,22 @@ import '../model/clubAdmin/get_event_details_by_id.dart';
 import '../model/clubAdmin/get_guardians.dart';
 import '../model/clubAdmin/get_members.dart';
 import '../model/clubAdmin/get_teams.dart';
+import '../model/coach/club.dart';
+import '../model/coach/club_member.dart';
+import '../model/coach/coach_event.dart';
 import '../model/guardian/getGuardianEvents.dart';
 import '../model/member/get_events_members.dart';
 
-late GlobalKey<NavigatorState> _navigatorKey;
+// late GlobalKey<NavigatorState> _navigatorKey;
+final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
 clearUserData() async {}
 
 class ApiBaseHelper {
-  initApiService(GlobalKey<NavigatorState> navigatorKey) {
-    _navigatorKey = navigatorKey;
-  }
+  void initApiService(GlobalKey<NavigatorState> navigatorKey) {}
+  // initApiService(GlobalKey<NavigatorState> navigatorKey) {
+  //   _navigatorKey = navigatorKey;
+  // }
 
   // static const _baseUrl = "https://api.apniride.org/api/";
   // static const _baseUrl = "http://13.55.87.147/api/";
@@ -327,9 +332,10 @@ class ApiBaseHelper {
 class ClubApiService {
   ClubApiService();
 
-  initApiService(GlobalKey<NavigatorState> navigatorKey) {
-    _navigatorKey = navigatorKey;
-  }
+  void initApiService(GlobalKey<NavigatorState> navigatorKey) {}
+  // initApiService(GlobalKey<NavigatorState> navigatorKey) {
+  //   _navigatorKey = navigatorKey;
+  // }
 
   final ApiBaseHelper _helper = ApiBaseHelper();
 
@@ -992,10 +998,12 @@ class ClubApiService {
   Future<bool> assignMembersToTeam(int teamId, List<int> memberIds) async {
     try {
       print("Assign members $memberIds to teamId: $teamId");
-      final fullResponse = await _helper.post("api/teams/$teamId/members", {
-        "teamId": teamId,
+      final fullResponse = await _helper.post("api/teams/$teamId/members",
+      {
+        // "teamId": teamId,
         "memberIds": memberIds,
       });
+
       print("full response ${fullResponse}");
       final jsonResponse = jsonEncode(fullResponse);
       print("jsonResponse  $jsonResponse");
@@ -1047,6 +1055,32 @@ class ClubApiService {
     }
   }
 
+  Future<bool> updateTeam(
+      int subGroupId,
+      int teamId,
+      Map<String, dynamic> data,
+      ) async {
+    try {
+      print("Update team data: $data subGroupId: $subGroupId teamId: $teamId");
+      final fullResponse = await _helper.put(
+        "api/sub-groups/$subGroupId/teams/$teamId",
+        data,
+      );
+      final jsonResponse = jsonEncode(fullResponse);
+      print("jsonResponse  $jsonResponse");
+      if (fullResponse['success'] == true) {
+        print("Update Team → ${fullResponse['message']}");
+        return true;
+      } else {
+        print("Body says failure: ${fullResponse['message']}");
+        return false;
+      }
+    } catch (e) {
+      print("Update team failed: $e");
+      return false;
+    }
+  }
+
   /// POST /api/events — returns eventId on success, -1 on failure
   Future<int> addEvent(Map<String, dynamic> data) async {
     try {
@@ -1079,9 +1113,10 @@ class ClubApiService {
 class CoachApiService {
   CoachApiService();
 
-  initApiService(GlobalKey<NavigatorState> navigatorKey) {
-    _navigatorKey = navigatorKey;
-  }
+  void initApiService(GlobalKey<NavigatorState> navigatorKey) {}
+  // initApiService(GlobalKey<NavigatorState> navigatorKey) {
+  //   _navigatorKey = navigatorKey;
+  // }
 
   final ApiBaseHelper _helper = ApiBaseHelper();
 
@@ -1096,6 +1131,162 @@ class CoachApiService {
       rethrow;
     }
   }
+
+  Future<List<Club>> getCoachClubs() async {
+    try {
+      print("Fetching coach clubs...");
+      final fullResponse = await _helper.get("api/coach/clubs");
+      print("getCoachClubs response: $fullResponse");
+
+      if (fullResponse['success'] == true) {
+        final List<dynamic> clubsData = fullResponse['data'];
+        return clubsData.map((json) => Club.fromJson(json)).toList();
+      } else {
+        print("Failed to fetch clubs: ${fullResponse['message']}");
+        return [];
+      }
+    } catch (e) {
+      print("getCoachClubs failed: $e");
+      return []; // Return empty list on error
+    }
+  }
+
+  Future<List<ClubMember>> getClubMembers(int clubId) async {
+    try {
+      print("Fetching members for club: $clubId");
+      final fullResponse = await _helper.get("api/members?clubId=$clubId");
+      print("getClubMembers response: $fullResponse");
+
+      if (fullResponse['success'] == true) {
+        final List<dynamic> membersData = fullResponse['data'];
+        return membersData.map((json) => ClubMember.fromJson(json)).toList();
+      } else {
+        print("Failed to fetch members: ${fullResponse['message']}");
+        return [];
+      }
+    } catch (e) {
+      print("getClubMembers failed: $e");
+      return [];
+    }
+  }
+
+  Future<List<CoachEventModel>> getAllEvents() async {
+    try {
+      print("Fetching all events...");
+      final fullResponse = await _helper.get("api/events");
+      print("getAllEvents response: $fullResponse");
+
+      if (fullResponse['success'] == true) {
+        final List<dynamic> eventsData = fullResponse['data'];
+        return eventsData.map((json) => CoachEventModel.fromJson(json)).toList();
+      } else {
+        print("Failed to fetch events: ${fullResponse['message']}");
+        return [];
+      }
+    } catch (e) {
+      print("getAllEvents failed: $e");
+      return [];
+    }
+  }
+
+  Future<int> createEvent(Map<String, dynamic> eventData) async {
+    try {
+      print("Creating event with data: $eventData");
+      final fullResponse = await _helper.post("api/events", eventData);
+      print("createEvent response: $fullResponse");
+
+      if (fullResponse['success'] == true) {
+        // Extract eventId from response data
+        if (fullResponse['data'] != null && fullResponse['data']['eventId'] != null) {
+          return fullResponse['data']['eventId'] as int;
+        }
+        return 0; // Success but no ID returned
+      } else {
+        print("Failed to create event: ${fullResponse['message']}");
+        return -1;
+      }
+    } catch (e) {
+      print("createEvent failed: $e");
+      return -1;
+    }
+  }
+
+  Future<bool> updateEvent(int clubId, int eventId, Map<String, dynamic> eventData) async {
+    try {
+      print("Updating event: $eventId for club: $clubId with data: $eventData");
+      // Note: Using ?clubId=$clubId in the URL as per your API
+      final fullResponse = await _helper.put("api/events/$eventId?clubId=$clubId", eventData);
+      print("updateEvent response: $fullResponse");
+
+      if (fullResponse['success'] == true) {
+        print("Event updated successfully");
+        return true;
+      } else {
+        print("Failed to update event: ${fullResponse['message']}");
+        return false;
+      }
+    } catch (e) {
+      print("updateEvent failed: $e");
+      return false;
+    }
+  }
+
+  Future<CoachEventModel?> getEventDetails(int clubId, int eventId) async {
+    try {
+      print("Fetching event details: $eventId for club: $clubId");
+      final fullResponse = await _helper.get("api/events/$eventId?clubId=$clubId");
+      print("getEventDetails response: $fullResponse");
+
+      if (fullResponse['success'] == true && fullResponse['data'] != null) {
+        return CoachEventModel.fromJson(fullResponse['data']);
+      } else {
+        print("Failed to fetch event details: ${fullResponse['message']}");
+        return null;
+      }
+    } catch (e) {
+      print("getEventDetails failed: $e");
+      return null;
+    }
+  }
+
+  Future<List<CoachEventModel>> getClubEvents(int clubId) async {
+    try {
+      print("Fetching events for club: $clubId");
+      final fullResponse = await _helper.get("api/events?clubId=$clubId");
+      print("getClubEvents response: $fullResponse");
+
+      if (fullResponse['success'] == true && fullResponse['data'] != null) {
+        final List<dynamic> eventsData = fullResponse['data'];
+        return eventsData.map((json) => CoachEventModel.fromJson(json)).toList();
+      } else {
+        print("Failed to fetch events: ${fullResponse['message']}");
+        return [];
+      }
+    } catch (e) {
+      print("getClubEvents failed: $e");
+      return [];
+    }
+  }
+
+  Future<ClubMember?> getMemberDetails(int clubId, int memberId) async {
+    try {
+      print("Fetching member details: $memberId for club: $clubId");
+      // Note: API might expect memberId directly without clubId in URL
+      final fullResponse = await _helper.get("api/members/$memberId");
+      print("getMemberDetails response: $fullResponse");
+
+      if (fullResponse['success'] == true && fullResponse['data'] != null) {
+        return ClubMember.fromJson(fullResponse['data']);
+      } else {
+        print("Failed to fetch member details: ${fullResponse['message']}");
+        return null;
+      }
+    } catch (e) {
+      print("getMemberDetails failed: $e");
+      return null;
+    }
+  }
+
 
   Future<GroupMembersData> getGroupMember(String groupId) async {
     try {
@@ -1144,9 +1335,10 @@ class CoachApiService {
 class ParentApiService {
   ParentApiService();
 
-  initApiService(GlobalKey<NavigatorState> navigatorKey) {
-    _navigatorKey = navigatorKey;
-  }
+  void initApiService(GlobalKey<NavigatorState> navigatorKey) {}
+  // initApiService(GlobalKey<NavigatorState> navigatorKey) {
+  //   _navigatorKey = navigatorKey;
+  // }
 
   final ApiBaseHelper _helper = ApiBaseHelper();
 
@@ -1244,9 +1436,10 @@ class ParentApiService {
 class MemberApiService {
   MemberApiService();
 
-  initApiService(GlobalKey<NavigatorState> navigatorKey) {
-    _navigatorKey = navigatorKey;
-  }
+  void initApiService(GlobalKey<NavigatorState> navigatorKey) {}
+  // initApiService(GlobalKey<NavigatorState> navigatorKey) {
+  //   _navigatorKey = navigatorKey;
+  // }
 
   final ApiBaseHelper _helper = ApiBaseHelper();
 
