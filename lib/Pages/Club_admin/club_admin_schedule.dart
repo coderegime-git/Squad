@@ -12,6 +12,7 @@ import '../../model/clubAdmin/get_coaches.dart';
 import '../../model/clubAdmin/get_event_details.dart';
 import '../../model/clubAdmin/get_event_details_by_id.dart';
 import '../../utills/api_service.dart';
+import 'activities_screen.dart';
 import 'event_groups.dart';
 
 class ClubAdminScheduleScreen extends StatefulWidget {
@@ -105,19 +106,20 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen> {
                     children: [
                       Text(
                         'Events & Schedule',
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineMedium
+                        style: Theme.of(context).textTheme.headlineMedium
                             ?.copyWith(
-                          color: Colors.white,
-                          fontSize: 20.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
+                              color: Colors.white,
+                              fontSize: 20.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                       const Spacer(),
                       IconButton(
-                        icon: Icon(Icons.filter_list_rounded,
-                            color: Colors.white, size: 22.sp),
+                        icon: Icon(
+                          Icons.filter_list_rounded,
+                          color: Colors.white,
+                          size: 22.sp,
+                        ),
                         onPressed: () => _showFilterSheet(context),
                       ),
                     ],
@@ -129,132 +131,152 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen> {
             Expanded(
               child: _loadingEvents
                   ? const Center(
-                child: CircularProgressIndicator(color: accentGreen),
-              )
+                      child: CircularProgressIndicator(color: accentGreen),
+                    )
                   : SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.symmetric(horizontal: 16.w),
-                child: Column(
-                  children: [
-                    16.height,
-
-                    // ── Calendar ─────────────────────────────────
-                    Container(
-                      decoration: BoxDecoration(
-                        color: cardDark,
-                        borderRadius: BorderRadius.circular(22.r),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: TableCalendar<Data>(
-                        firstDay: DateTime(2024),
-                        lastDay: DateTime(2027),
-                        focusedDay: _focusedDay,
-                        calendarFormat: _calendarFormat,
-                        selectedDayPredicate: (d) =>
-                            isSameDay(_selectedDay, d),
-                        onDaySelected: (sel, foc) {
-                          setState(() {
-                            _selectedDay = sel;
-                            _focusedDay = foc;
-                          });
-                        },
-                        onFormatChanged: (f) =>
-                            setState(() => _calendarFormat = f),
-                        eventLoader: _getEventsForDay,
-                        calendarStyle: CalendarStyle(
-                          todayDecoration: BoxDecoration(
-                              color: accentGreen.withOpacity(0.3),
-                              shape: BoxShape.circle),
-                          selectedDecoration: const BoxDecoration(
-                              color: accentGreen,
-                              shape: BoxShape.circle),
-                          markerDecoration: BoxDecoration(
-                              color: accentOrange,
-                              shape: BoxShape.circle),
-                          weekendTextStyle:
-                          TextStyle(color: accentOrange),
-                        ),
-                        headerStyle: HeaderStyle(
-                          formatButtonVisible: true,
-                          titleCentered: true,
-                          formatButtonDecoration: BoxDecoration(
-                            color: accentGreen.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(10.r),
-                          ),
-                          formatButtonTextStyle:
-                          TextStyle(color: accentGreen),
-                          titleTextStyle: GoogleFonts.montserrat(
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.bold),
-                          leftChevronIcon: Icon(
-                              Icons.chevron_left_rounded,
-                              color: textSecondary),
-                          rightChevronIcon: Icon(
-                              Icons.chevron_right_rounded,
-                              color: textSecondary),
-                        ),
-                      ),
-                    ),
-
-                    20.height,
-
-                    // ── Events List ───────────────────────────────
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          DateFormat('EEE, MMM d').format(
-                              _selectedDay ?? DateTime.now()),
-                          style: GoogleFonts.montserrat(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.grey.shade700),
-                        ),
-                        Text(
-                          '${dayEvents.length} event${dayEvents.length != 1 ? 's' : ''}',
-                          style: GoogleFonts.poppins(
-                              fontSize: 12.sp, color: textSecondary),
-                        ),
-                      ],
-                    ),
-                    14.height,
-
-                    dayEvents.isEmpty
-                        ? Container(
-                      padding: EdgeInsets.all(40.w),
-                      decoration: BoxDecoration(
-                        color: cardDark,
-                        borderRadius:
-                        BorderRadius.circular(18.r),
-                        border: Border.all(
-                            color: Colors.grey.shade300),
-                      ),
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.symmetric(horizontal: 16.w),
                       child: Column(
                         children: [
-                          Icon(Icons.event_busy_rounded,
-                              size: 48.sp,
-                              color: textSecondary),
-                          12.height,
-                          Text('No events scheduled',
-                              style: GoogleFonts.poppins(
-                                  color: textSecondary)),
+                          16.height,
+
+                          // ── Calendar ─────────────────────────────────
+                          Container(
+                            decoration: BoxDecoration(
+                              color: cardDark,
+                              borderRadius: BorderRadius.circular(22.r),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: TableCalendar<Data>(
+                              firstDay: DateTime(2024),
+                              lastDay: DateTime(2027),
+                              focusedDay: _focusedDay,
+                              calendarFormat: _calendarFormat,
+                              selectedDayPredicate: (d) =>
+                                  isSameDay(_selectedDay, d),
+                              onDaySelected: (sel, foc) {
+                                setState(() {
+                                  _selectedDay = sel;
+                                  _focusedDay = foc;
+                                });
+                              },
+                              onFormatChanged: (f) =>
+                                  setState(() => _calendarFormat = f),
+                              eventLoader: _getEventsForDay,
+                              calendarStyle: CalendarStyle(
+                                todayDecoration: BoxDecoration(
+                                  color: accentGreen.withOpacity(0.3),
+                                  shape: BoxShape.circle,
+                                ),
+                                selectedDecoration: const BoxDecoration(
+                                  color: accentGreen,
+                                  shape: BoxShape.circle,
+                                ),
+                                markerDecoration: BoxDecoration(
+                                  color: accentOrange,
+                                  shape: BoxShape.circle,
+                                ),
+                                weekendTextStyle: TextStyle(
+                                  color: accentOrange,
+                                ),
+                              ),
+                              headerStyle: HeaderStyle(
+                                formatButtonVisible: true,
+                                titleCentered: true,
+                                formatButtonDecoration: BoxDecoration(
+                                  color: accentGreen.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(10.r),
+                                ),
+                                formatButtonTextStyle: TextStyle(
+                                  color: accentGreen,
+                                ),
+                                titleTextStyle: GoogleFonts.montserrat(
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                leftChevronIcon: Icon(
+                                  Icons.chevron_left_rounded,
+                                  color: textSecondary,
+                                ),
+                                rightChevronIcon: Icon(
+                                  Icons.chevron_right_rounded,
+                                  color: textSecondary,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          20.height,
+
+                          // ── Events List ───────────────────────────────
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                DateFormat(
+                                  'EEE, MMM d',
+                                ).format(_selectedDay ?? DateTime.now()),
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                              Text(
+                                '${dayEvents.length} event${dayEvents.length != 1 ? 's' : ''}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12.sp,
+                                  color: textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          14.height,
+
+                          dayEvents.isEmpty
+                              ? Container(
+                                  padding: EdgeInsets.all(40.w),
+                                  decoration: BoxDecoration(
+                                    color: cardDark,
+                                    borderRadius: BorderRadius.circular(18.r),
+                                    border: Border.all(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        Icons.event_busy_rounded,
+                                        size: 48.sp,
+                                        color: textSecondary,
+                                      ),
+                                      12.height,
+                                      Text(
+                                        'No events scheduled',
+                                        style: GoogleFonts.poppins(
+                                          color: textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : Column(
+                                  children: dayEvents
+                                      .map(
+                                        (e) => Padding(
+                                          padding: EdgeInsets.only(
+                                            bottom: 12.h,
+                                          ),
+                                          child: _eventCard(e),
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
+
+                          100.height,
                         ],
                       ),
-                    )
-                        : Column(
-                      children: dayEvents
-                          .map((e) => Padding(
-                        padding: EdgeInsets.only(
-                            bottom: 12.h),
-                        child: _eventCard(e),
-                      ))
-                          .toList(),
                     ),
-
-                    100.height,
-                  ],
-                ),
-              ),
             ),
           ],
         ),
@@ -262,9 +284,13 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen> {
           onPressed: () => _createEventSheet(context),
           backgroundColor: accentGreen,
           icon: const Icon(Icons.add_rounded, color: Colors.white),
-          label: Text('Create Event',
-              style: GoogleFonts.poppins(
-                  color: Colors.white, fontWeight: FontWeight.w600)),
+          label: Text(
+            'Create Event',
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
       ),
     );
@@ -293,17 +319,23 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen> {
             Row(
               children: [
                 Container(
-                  padding:
-                  EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 10.w,
+                    vertical: 4.h,
+                  ),
                   decoration: BoxDecoration(
-                      color: color.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(20.r)),
-                  child: Text(e.eventType,
-                      style: GoogleFonts.poppins(
-                          fontSize: 10.sp,
-                          color: color,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.8)),
+                    color: color.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                  child: Text(
+                    e.eventType,
+                    style: GoogleFonts.poppins(
+                      fontSize: 10.sp,
+                      color: color,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
                 ),
                 const Spacer(),
                 PopupMenuButton(
@@ -311,36 +343,58 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen> {
                   icon: Icon(Icons.more_vert_rounded, color: textSecondary),
                   itemBuilder: (_) => [
                     PopupMenuItem(
-                        child: Text('View Details',
-                            style: GoogleFonts.poppins()),
-                        onTap: () => _showEventDetailSheet(e)),
+                      child: Text('View Details', style: GoogleFonts.poppins()),
+                      onTap: () => _showEventDetailSheet(e),
+                    ),
                     PopupMenuItem(
-                        child: Text('Manage Groups',
-                            style: GoogleFonts.poppins()),
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  EventGroupsScreen(event: e)),
-                        )),
+                      child: Text(
+                        'Manage Groups',
+                        style: GoogleFonts.poppins(),
+                      ),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => EventGroupsScreen(event: e),
+                        ),
+                      ),
+                    ),
                     PopupMenuItem(
-                        child: Text('Delete',
-                            style:
-                            GoogleFonts.poppins(color: Colors.red)),
-                        onTap: () => _confirmDelete(e)),
+                      child: Text(
+                        'Map to Activities',
+                        style: GoogleFonts.poppins(),
+                      ),
+                      onTap: () => showModalBottomSheet(
+                        context: context,
+                        builder: (context) {
+                          return ClubAdminActivitiesScreen(
+                            eventId: e.eventId.toString(),
+                            fromMap: true,
+                          );
+                        },
+                      ),
+                    ),
+                    PopupMenuItem(
+                      child: Text(
+                        'Delete',
+                        style: GoogleFonts.poppins(color: Colors.red),
+                      ),
+                      onTap: () => _confirmDelete(e),
+                    ),
                   ],
                 ),
               ],
             ),
             10.height,
-            Text(e.eventName,
-                style: GoogleFonts.montserrat(
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black)),
+            Text(
+              e.eventName,
+              style: GoogleFonts.montserrat(
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w700,
+                color: Colors.black,
+              ),
+            ),
             8.height,
-            _eRow(Icons.access_time_rounded,
-                '${e.startTime} – ${e.endTime}'),
+            _eRow(Icons.access_time_rounded, '${e.startTime} – ${e.endTime}'),
             4.height,
             _eRow(Icons.location_on_outlined, e.location),
             4.height,
@@ -348,19 +402,24 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen> {
             4.height,
             Row(
               children: [
-                Icon(Icons.group_rounded,
-                    size: 14.sp, color: textSecondary),
+                Icon(Icons.group_rounded, size: 14.sp, color: textSecondary),
                 6.width,
                 Text(
-                    '${e.coachIds.length} coach${e.coachIds.length != 1 ? 'es' : ''}',
-                    style: GoogleFonts.poppins(
-                        fontSize: 12.sp, color: textSecondary)),
+                  '${e.coachIds.length} coach${e.coachIds.length != 1 ? 'es' : ''}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12.sp,
+                    color: textSecondary,
+                  ),
+                ),
                 const Spacer(),
-                Text(e.status,
-                    style: GoogleFonts.poppins(
-                        fontSize: 11.sp,
-                        color: color,
-                        fontWeight: FontWeight.w600)),
+                Text(
+                  e.status,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11.sp,
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ],
@@ -373,9 +432,10 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen> {
     children: [
       Icon(icon, size: 14.sp, color: textSecondary),
       6.width,
-      Text(text,
-          style: GoogleFonts.poppins(
-              fontSize: 12.sp, color: textSecondary)),
+      Text(
+        text,
+        style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary),
+      ),
     ],
   );
 
@@ -386,30 +446,40 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen> {
       builder: (_) => AlertDialog(
         backgroundColor: cardDark,
         shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20.r)),
-        title: Text('Delete Event',
-            style: GoogleFonts.montserrat(color: Colors.black)),
-        content: Text('Delete "${e.eventName}"?',
-            style: GoogleFonts.poppins(color: textSecondary)),
+          borderRadius: BorderRadius.circular(20.r),
+        ),
+        title: Text(
+          'Delete Event',
+          style: GoogleFonts.montserrat(color: Colors.black),
+        ),
+        content: Text(
+          'Delete "${e.eventName}"?',
+          style: GoogleFonts.poppins(color: textSecondary),
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel',
-                  style: GoogleFonts.poppins(color: textSecondary))),
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(color: textSecondary),
+            ),
+          ),
           TextButton(
-              onPressed: () async {
-                Navigator.pop(context);
-                final success =
-                await _apiService.deleteEvent(e.eventId);
-                if (success) {
-                  toast('Event deleted', bgColor: Colors.red);
-                  _fetchEvents();
-                } else {
-                  toast('Failed to delete event');
-                }
-              },
-              child: Text('Delete',
-                  style: GoogleFonts.poppins(color: Colors.red))),
+            onPressed: () async {
+              Navigator.pop(context);
+              final success = await _apiService.deleteEvent(e.eventId);
+              if (success) {
+                toast('Event deleted', bgColor: Colors.red);
+                _fetchEvents();
+              } else {
+                toast('Failed to delete event');
+              }
+            },
+            child: Text(
+              'Delete',
+              style: GoogleFonts.poppins(color: Colors.red),
+            ),
+          ),
         ],
       ),
     );
@@ -420,26 +490,33 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen> {
       context: context,
       backgroundColor: cardDark,
       shape: RoundedRectangleBorder(
-          borderRadius:
-          BorderRadius.vertical(top: Radius.circular(24.r))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+      ),
       builder: (_) => Padding(
         padding: EdgeInsets.all(20.w),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Filter Events',
-                style: GoogleFonts.montserrat(
-                    fontSize: 16.sp, fontWeight: FontWeight.bold)),
+            Text(
+              'Filter Events',
+              style: GoogleFonts.montserrat(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             16.height,
             for (final f in [
               'All Events',
               'Training Sessions',
               'Matches',
-              'Tournaments'
+              'Tournaments',
             ])
               ListTile(
-                leading: Icon(Icons.circle_outlined,
-                    color: accentGreen, size: 18.sp),
+                leading: Icon(
+                  Icons.circle_outlined,
+                  color: accentGreen,
+                  size: 18.sp,
+                ),
                 title: Text(f, style: GoogleFonts.poppins()),
                 onTap: () {
                   Navigator.pop(context);
@@ -460,12 +537,13 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen> {
       isScrollControlled: true,
       backgroundColor: cardDark,
       shape: RoundedRectangleBorder(
-          borderRadius:
-          BorderRadius.vertical(top: Radius.circular(24.r))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+      ),
       builder: (_) => _EventDetailSheet(
-          eventId: event.eventId,
-          event: event,
-          apiService: _apiService),
+        eventId: event.eventId,
+        event: event,
+        apiService: _apiService,
+      ),
     );
   }
 
@@ -475,8 +553,8 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen> {
       isScrollControlled: true,
       backgroundColor: cardDark,
       shape: RoundedRectangleBorder(
-          borderRadius:
-          BorderRadius.vertical(top: Radius.circular(24.r))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+      ),
       builder: (_) => _CreateEventSheet(onCreated: _fetchEvents),
     );
   }
@@ -486,12 +564,12 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen> {
 // CHANGE: added `event` parameter + "Manage Groups" button at the bottom
 class _EventDetailSheet extends StatefulWidget {
   final int eventId;
-  final Data event;                  // ← added
+  final Data event; // ← added
   final ClubApiService apiService;
 
   const _EventDetailSheet({
     required this.eventId,
-    required this.event,             // ← added
+    required this.event, // ← added
     required this.apiService,
   });
 
@@ -528,8 +606,7 @@ class _EventDetailSheetState extends State<_EventDetailSheet> {
   String _formatTime(String t) {
     try {
       final parts = t.split(':');
-      final dt =
-      DateTime(0, 0, 0, int.parse(parts[0]), int.parse(parts[1]));
+      final dt = DateTime(0, 0, 0, int.parse(parts[0]), int.parse(parts[1]));
       return DateFormat('h:mm a').format(dt);
     } catch (_) {
       return t;
@@ -563,117 +640,143 @@ class _EventDetailSheetState extends State<_EventDetailSheet> {
       padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 32.h),
       child: _loading
           ? SizedBox(
-        height: 180.h,
-        child: const Center(
-            child: CircularProgressIndicator(color: accentGreen)),
-      )
+              height: 180.h,
+              child: const Center(
+                child: CircularProgressIndicator(color: accentGreen),
+              ),
+            )
           : _error != null
           ? SizedBox(
-        height: 180.h,
-        child: Center(
-            child: Text(_error!,
-                style: GoogleFonts.poppins(
-                    color: textSecondary))),
-      )
-          : Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // drag handle
-          Center(
-            child: Container(
-              width: 40.w,
-              height: 4.h,
-              decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2.r)),
-            ),
-          ),
-          16.height,
-          Row(
-            children: [
-              _badge(_event!.eventType,
-                  _typeColor(_event!.eventType)),
-              8.width,
-              _badge(_event!.status,
-                  _statusColor(_event!.status)),
-            ],
-          ),
-          12.height,
-          Text(_event!.eventName,
-              style: GoogleFonts.montserrat(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black)),
-          16.height,
-          _detailRow(Icons.calendar_today_rounded, 'Date',
-              _event!.eventDate),
-          10.height,
-          _detailRow(
-              Icons.access_time_rounded,
-              'Time',
-              '${_formatTime(_event!.startTime)} – ${_formatTime(_event!.endTime)}'),
-          10.height,
-          _detailRow(Icons.location_on_outlined, 'Location',
-              _event!.location),
-          10.height,
-          _detailRow(Icons.person_rounded, 'Created by',
-              _event!.createdByUsername),
-          10.height,
-          _detailRow(
-              Icons.group_rounded,
-              'Coaches',
-              '${_event!.coachIds.length} assigned  •  IDs: ${_event!.coachIds.join(', ')}'),
-          10.height,
-          _detailRow(Icons.business_rounded, 'Club ID',
-              _event!.clubId.toString()),
-          20.height,
-
-          // ── Manage Groups Button — newly added ──────────────
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => EventGroupsScreen(
-                        event: widget.event),
-                  ),
-                );
-              },
-              icon: Icon(Icons.group_work_rounded,
-                  size: 20.sp),
-              label: Text('Manage Groups',
-                  style: GoogleFonts.poppins(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w700)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: accentGreen,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding: EdgeInsets.symmetric(vertical: 14.h),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14.r)),
+              height: 180.h,
+              child: Center(
+                child: Text(
+                  _error!,
+                  style: GoogleFonts.poppins(color: textSecondary),
+                ),
               ),
+            )
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // drag handle
+                Center(
+                  child: Container(
+                    width: 40.w,
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2.r),
+                    ),
+                  ),
+                ),
+                16.height,
+                Row(
+                  children: [
+                    _badge(_event!.eventType, _typeColor(_event!.eventType)),
+                    8.width,
+                    _badge(_event!.status, _statusColor(_event!.status)),
+                  ],
+                ),
+                12.height,
+                Text(
+                  _event!.eventName,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                16.height,
+                _detailRow(
+                  Icons.calendar_today_rounded,
+                  'Date',
+                  _event!.eventDate,
+                ),
+                10.height,
+                _detailRow(
+                  Icons.access_time_rounded,
+                  'Time',
+                  '${_formatTime(_event!.startTime)} – ${_formatTime(_event!.endTime)}',
+                ),
+                10.height,
+                _detailRow(
+                  Icons.location_on_outlined,
+                  'Location',
+                  _event!.location,
+                ),
+                10.height,
+                _detailRow(
+                  Icons.person_rounded,
+                  'Created by',
+                  _event!.createdByUsername,
+                ),
+                10.height,
+                _detailRow(
+                  Icons.group_rounded,
+                  'Coaches',
+                  '${_event!.coachIds.length} assigned  •  IDs: ${_event!.coachIds.join(', ')}',
+                ),
+                10.height,
+                _detailRow(
+                  Icons.business_rounded,
+                  'Club ID',
+                  _event!.clubId.toString(),
+                ),
+                20.height,
+
+                // ── Manage Groups Button — newly added ──────────────
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              EventGroupsScreen(event: widget.event),
+                        ),
+                      );
+                    },
+                    icon: Icon(Icons.group_work_rounded, size: 20.sp),
+                    label: Text(
+                      'Manage Groups',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accentGreen,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: EdgeInsets.symmetric(vertical: 14.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14.r),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 
   Widget _badge(String label, Color color) => Container(
     padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
     decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(20.r)),
-    child: Text(label,
-        style: GoogleFonts.poppins(
-            fontSize: 11.sp,
-            color: color,
-            fontWeight: FontWeight.w700)),
+      color: color.withOpacity(0.12),
+      borderRadius: BorderRadius.circular(20.r),
+    ),
+    child: Text(
+      label,
+      style: GoogleFonts.poppins(
+        fontSize: 11.sp,
+        color: color,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
   );
 
   Widget _detailRow(IconData icon, String label, String value) => Row(
@@ -681,15 +784,19 @@ class _EventDetailSheetState extends State<_EventDetailSheet> {
     children: [
       Icon(icon, size: 16.sp, color: textSecondary),
       8.width,
-      Text('$label: ',
-          style: GoogleFonts.poppins(
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87)),
+      Text(
+        '$label: ',
+        style: GoogleFonts.poppins(
+          fontSize: 13.sp,
+          fontWeight: FontWeight.w600,
+          color: Colors.black87,
+        ),
+      ),
       Expanded(
-        child: Text(value,
-            style: GoogleFonts.poppins(
-                fontSize: 13.sp, color: textSecondary)),
+        child: Text(
+          value,
+          style: GoogleFonts.poppins(fontSize: 13.sp, color: textSecondary),
+        ),
       ),
     ],
   );
@@ -698,6 +805,7 @@ class _EventDetailSheetState extends State<_EventDetailSheet> {
 // ── Create Event Sheet — exactly same as original, zero changes ───────────
 class _CreateEventSheet extends StatefulWidget {
   final VoidCallback? onCreated;
+
   const _CreateEventSheet({this.onCreated});
 
   @override
@@ -726,7 +834,7 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
     'SCHEDULED',
     'ONGOING',
     'COMPLETED',
-    'CANCELLED'
+    'CANCELLED',
   ];
 
   @override
@@ -754,9 +862,9 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
       firstDate: DateTime(2024),
       lastDate: DateTime(2030),
       builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(primary: accentGreen),
-        ),
+        data: Theme.of(
+          ctx,
+        ).copyWith(colorScheme: const ColorScheme.light(primary: accentGreen)),
         child: child!,
       ),
     );
@@ -768,9 +876,9 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
       context: context,
       initialTime: TimeOfDay.now(),
       builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(primary: accentGreen),
-        ),
+        data: Theme.of(
+          ctx,
+        ).copyWith(colorScheme: const ColorScheme.light(primary: accentGreen)),
         child: child!,
       ),
     );
@@ -854,7 +962,8 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom),
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: SingleChildScrollView(
         padding: EdgeInsets.all(20.w),
         child: Column(
@@ -865,14 +974,19 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
                 width: 40.w,
                 height: 4.h,
                 decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2.r)),
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2.r),
+                ),
               ),
             ),
             16.height,
-            Text('Create New Event',
-                style: GoogleFonts.montserrat(
-                    fontSize: 18.sp, fontWeight: FontWeight.bold)),
+            Text(
+              'Create New Event',
+              style: GoogleFonts.montserrat(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             20.height,
             _inputField('Event Title', _eventNameController),
             12.height,
@@ -915,9 +1029,7 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
                       6.height,
                       _tappableField(
                         icon: Icons.access_time_rounded,
-                        text: _endTime != null
-                            ? _formatTime(_endTime!)
-                            : 'End',
+                        text: _endTime != null ? _formatTime(_endTime!) : 'End',
                         onTap: () => _pickTime(false),
                       ),
                     ],
@@ -926,103 +1038,124 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
               ],
             ),
             12.height,
-            _dropField('Event Type', _eventTypes, _selectedEventType,
-                    (val) => setState(() => _selectedEventType = val)),
+            _dropField(
+              'Event Type',
+              _eventTypes,
+              _selectedEventType,
+              (val) => setState(() => _selectedEventType = val),
+            ),
             12.height,
-            _dropField('Status', _statusOptions, _selectedStatus,
-                    (val) => setState(() => _selectedStatus = val)),
+            _dropField(
+              'Status',
+              _statusOptions,
+              _selectedStatus,
+              (val) => setState(() => _selectedStatus = val),
+            ),
             12.height,
             _labelText('Assign Coaches'),
             6.height,
             _loadingCoaches
                 ? Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 16.h),
-                child: const CircularProgressIndicator(
-                    color: accentGreen),
-              ),
-            )
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16.h),
+                      child: const CircularProgressIndicator(
+                        color: accentGreen,
+                      ),
+                    ),
+                  )
                 : _coaches.isEmpty
                 ? Padding(
-              padding: EdgeInsets.symmetric(vertical: 8.h),
-              child: Text('No coaches available',
-                  style: GoogleFonts.poppins(
-                      fontSize: 12.sp, color: textSecondary)),
-            )
+                    padding: EdgeInsets.symmetric(vertical: 8.h),
+                    child: Text(
+                      'No coaches available',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12.sp,
+                        color: textSecondary,
+                      ),
+                    ),
+                  )
                 : Container(
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: Column(
-                children: _coaches.map((coach) {
-                  final isSelected =
-                  _selectedCoachIds.contains(coach.coachId);
-                  return InkWell(
-                    onTap: () {
-                      setState(() {
-                        if (isSelected)
-                          _selectedCoachIds.remove(coach.coachId);
-                        else
-                          _selectedCoachIds.add(coach.coachId);
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(12.r),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 14.w, vertical: 10.h),
-                      child: Row(
-                        children: [
-                          AnimatedContainer(
-                            duration: const Duration(
-                                milliseconds: 200),
-                            width: 22.w,
-                            height: 22.w,
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? accentGreen
-                                  : Colors.white,
-                              borderRadius:
-                              BorderRadius.circular(6.r),
-                              border: Border.all(
-                                color: isSelected
-                                    ? accentGreen
-                                    : Colors.grey.shade400,
-                                width: 1.5,
-                              ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Column(
+                      children: _coaches.map((coach) {
+                        final isSelected = _selectedCoachIds.contains(
+                          coach.coachId,
+                        );
+                        return InkWell(
+                          onTap: () {
+                            setState(() {
+                              if (isSelected)
+                                _selectedCoachIds.remove(coach.coachId);
+                              else
+                                _selectedCoachIds.add(coach.coachId);
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(12.r),
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 14.w,
+                              vertical: 10.h,
                             ),
-                            child: isSelected
-                                ? Icon(Icons.check_rounded,
-                                size: 14.sp,
-                                color: Colors.white)
-                                : null,
-                          ),
-                          12.width,
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                            child: Row(
                               children: [
-                                Text(coach.username,
-                                    style: GoogleFonts.poppins(
-                                        fontSize: 13.sp,
-                                        fontWeight:
-                                        FontWeight.w600)),
-                                Text(coach.specialization,
-                                    style: GoogleFonts.poppins(
-                                        fontSize: 11.sp,
-                                        color: textSecondary)),
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  width: 22.w,
+                                  height: 22.w,
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? accentGreen
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(6.r),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? accentGreen
+                                          : Colors.grey.shade400,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: isSelected
+                                      ? Icon(
+                                          Icons.check_rounded,
+                                          size: 14.sp,
+                                          color: Colors.white,
+                                        )
+                                      : null,
+                                ),
+                                12.width,
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        coach.username,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 13.sp,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      Text(
+                                        coach.specialization,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 11.sp,
+                                          color: textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                        ],
-                      ),
+                        );
+                      }).toList(),
                     ),
-                  );
-                }).toList(),
-              ),
-            ),
+                  ),
             20.height,
             SizedBox(
               width: double.infinity,
@@ -1035,19 +1168,25 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
                   elevation: 0,
                   padding: EdgeInsets.symmetric(vertical: 15.h),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14.r)),
+                    borderRadius: BorderRadius.circular(14.r),
+                  ),
                 ),
                 child: _submitting
                     ? SizedBox(
-                  height: 20.h,
-                  width: 20.h,
-                  child: const CircularProgressIndicator(
-                      color: Colors.white, strokeWidth: 2),
-                )
-                    : Text('Create Event',
-                    style: GoogleFonts.poppins(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w700)),
+                        height: 20.h,
+                        width: 20.h,
+                        child: const CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        'Create Event',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
               ),
             ),
             20.height,
@@ -1060,9 +1199,10 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
   Widget _labelText(String label) => Text(
     label,
     style: GoogleFonts.poppins(
-        fontSize: 12.sp,
-        fontWeight: FontWeight.w600,
-        color: Colors.grey.shade700),
+      fontSize: 12.sp,
+      fontWeight: FontWeight.w600,
+      color: Colors.grey.shade700,
+    ),
   );
 
   Widget _inputField(String hint, TextEditingController controller) =>
@@ -1072,21 +1212,27 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: GoogleFonts.poppins(
-              fontSize: 12.sp, color: textSecondary.withOpacity(0.5)),
+            fontSize: 12.sp,
+            color: textSecondary.withOpacity(0.5),
+          ),
           filled: true,
           fillColor: Colors.grey.shade100,
-          contentPadding:
-          EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 14.w,
+            vertical: 13.h,
+          ),
           border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide(color: Colors.grey.shade300)),
+            borderRadius: BorderRadius.circular(12.r),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
           enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide(color: Colors.grey.shade300)),
+            borderRadius: BorderRadius.circular(12.r),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
           focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide:
-              const BorderSide(color: accentGreen, width: 1.5)),
+            borderRadius: BorderRadius.circular(12.r),
+            borderSide: const BorderSide(color: accentGreen, width: 1.5),
+          ),
         ),
       );
 
@@ -1094,66 +1240,62 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
     required IconData icon,
     required String text,
     required VoidCallback onTap,
-  }) =>
-      GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding:
-          EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: Colors.grey.shade300),
+  }) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16.sp, color: textSecondary),
+          8.width,
+          Text(
+            text,
+            style: GoogleFonts.poppins(
+              fontSize: 13.sp,
+              color: text.contains('Select') || text == 'Start' || text == 'End'
+                  ? textSecondary.withOpacity(0.5)
+                  : Colors.black,
+            ),
           ),
-          child: Row(
-            children: [
-              Icon(icon, size: 16.sp, color: textSecondary),
-              8.width,
-              Text(
-                text,
-                style: GoogleFonts.poppins(
-                    fontSize: 13.sp,
-                    color: text.contains('Select') ||
-                        text == 'Start' ||
-                        text == 'End'
-                        ? textSecondary.withOpacity(0.5)
-                        : Colors.black),
-              ),
-            ],
-          ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 
   Widget _dropField(
-      String label,
-      List<String> items,
-      String? value,
-      ValueChanged<String?> onChanged,
-      ) =>
-      DropdownButtonFormField<String>(
-        value: value,
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle:
-          GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary),
-          filled: true,
-          fillColor: Colors.grey.shade100,
-          border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide(color: Colors.grey.shade300)),
-          enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide(color: Colors.grey.shade300)),
-          focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide:
-              const BorderSide(color: accentGreen, width: 1.5)),
-        ),
-        style:
-        GoogleFonts.poppins(fontSize: 13.sp, color: Colors.black),
-        items: items
-            .map((i) => DropdownMenuItem(value: i, child: Text(i)))
-            .toList(),
-        onChanged: onChanged,
-      );
+    String label,
+    List<String> items,
+    String? value,
+    ValueChanged<String?> onChanged,
+  ) => DropdownButtonFormField<String>(
+    value: value,
+    decoration: InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary),
+      filled: true,
+      fillColor: Colors.grey.shade100,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12.r),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12.r),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12.r),
+        borderSide: const BorderSide(color: accentGreen, width: 1.5),
+      ),
+    ),
+    style: GoogleFonts.poppins(fontSize: 13.sp, color: Colors.black),
+    items: items
+        .map((i) => DropdownMenuItem(value: i, child: Text(i)))
+        .toList(),
+    onChanged: onChanged,
+  );
 }

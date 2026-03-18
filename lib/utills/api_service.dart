@@ -15,6 +15,7 @@ import 'package:sports/model/guardian/get_your_member.dart';
 import 'package:sports/model/member/profile_data.dart';
 import 'package:sports/utills/shared_preference.dart';
 
+import '../model/clubAdmin/activity_mapped_event_data.dart';
 import '../model/clubAdmin/getSubGroups.dart';
 import '../model/clubAdmin/get_coaches.dart';
 import '../model/clubAdmin/get_event_details.dart';
@@ -746,8 +747,35 @@ class ClubApiService {
     try {
       final fullResponse = await _helper.delete("api/activities/$activityId");
       final jsonResponse = jsonEncode(fullResponse);
-      print(jsonResponse);
       return fullResponse;
+    } catch (e) {
+      print("getMemberEvents failed: $e");
+      rethrow;
+    }
+  }
+
+  Future<dynamic> mapActivitiesEvents(String activityId, String eventId) async {
+    try {
+      final fullResponse = await _helper.post(
+        "api/activities/$activityId/events/$eventId",
+      );
+      final jsonResponse = jsonEncode(fullResponse);
+      return fullResponse;
+    } catch (e) {
+      print("getMemberEvents failed: $e");
+      rethrow;
+    }
+  }
+
+  Future<ActivityMappedEventData> getMapActivitiesEvents(
+    String activityId,
+  ) async {
+    try {
+      final fullResponse = await _helper.get(
+        "api/activities/$activityId/events",
+      );
+      final jsonResponse = jsonEncode(fullResponse);
+      return activityMappedEventDataFromJson(fullResponse);
     } catch (e) {
       print("getMemberEvents failed: $e");
       rethrow;

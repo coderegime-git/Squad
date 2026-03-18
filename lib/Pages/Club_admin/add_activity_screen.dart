@@ -514,15 +514,7 @@ class _ActivityCreationPageState extends State<ActivityCreationPage>
           ),
         ),
       ),
-      actions: [
-        Padding(
-          padding: const EdgeInsets.all(10),
-          child: _OutlineButton(
-            onTap: () {},
-            child: const Icon(Icons.more_horiz, size: 18, color: _textPrimary),
-          ),
-        ),
-      ],
+      actions: [],
       flexibleSpace: FlexibleSpaceBar(
         titlePadding: const EdgeInsets.only(left: 55, bottom: 16),
         title: const Text(
