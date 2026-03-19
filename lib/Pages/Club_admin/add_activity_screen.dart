@@ -542,22 +542,6 @@ class _ActivityCreationPageState extends State<ActivityCreationPage>
                   ),
                 ),
               ),
-              Positioned(
-                top: 14,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Text(
-                    'CLUB ADMIN',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 3,
-                      color: _primary.withOpacity(0.4),
-                    ),
-                  ),
-                ),
-              ),
             ],
           ),
         ),

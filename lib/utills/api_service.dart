@@ -36,6 +36,7 @@ clearUserData() async {}
 
 class ApiBaseHelper {
   void initApiService(GlobalKey<NavigatorState> navigatorKey) {}
+
   // initApiService(GlobalKey<NavigatorState> navigatorKey) {
   //   _navigatorKey = navigatorKey;
   // }
@@ -333,6 +334,7 @@ class ClubApiService {
   ClubApiService();
 
   void initApiService(GlobalKey<NavigatorState> navigatorKey) {}
+
   // initApiService(GlobalKey<NavigatorState> navigatorKey) {
   //   _navigatorKey = navigatorKey;
   // }
@@ -998,8 +1000,7 @@ class ClubApiService {
   Future<bool> assignMembersToTeam(int teamId, List<int> memberIds) async {
     try {
       print("Assign members $memberIds to teamId: $teamId");
-      final fullResponse = await _helper.post("api/teams/$teamId/members",
-      {
+      final fullResponse = await _helper.post("api/teams/$teamId/members", {
         // "teamId": teamId,
         "memberIds": memberIds,
       });
@@ -1056,10 +1057,10 @@ class ClubApiService {
   }
 
   Future<bool> updateTeam(
-      int subGroupId,
-      int teamId,
-      Map<String, dynamic> data,
-      ) async {
+    int subGroupId,
+    int teamId,
+    Map<String, dynamic> data,
+  ) async {
     try {
       print("Update team data: $data subGroupId: $subGroupId teamId: $teamId");
       final fullResponse = await _helper.put(
@@ -1114,6 +1115,7 @@ class CoachApiService {
   CoachApiService();
 
   void initApiService(GlobalKey<NavigatorState> navigatorKey) {}
+
   // initApiService(GlobalKey<NavigatorState> navigatorKey) {
   //   _navigatorKey = navigatorKey;
   // }
@@ -1178,7 +1180,9 @@ class CoachApiService {
 
       if (fullResponse['success'] == true) {
         final List<dynamic> eventsData = fullResponse['data'];
-        return eventsData.map((json) => CoachEventModel.fromJson(json)).toList();
+        return eventsData
+            .map((json) => CoachEventModel.fromJson(json))
+            .toList();
       } else {
         print("Failed to fetch events: ${fullResponse['message']}");
         return [];
@@ -1197,7 +1201,8 @@ class CoachApiService {
 
       if (fullResponse['success'] == true) {
         // Extract eventId from response data
-        if (fullResponse['data'] != null && fullResponse['data']['eventId'] != null) {
+        if (fullResponse['data'] != null &&
+            fullResponse['data']['eventId'] != null) {
           return fullResponse['data']['eventId'] as int;
         }
         return 0; // Success but no ID returned
@@ -1211,11 +1216,18 @@ class CoachApiService {
     }
   }
 
-  Future<bool> updateEvent(int clubId, int eventId, Map<String, dynamic> eventData) async {
+  Future<bool> updateEvent(
+    int clubId,
+    int eventId,
+    Map<String, dynamic> eventData,
+  ) async {
     try {
       print("Updating event: $eventId for club: $clubId with data: $eventData");
       // Note: Using ?clubId=$clubId in the URL as per your API
-      final fullResponse = await _helper.put("api/events/$eventId?clubId=$clubId", eventData);
+      final fullResponse = await _helper.put(
+        "api/events/$eventId?clubId=$clubId",
+        eventData,
+      );
       print("updateEvent response: $fullResponse");
 
       if (fullResponse['success'] == true) {
@@ -1234,7 +1246,9 @@ class CoachApiService {
   Future<CoachEventModel?> getEventDetails(int clubId, int eventId) async {
     try {
       print("Fetching event details: $eventId for club: $clubId");
-      final fullResponse = await _helper.get("api/events/$eventId?clubId=$clubId");
+      final fullResponse = await _helper.get(
+        "api/events/$eventId?clubId=$clubId",
+      );
       print("getEventDetails response: $fullResponse");
 
       if (fullResponse['success'] == true && fullResponse['data'] != null) {
@@ -1257,7 +1271,9 @@ class CoachApiService {
 
       if (fullResponse['success'] == true && fullResponse['data'] != null) {
         final List<dynamic> eventsData = fullResponse['data'];
-        return eventsData.map((json) => CoachEventModel.fromJson(json)).toList();
+        return eventsData
+            .map((json) => CoachEventModel.fromJson(json))
+            .toList();
       } else {
         print("Failed to fetch events: ${fullResponse['message']}");
         return [];
@@ -1286,7 +1302,6 @@ class CoachApiService {
       return null;
     }
   }
-
 
   Future<GroupMembersData> getGroupMember(String groupId) async {
     try {
@@ -1317,6 +1332,7 @@ class CoachApiService {
     dynamic payload,
   ) async {
     print(payload);
+    print(eventId);
     try {
       final fullResponse = await _helper.post(
         "api/events/$eventId/attendance",
@@ -1336,6 +1352,7 @@ class ParentApiService {
   ParentApiService();
 
   void initApiService(GlobalKey<NavigatorState> navigatorKey) {}
+
   // initApiService(GlobalKey<NavigatorState> navigatorKey) {
   //   _navigatorKey = navigatorKey;
   // }
@@ -1437,6 +1454,7 @@ class MemberApiService {
   MemberApiService();
 
   void initApiService(GlobalKey<NavigatorState> navigatorKey) {}
+
   // initApiService(GlobalKey<NavigatorState> navigatorKey) {
   //   _navigatorKey = navigatorKey;
   // }

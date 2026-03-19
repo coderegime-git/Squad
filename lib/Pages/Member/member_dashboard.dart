@@ -90,23 +90,26 @@ class _MemberDashboardState extends State<MemberDashboard> {
                     children: [
                       Text(
                         "Hello, $_username",
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineMedium
+                        style: Theme.of(context).textTheme.headlineMedium
                             ?.copyWith(
-                          color: Colors.white,
-                          fontSize: 20.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
+                              color: Colors.white,
+                              fontSize: 20.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                       const Spacer(),
                       GestureDetector(
                         onTap: () => Navigator.pushNamed(
-                            context, AppRoutes.guardianNotifications),
+                          context,
+                          AppRoutes.guardianNotifications,
+                        ),
                         child: Stack(
                           children: [
-                            Icon(Icons.notifications_none_rounded,
-                                color: Colors.white, size: 26.sp),
+                            Icon(
+                              Icons.notifications_none_rounded,
+                              color: Colors.white,
+                              size: 26.sp,
+                            ),
                             Positioned(
                               right: 0,
                               top: 0,
@@ -122,7 +125,9 @@ class _MemberDashboardState extends State<MemberDashboard> {
                                       color: accentOrange,
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                          color: Colors.black, width: 1.5),
+                                        color: Colors.black,
+                                        width: 1.5,
+                                      ),
                                     ),
                                   );
                                 },
@@ -177,11 +182,12 @@ class _MemberDashboardState extends State<MemberDashboard> {
                                   8.width,
                                   Container(
                                     padding: EdgeInsets.symmetric(
-                                        horizontal: 8.w, vertical: 2.h),
+                                      horizontal: 8.w,
+                                      vertical: 2.h,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: accentOrange.withOpacity(0.15),
-                                      borderRadius:
-                                      BorderRadius.circular(20.r),
+                                      borderRadius: BorderRadius.circular(20.r),
                                     ),
                                     child: Text(
                                       '${pending.length}',
@@ -195,13 +201,15 @@ class _MemberDashboardState extends State<MemberDashboard> {
                                 ],
                               ),
                               12.height,
-                              ...pending.map((e) => _PendingEventCard(
-                                event: e,
-                                onAccept: () =>
-                                    _updateStatus(e.eventId, 'ACCEPTED'),
-                                onDecline: () =>
-                                    _updateStatus(e.eventId, 'REJECTED'),
-                              )),
+                              ...pending.map(
+                                (e) => _PendingEventCard(
+                                  event: e,
+                                  onAccept: () =>
+                                      _updateStatus(e.eventId, 'ACCEPT'),
+                                  onDecline: () =>
+                                      _updateStatus(e.eventId, 'REJECTED'),
+                                ),
+                              ),
                               16.height,
                             ],
                           );
@@ -213,10 +221,12 @@ class _MemberDashboardState extends State<MemberDashboard> {
                         future: _allEventsFuture,
                         builder: (context, snapshot) {
                           final all = snapshot.data?.data ?? [];
-                          final accepted =
-                              all.where((e) => e.status == 'ACCEPTED').length;
-                          final pending =
-                              all.where((e) => e.status == 'PENDING').length;
+                          final accepted = all
+                              .where((e) => e.status == 'ACCEPTED')
+                              .length;
+                          final pending = all
+                              .where((e) => e.status == 'PENDING')
+                              .length;
                           return Row(
                             children: [
                               _buildStatCard(
@@ -266,9 +276,10 @@ class _MemberDashboardState extends State<MemberDashboard> {
                           }
                           if (snapshot.hasError) {
                             return Center(
-                              child: Text("Failed to load events",
-                                  style: GoogleFonts.poppins(
-                                      color: Colors.grey)),
+                              child: Text(
+                                "Failed to load events",
+                                style: GoogleFonts.poppins(color: Colors.grey),
+                              ),
                             );
                           }
                           final events = snapshot.data?.data ?? [];
@@ -278,29 +289,37 @@ class _MemberDashboardState extends State<MemberDashboard> {
                               decoration: BoxDecoration(
                                 color: cardDark,
                                 borderRadius: BorderRadius.circular(16.r),
-                                border:
-                                Border.all(color: Colors.grey.shade300),
+                                border: Border.all(color: Colors.grey.shade300),
                               ),
                               child: Center(
-                                child: Text("No events yet",
-                                    style: GoogleFonts.poppins(
-                                        color: textSecondary)),
+                                child: Text(
+                                  "No events yet",
+                                  style: GoogleFonts.poppins(
+                                    color: textSecondary,
+                                  ),
+                                ),
                               ),
                             );
                           }
                           return Column(
                             children: events
-                                .map((e) => _EventSummaryCard(
-                              event: e,
-                              onAccept: e.status == 'PENDING'
-                                  ? () => _updateStatus(
-                                  e.eventId, 'ACCEPTED')
-                                  : null,
-                              onDecline: e.status == 'PENDING'
-                                  ? () => _updateStatus(
-                                  e.eventId, 'REJECTED')
-                                  : null,
-                            ))
+                                .map(
+                                  (e) => _EventSummaryCard(
+                                    event: e,
+                                    onAccept: e.status == 'PENDING'
+                                        ? () => _updateStatus(
+                                            e.eventId,
+                                            'ACCEPTED',
+                                          )
+                                        : null,
+                                    onDecline: e.status == 'PENDING'
+                                        ? () => _updateStatus(
+                                            e.eventId,
+                                            'REJECTED',
+                                          )
+                                        : null,
+                                  ),
+                                )
                                 .toList(),
                           );
                         },
@@ -352,14 +371,18 @@ class _MemberDashboardState extends State<MemberDashboard> {
               ],
             ),
             8.height,
-            Text(label,
-                style: GoogleFonts.poppins(
-                    fontSize: 13.sp, color: textSecondary)),
+            Text(
+              label,
+              style: GoogleFonts.poppins(fontSize: 13.sp, color: textSecondary),
+            ),
             2.height,
-            Text(subtitle,
-                style: GoogleFonts.poppins(
-                    fontSize: 11.sp,
-                    color: textSecondary.withOpacity(0.7))),
+            Text(
+              subtitle,
+              style: GoogleFonts.poppins(
+                fontSize: 11.sp,
+                color: textSecondary.withOpacity(0.7),
+              ),
+            ),
           ],
         ),
       ),
@@ -416,8 +439,7 @@ class _PendingEventCard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding:
-                EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                 decoration: BoxDecoration(
                   color: accentOrange.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(20.r),
@@ -438,16 +460,27 @@ class _PendingEventCard extends StatelessWidget {
             children: [
               Icon(Icons.sports_rounded, size: 13.sp, color: textSecondary),
               5.width,
-              Text(event.teamName,
-                  style: GoogleFonts.poppins(
-                      fontSize: 12.sp, color: textSecondary)),
+              Text(
+                event.teamName,
+                style: GoogleFonts.poppins(
+                  fontSize: 12.sp,
+                  color: textSecondary,
+                ),
+              ),
               16.width,
-              Icon(Icons.calendar_today_rounded,
-                  size: 13.sp, color: textSecondary),
+              Icon(
+                Icons.calendar_today_rounded,
+                size: 13.sp,
+                color: textSecondary,
+              ),
               5.width,
-              Text(event.eventDate,
-                  style: GoogleFonts.poppins(
-                      fontSize: 12.sp, color: textSecondary)),
+              Text(
+                event.eventDate,
+                style: GoogleFonts.poppins(
+                  fontSize: 12.sp,
+                  color: textSecondary,
+                ),
+              ),
             ],
           ),
           12.height,
@@ -460,14 +493,18 @@ class _PendingEventCard extends StatelessWidget {
                     backgroundColor: accentGreen,
                     padding: EdgeInsets.symmetric(vertical: 10.h),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.r)),
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
                     elevation: 0,
                   ),
-                  child: Text('Accept',
-                      style: GoogleFonts.poppins(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white)),
+                  child: Text(
+                    'Accept',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
               12.width,
@@ -478,13 +515,17 @@ class _PendingEventCard extends StatelessWidget {
                     side: const BorderSide(color: Colors.red, width: 1.5),
                     padding: EdgeInsets.symmetric(vertical: 10.h),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.r)),
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
                   ),
-                  child: Text('Decline',
-                      style: GoogleFonts.poppins(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.red)),
+                  child: Text(
+                    'Decline',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.red,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -501,11 +542,7 @@ class _EventSummaryCard extends StatelessWidget {
   final VoidCallback? onAccept;
   final VoidCallback? onDecline;
 
-  const _EventSummaryCard({
-    required this.event,
-    this.onAccept,
-    this.onDecline,
-  });
+  const _EventSummaryCard({required this.event, this.onAccept, this.onDecline});
 
   Color _statusColor(String status) {
     switch (status.toUpperCase()) {
@@ -547,8 +584,7 @@ class _EventSummaryCard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding:
-                EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(20.r),
@@ -569,16 +605,27 @@ class _EventSummaryCard extends StatelessWidget {
             children: [
               Icon(Icons.sports_rounded, size: 13.sp, color: textSecondary),
               5.width,
-              Text(event.teamName,
-                  style: GoogleFonts.poppins(
-                      fontSize: 11.sp, color: textSecondary)),
+              Text(
+                event.teamName,
+                style: GoogleFonts.poppins(
+                  fontSize: 11.sp,
+                  color: textSecondary,
+                ),
+              ),
               16.width,
-              Icon(Icons.calendar_today_rounded,
-                  size: 13.sp, color: textSecondary),
+              Icon(
+                Icons.calendar_today_rounded,
+                size: 13.sp,
+                color: textSecondary,
+              ),
               5.width,
-              Text(event.eventDate,
-                  style: GoogleFonts.poppins(
-                      fontSize: 11.sp, color: textSecondary)),
+              Text(
+                event.eventDate,
+                style: GoogleFonts.poppins(
+                  fontSize: 11.sp,
+                  color: textSecondary,
+                ),
+              ),
             ],
           ),
           if (event.status == 'PENDING' &&
@@ -594,14 +641,18 @@ class _EventSummaryCard extends StatelessWidget {
                       backgroundColor: accentGreen,
                       padding: EdgeInsets.symmetric(vertical: 8.h),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8.r)),
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
                       elevation: 0,
                     ),
-                    child: Text('Accept',
-                        style: GoogleFonts.poppins(
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white)),
+                    child: Text(
+                      'Accept',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
                 10.width,
@@ -609,17 +660,20 @@ class _EventSummaryCard extends StatelessWidget {
                   child: OutlinedButton(
                     onPressed: onDecline,
                     style: OutlinedButton.styleFrom(
-                      side:
-                      const BorderSide(color: Colors.red, width: 1.2),
+                      side: const BorderSide(color: Colors.red, width: 1.2),
                       padding: EdgeInsets.symmetric(vertical: 8.h),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8.r)),
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
                     ),
-                    child: Text('Decline',
-                        style: GoogleFonts.poppins(
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.red)),
+                    child: Text(
+                      'Decline',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.red,
+                      ),
+                    ),
                   ),
                 ),
               ],

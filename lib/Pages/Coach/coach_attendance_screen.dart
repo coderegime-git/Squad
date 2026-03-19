@@ -63,22 +63,26 @@ class _CoachAttendanceScreenState extends State<CoachAttendanceScreen> {
   }
 
   void _submitAttendance() async {
-    setState(() => _isSubmitting = true);
-    final List<AttendanceData> attendanceData = _members.map((m) {
-      return AttendanceData(
-        memberId: m.memberId.toString(), // or int if API expects int
-        status: m.status ?? "ABSENT", // fallback safety
-      );
-    }).toList();
+    try {
+      setState(() => _isSubmitting = true);
+      final List<AttendanceData> attendanceData = _members.map((m) {
+        return AttendanceData(
+          memberId: m.memberId.toString(), // or int if API expects int
+          status: m.status ?? "ABSENT", // fallback safety
+        );
+      }).toList();
 
-    // ✅ Convert to JSON list
-    final payload = attendanceData.map((e) => e.toJson()).toList();
+      final payload = attendanceData.map((e) => e.toJson()).toList();
 
-    // ✅ Call API with payload
-    final success = await apiService.saveAttendance(widget.eventId, payload);
-    setState(() => _isSubmitting = false);
-    toast('Attendance saved successfully!', bgColor: accentGreen);
-    Navigator.pop(context);
+      final success = await apiService.saveAttendance(widget.eventId, payload);
+      setState(() => _isSubmitting = false);
+      toast('Attendance saved successfully!', bgColor: accentGreen);
+      Navigator.pop(context);
+    } catch (e) {
+      toast('Failed to save!', bgColor: Colors.red.shade400);
+
+      setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -181,14 +185,15 @@ class _CoachAttendanceScreenState extends State<CoachAttendanceScreen> {
                         count: _absentCount,
                         color: Colors.redAccent,
                       ),
-                      8.width,
-                      _SummaryChip(
-                        label: 'Late',
-                        count: _lateCount,
-                        color: accentOrange,
-                      ),
+                      // 8.width,
+                      // _SummaryChip(
+                      //   label: 'Late',
+                      //   count: _lateCount,
+                      //   color: accentOrange,
+                      // ),
                       const Spacer(),
                       PopupMenuButton<String>(
+                        color: Colors.white,
                         onSelected: (val) {
                           if (val == 'all_present') _markAll("PRESENT");
                           if (val == 'all_absent') _markAll("ABSENT");
@@ -206,7 +211,7 @@ class _CoachAttendanceScreenState extends State<CoachAttendanceScreen> {
                         child: Container(
                           padding: EdgeInsets.all(8.r),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: Colors.black,
                             borderRadius: BorderRadius.circular(10.r),
                           ),
                           child: Icon(Icons.more_vert_rounded, size: 20.sp),
@@ -376,14 +381,14 @@ class _AttendanceTile extends StatelessWidget {
             onTap: () => onStatusChanged("PRESENT"),
           ),
           6.width,
-          _StatusBtn(
-            label: 'L',
-            tooltip: 'Late',
-            color: accentOrange,
-            isSelected: member.status == "LATE",
-            onTap: () => onStatusChanged("LATE"),
-          ),
-          6.width,
+          // _StatusBtn(
+          //   label: 'L',
+          //   tooltip: 'Late',
+          //   color: accentOrange,
+          //   isSelected: member.status == "LATE",
+          //   onTap: () => onStatusChanged("LATE"),
+          // ),
+          // 6.width,
           _StatusBtn(
             label: 'A',
             tooltip: 'Absent',

@@ -75,8 +75,9 @@ class _CoachEventGroupsScreenState extends State<CoachEventGroupsScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.r),
+        ),
         title: Text(
           "Delete Group",
           style: GoogleFonts.montserrat(fontWeight: FontWeight.w700),
@@ -88,15 +89,19 @@ class _CoachEventGroupsScreenState extends State<CoachEventGroupsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child:
-            Text("Cancel", style: GoogleFonts.poppins(color: Colors.grey)),
+            child: Text(
+              "Cancel",
+              style: GoogleFonts.poppins(color: Colors.grey),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
               Navigator.pop(context);
-              final success =
-              await _api.deleteGroup(widget.eventId, group.groupId!);
+              final success = await _api.deleteGroup(
+                widget.eventId,
+                group.groupId!,
+              );
               if (success) {
                 _refresh();
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -114,8 +119,10 @@ class _CoachEventGroupsScreenState extends State<CoachEventGroupsScreen> {
                 );
               }
             },
-            child:
-            Text("Delete", style: GoogleFonts.poppins(color: Colors.white)),
+            child: Text(
+              "Delete",
+              style: GoogleFonts.poppins(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -167,8 +174,10 @@ class _CoachEventGroupsScreenState extends State<CoachEventGroupsScreen> {
                   children: [
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
-                      child: const Icon(Icons.arrow_back_ios_new_rounded,
-                          color: Colors.white),
+                      child: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: Colors.white,
+                      ),
                     ),
                     16.width,
                     Expanded(
@@ -178,14 +187,12 @@ class _CoachEventGroupsScreenState extends State<CoachEventGroupsScreen> {
                         children: [
                           Text(
                             "Groups",
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineMedium
+                            style: Theme.of(context).textTheme.headlineMedium
                                 ?.copyWith(
-                              color: Colors.white,
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
+                                  color: Colors.white,
+                                  fontSize: 20.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
                           ),
                           Text(
                             widget.eventName,
@@ -217,15 +224,21 @@ class _CoachEventGroupsScreenState extends State<CoachEventGroupsScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.error_outline,
-                            color: Colors.red, size: 40.sp),
+                        Icon(
+                          Icons.error_outline,
+                          color: Colors.red,
+                          size: 40.sp,
+                        ),
                         12.height,
-                        Text("Failed to load groups",
-                            style: GoogleFonts.poppins(color: Colors.grey)),
+                        Text(
+                          "Failed to load groups",
+                          style: GoogleFonts.poppins(color: Colors.grey),
+                        ),
                         12.height,
                         ElevatedButton(
-                            onPressed: _refresh,
-                            child: const Text("Retry")),
+                          onPressed: _refresh,
+                          child: const Text("Retry"),
+                        ),
                       ],
                     ),
                   );
@@ -258,6 +271,7 @@ class _CoachEventGroupsScreenState extends State<CoachEventGroupsScreen> {
                                 groupId: group.groupId!,
                                 groupName: group.name ?? 'Group',
                                 eventName: widget.eventName,
+                                eventId: widget.eventId,
                               ),
                             ),
                           );
@@ -269,8 +283,9 @@ class _CoachEventGroupsScreenState extends State<CoachEventGroupsScreen> {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(16.r),
                             border: Border.all(
-                                color: accentGreen.withOpacity(0.3),
-                                width: 1.2),
+                              color: accentGreen.withOpacity(0.3),
+                              width: 1.2,
+                            ),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.04),
@@ -287,8 +302,11 @@ class _CoachEventGroupsScreenState extends State<CoachEventGroupsScreen> {
                                   color: accentGreen.withOpacity(0.12),
                                   borderRadius: BorderRadius.circular(12.r),
                                 ),
-                                child: Icon(Icons.group_rounded,
-                                    color: accentGreen, size: 24.sp),
+                                child: Icon(
+                                  Icons.group_rounded,
+                                  color: accentGreen,
+                                  size: 24.sp,
+                                ),
                               ),
                               14.width,
                               Expanded(
@@ -307,8 +325,9 @@ class _CoachEventGroupsScreenState extends State<CoachEventGroupsScreen> {
                                       Text(
                                         group.description,
                                         style: GoogleFonts.poppins(
-                                            fontSize: 12.sp,
-                                            color: Colors.grey.shade600),
+                                          fontSize: 12.sp,
+                                          color: Colors.grey.shade600,
+                                        ),
                                       ),
                                   ],
                                 ),
@@ -323,12 +342,15 @@ class _CoachEventGroupsScreenState extends State<CoachEventGroupsScreen> {
                                       padding: EdgeInsets.all(6.w),
                                       decoration: BoxDecoration(
                                         color: Colors.blue.withOpacity(0.08),
-                                        borderRadius:
-                                        BorderRadius.circular(8.r),
+                                        borderRadius: BorderRadius.circular(
+                                          8.r,
+                                        ),
                                       ),
-                                      child: Icon(Icons.edit_rounded,
-                                          color: Colors.blue.shade400,
-                                          size: 18.sp),
+                                      child: Icon(
+                                        Icons.edit_rounded,
+                                        color: Colors.blue.shade400,
+                                        size: 18.sp,
+                                      ),
                                     ),
                                   ),
                                   8.width,
@@ -338,17 +360,22 @@ class _CoachEventGroupsScreenState extends State<CoachEventGroupsScreen> {
                                       padding: EdgeInsets.all(6.w),
                                       decoration: BoxDecoration(
                                         color: Colors.red.withOpacity(0.08),
-                                        borderRadius:
-                                        BorderRadius.circular(8.r),
+                                        borderRadius: BorderRadius.circular(
+                                          8.r,
+                                        ),
                                       ),
-                                      child: Icon(Icons.delete_rounded,
-                                          color: Colors.red.shade400,
-                                          size: 18.sp),
+                                      child: Icon(
+                                        Icons.delete_rounded,
+                                        color: Colors.red.shade400,
+                                        size: 18.sp,
+                                      ),
                                     ),
                                   ),
                                   8.width,
-                                  Icon(Icons.chevron_right_rounded,
-                                      color: Colors.grey.shade400),
+                                  Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: Colors.grey.shade400,
+                                  ),
                                 ],
                               ),
                             ],
@@ -398,8 +425,7 @@ class _GroupFormPageState extends State<_GroupFormPage> {
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.existing?.name ?? '');
-    _descCtrl =
-        TextEditingController(text: widget.existing?.description ?? '');
+    _descCtrl = TextEditingController(text: widget.existing?.description ?? '');
   }
 
   @override
@@ -415,23 +441,17 @@ class _GroupFormPageState extends State<_GroupFormPage> {
 
     bool success;
     if (_isEdit) {
-      success = await _api.updateGroup(
-        widget.eventId,
-        widget.existing!.groupId!,
-        {
-          "name": _nameCtrl.text.trim(),
-          "description": _descCtrl.text.trim(),
-          "status": "ACTIVE",
-        },
-      );
+      success = await _api
+          .updateGroup(widget.eventId, widget.existing!.groupId!, {
+            "name": _nameCtrl.text.trim(),
+            "description": _descCtrl.text.trim(),
+            "status": "ACTIVE",
+          });
     } else {
-      success = await _api.createGroup(
-        widget.eventId,
-        {
-          "name": _nameCtrl.text.trim(),
-          "description": _descCtrl.text.trim(),
-        },
-      );
+      success = await _api.createGroup(widget.eventId, {
+        "name": _nameCtrl.text.trim(),
+        "description": _descCtrl.text.trim(),
+      });
     }
 
     setState(() => _loading = false);
@@ -439,8 +459,11 @@ class _GroupFormPageState extends State<_GroupFormPage> {
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-          Text(_isEdit ? "Group updated successfully" : "Group created successfully"),
+          content: Text(
+            _isEdit
+                ? "Group updated successfully"
+                : "Group created successfully",
+          ),
           backgroundColor: accentGreen,
         ),
       );
@@ -487,8 +510,10 @@ class _GroupFormPageState extends State<_GroupFormPage> {
                   children: [
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
-                      child: const Icon(Icons.arrow_back_ios_new_rounded,
-                          color: Colors.white),
+                      child: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: Colors.white,
+                      ),
                     ),
                     16.width,
                     Expanded(
@@ -498,14 +523,12 @@ class _GroupFormPageState extends State<_GroupFormPage> {
                         children: [
                           Text(
                             _isEdit ? "Edit Group" : "Create Group",
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineMedium
+                            style: Theme.of(context).textTheme.headlineMedium
                                 ?.copyWith(
-                              color: Colors.white,
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
+                                  color: Colors.white,
+                                  fontSize: 20.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
                           ),
                           Text(
                             widget.eventName,
@@ -565,35 +588,40 @@ class _GroupFormPageState extends State<_GroupFormPage> {
                             controller: _nameCtrl,
                             decoration: InputDecoration(
                               labelText: "Group Name *",
-                              labelStyle:
-                              GoogleFonts.poppins(fontSize: 13.sp),
+                              labelStyle: GoogleFonts.poppins(fontSize: 13.sp),
                               hintText: "e.g. Under 19",
                               hintStyle: GoogleFonts.poppins(
-                                  fontSize: 13.sp,
-                                  color: Colors.grey.shade400),
+                                fontSize: 13.sp,
+                                color: Colors.grey.shade400,
+                              ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12.r),
                                 borderSide: BorderSide(
-                                    color: Colors.grey.shade300),
+                                  color: Colors.grey.shade300,
+                                ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12.r),
                                 borderSide: BorderSide(
-                                    color: Colors.grey.shade300),
+                                  color: Colors.grey.shade300,
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12.r),
                                 borderSide: BorderSide(
-                                    color: accentGreen, width: 2),
+                                  color: accentGreen,
+                                  width: 2,
+                                ),
                               ),
-                              prefixIcon: Icon(Icons.group_rounded,
-                                  color: accentGreen),
+                              prefixIcon: Icon(
+                                Icons.group_rounded,
+                                color: accentGreen,
+                              ),
                               filled: true,
                               fillColor: Colors.grey.shade50,
                             ),
                             style: GoogleFonts.poppins(fontSize: 14.sp),
-                            validator: (v) =>
-                            (v == null || v.trim().isEmpty)
+                            validator: (v) => (v == null || v.trim().isEmpty)
                                 ? "Group name is required"
                                 : null,
                           ),
@@ -605,30 +633,35 @@ class _GroupFormPageState extends State<_GroupFormPage> {
                             maxLines: 3,
                             decoration: InputDecoration(
                               labelText: "Description",
-                              labelStyle:
-                              GoogleFonts.poppins(fontSize: 13.sp),
+                              labelStyle: GoogleFonts.poppins(fontSize: 13.sp),
                               hintText: "e.g. Group for U19 category",
                               hintStyle: GoogleFonts.poppins(
-                                  fontSize: 13.sp,
-                                  color: Colors.grey.shade400),
+                                fontSize: 13.sp,
+                                color: Colors.grey.shade400,
+                              ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12.r),
                                 borderSide: BorderSide(
-                                    color: Colors.grey.shade300),
+                                  color: Colors.grey.shade300,
+                                ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12.r),
                                 borderSide: BorderSide(
-                                    color: Colors.grey.shade300),
+                                  color: Colors.grey.shade300,
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12.r),
                                 borderSide: BorderSide(
-                                    color: accentGreen, width: 2),
+                                  color: accentGreen,
+                                  width: 2,
+                                ),
                               ),
                               prefixIcon: Icon(
-                                  Icons.description_rounded,
-                                  color: accentGreen),
+                                Icons.description_rounded,
+                                color: accentGreen,
+                              ),
                               filled: true,
                               fillColor: Colors.grey.shade50,
                             ),
@@ -655,19 +688,21 @@ class _GroupFormPageState extends State<_GroupFormPage> {
                         onPressed: _loading ? null : _submit,
                         child: _loading
                             ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2.5),
-                        )
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
                             : Text(
-                          _isEdit ? "Update Group" : "Create Group",
-                          style: GoogleFonts.montserrat(
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
+                                _isEdit ? "Update Group" : "Create Group",
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 15.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
                       ),
                     ),
                   ],
