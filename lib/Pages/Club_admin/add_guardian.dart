@@ -264,9 +264,7 @@ class _ClubAdminAddGuardianScreenState
                               child: _isLoading
                                   ? AppUI.buttonSpinner()
                                   : Text(
-                                      _currentStep == _stepTitles.length - 1
-                                          ? 'Add Guardian'
-                                          : 'Next  →',
+                                      'Add Guardian',
                                       style: GoogleFonts.poppins(
                                         fontSize: 14.sp,
                                         fontWeight: FontWeight.w700,

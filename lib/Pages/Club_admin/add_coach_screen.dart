@@ -38,7 +38,7 @@ class _ClubAdminAddCoachScreenState extends State<ClubAdminAddCoachScreen> {
   final List<String> _stepTitles = [
     'Personal Info',
     'Specialization',
-    'Assign Groups',
+    //'Assign Groups',
   ];
 
   final List<String> _specializations = [
@@ -292,7 +292,7 @@ class _ClubAdminAddCoachScreenState extends State<ClubAdminAddCoachScreen> {
   Future<void> _handleNext() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_currentStep < _stepTitles.length - 1) {
+    if (_currentStep < _stepTitles.length - 2) {
       setState(() => _currentStep++);
       return;
     }
@@ -353,8 +353,8 @@ class _ClubAdminAddCoachScreenState extends State<ClubAdminAddCoachScreen> {
         return _step1();
       case 1:
         return _step2();
-      case 2:
-        return _step3();
+      /* case 2:
+        return _step3();*/
       default:
         return const SizedBox.shrink();
     }
