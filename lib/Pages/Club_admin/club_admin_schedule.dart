@@ -45,11 +45,16 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen> {
     setState(() => _loadingEvents = true);
     try {
       final result = await _apiService.getEvents();
+      if (!mounted) return;
       setState(() {
         _allEvents = result.data;
         _loadingEvents = false;
       });
     } catch (e) {
+      print("Dashboard load error: ");
+      print(e.toString());
+      if (!mounted) return;
+
       setState(() => _loadingEvents = false);
     }
   }
@@ -539,7 +544,7 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
       ),
-      builder: (_) => _EventDetailSheet(
+      builder: (_) => EventDetailSheet(
         eventId: event.eventId,
         event: event,
         apiService: _apiService,
@@ -562,22 +567,22 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen> {
 
 // ── Event Detail Sheet ─────────────────────────────────────────────────────
 // CHANGE: added `event` parameter + "Manage Groups" button at the bottom
-class _EventDetailSheet extends StatefulWidget {
+class EventDetailSheet extends StatefulWidget {
   final int eventId;
   final Data event; // ← added
   final ClubApiService apiService;
 
-  const _EventDetailSheet({
+  const EventDetailSheet({
     required this.eventId,
     required this.event, // ← added
     required this.apiService,
   });
 
   @override
-  State<_EventDetailSheet> createState() => _EventDetailSheetState();
+  State<EventDetailSheet> createState() => EventDetailSheetState();
 }
 
-class _EventDetailSheetState extends State<_EventDetailSheet> {
+class EventDetailSheetState extends State<EventDetailSheet> {
   bool _loading = true;
   String? _error;
   EventData? _event;

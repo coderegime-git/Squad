@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:nb_utils/nb_utils.dart' hide whiteColor;
+import 'package:sports/Pages/splash.dart';
 
 import '../../config/colors.dart';
 import '../config/common.dart';
+import '../utills/shared_preference.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -99,17 +101,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Text('Upcoming Events', style: boldTextStyle(size: 18)),
               12.height,
               _eventTile(
-                  title: 'Cricket Practice',
-                  subtitle: 'Tomorrow • 6:00 PM',
-                  icon: Icons.sports_cricket),
+                title: 'Cricket Practice',
+                subtitle: 'Tomorrow • 6:00 PM',
+                icon: Icons.sports_cricket,
+              ),
               _eventTile(
-                  title: 'Swimming Session',
-                  subtitle: 'Sat • 8:00 AM',
-                  icon: Icons.pool),
+                title: 'Swimming Session',
+                subtitle: 'Sat • 8:00 AM',
+                icon: Icons.pool,
+              ),
               _eventTile(
-                  title: 'Football Match',
-                  subtitle: 'Sun • 4:00 PM',
-                  icon: Icons.sports_soccer),
+                title: 'Football Match',
+                subtitle: 'Sun • 4:00 PM',
+                icon: Icons.sports_soccer,
+              ),
 
               24.height,
 
@@ -127,9 +132,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
               12.height,
               Row(
                 children: [
-                  _actionButton(icon: Icons.calendar_today, label: 'View Events'),
+                  _actionButton(
+                    icon: Icons.calendar_today,
+                    label: 'View Events',
+                  ),
                   12.width,
-                  _actionButton(icon: Icons.chat_bubble_outline, label: 'Messages'),
+                  _actionButton(
+                    icon: Icons.chat_bubble_outline,
+                    label: 'Messages',
+                  ),
                 ],
               ),
               12.height,
@@ -168,9 +179,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: Icon(Icons.person, size: 30, color: primaryColour),
                   ),
                   12.height,
-                  Text('Guardian Name', style: boldTextStyle(color: Colors.white)),
+                  Text(
+                    'Guardian Name',
+                    style: boldTextStyle(color: Colors.white),
+                  ),
                   4.height,
-                  Text('guardian@club.com', style: secondaryTextStyle(color: Colors.white70, size: 12)),
+                  Text(
+                    'guardian@club.com',
+                    style: secondaryTextStyle(color: Colors.white70, size: 12),
+                  ),
                 ],
               ),
             ),
@@ -203,7 +220,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ListTile(
               leading: Icon(Icons.logout, color: Colors.red),
               title: Text('Logout', style: primaryTextStyle(color: Colors.red)),
-              onTap: () {},
+              onTap: () {
+                SharedPreferenceHelper.clear();
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const Splash()),
+                  (route) => false,
+                );
+              },
             ),
           ],
         ),
@@ -212,7 +236,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   /// WIDGETS
-  Widget _statCard({required String title, required String value, required IconData icon, required Color color}) {
+  Widget _statCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
     return Expanded(
       child: Container(
         padding: EdgeInsets.all(16),
@@ -233,7 +262,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _eventTile({required String title, required String subtitle, required IconData icon}) {
+  Widget _eventTile({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+  }) {
     return Container(
       margin: EdgeInsets.only(bottom: 12),
       padding: EdgeInsets.all(14),

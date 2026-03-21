@@ -17,7 +17,9 @@ import 'package:nb_utils/nb_utils.dart';
 
 import '../../config/colors.dart';
 import '../../routes/app_routes.dart';
+import '../../utills/shared_preference.dart';
 import '../Member/edit_profile.dart';
+import '../splash.dart';
 
 class GuardianProfileScreen extends StatefulWidget {
   const GuardianProfileScreen({super.key});
@@ -504,9 +506,14 @@ class _GuardianProfileScreenState extends State<GuardianProfileScreen> {
                                         Future.delayed(
                                           const Duration(milliseconds: 800),
                                           () {
-                                            Navigator.pushReplacementNamed(
+                                            SharedPreferenceHelper.clear();
+                                            Navigator.pushAndRemoveUntil(
                                               context,
-                                              AppRoutes.login,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    const Splash(),
+                                              ),
+                                              (route) => false,
                                             );
                                           },
                                         );

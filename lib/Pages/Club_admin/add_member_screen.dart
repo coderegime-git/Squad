@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:nb_utils/nb_utils.dart';
 
 import '../../config/colors.dart';
+import '../../model/clubAdmin/get_guardians.dart';
 import '../../utills/api_service.dart';
 import '../../utills/helper.dart';
 
@@ -22,6 +23,8 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
   final _formKey = GlobalKey<FormState>();
   int _currentStep = 0;
   bool _isLoading = false;
+  List<GuardianData> _guardians = [];
+  GuardianData? _selectedGuardian;
 
   // Step 1 – Personal Info
   final _nameCtrl = TextEditingController();
@@ -48,17 +51,31 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
   final _guardianPhoneCtrl = TextEditingController();
   final _guardianEmailCtrl = TextEditingController();
   String? _selectedRelation;
-
+  final apiService = ClubApiService();
   final List<String> _stepTitles = [
     'Personal Info',
     'Club Details',
     'Guardian Info',
   ];
-
+  bool _loadingGuardians = true;
   final _genders = ['Male', 'Female', 'Other'];
   final _activities = ['Football', 'Swimming', 'Cricket', 'Basketball'];
-  final _groups = ['Under-10', 'Under-12', 'Under-14', 'Under-16', 'Beginner', 'Intermediate', 'Advanced'];
-  final _subGroups = ['Team A', 'Team B', 'Squad Alpha', 'Squad Beta', 'Main Squad'];
+  final _groups = [
+    'Under-10',
+    'Under-12',
+    'Under-14',
+    'Under-16',
+    'Beginner',
+    'Intermediate',
+    'Advanced',
+  ];
+  final _subGroups = [
+    'Team A',
+    'Team B',
+    'Squad Alpha',
+    'Squad Beta',
+    'Main Squad',
+  ];
   final _paymentStatuses = ['Paid', 'Pending', 'Partial'];
   final _relations = ['Father', 'Mother', 'Guardian', 'Other'];
 
@@ -79,6 +96,20 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
     _guardianPhoneCtrl.dispose();
     _guardianEmailCtrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    getGuardianData();
+    super.initState();
+  }
+
+  void getGuardianData() async {
+    final guardianResult = await apiService.getGuardians();
+    setState(() {
+      _guardians = guardianResult.data;
+      _loadingGuardians = false;
+    });
   }
 
   @override
@@ -110,20 +141,21 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
                     children: [
                       GestureDetector(
                         onTap: () => Navigator.pop(context),
-                        child: Icon(Icons.arrow_back_ios_rounded,
-                            color: Colors.white, size: 20.sp),
+                        child: Icon(
+                          Icons.arrow_back_ios_rounded,
+                          color: Colors.white,
+                          size: 20.sp,
+                        ),
                       ),
                       16.width,
                       Text(
                         'Add New Member',
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineMedium
+                        style: Theme.of(context).textTheme.headlineMedium
                             ?.copyWith(
-                          color: Colors.white,
-                          fontSize: 20.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
+                              color: Colors.white,
+                              fontSize: 20.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                     ],
                   ),
@@ -132,6 +164,7 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
             ),
 
             // ── Step Indicator ──────────────────────────────────────────
+            /*
             Container(
               color: Colors.white,
               padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
@@ -154,7 +187,9 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
                                   top: 13.r,
                                   child: Container(
                                     height: 2.h,
-                                    color: i < _currentStep ? accentGreen : Colors.grey.shade300,
+                                    color: i < _currentStep
+                                        ? accentGreen
+                                        : Colors.grey.shade300,
                                   ),
                                 ),
 
@@ -165,24 +200,34 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
                                     width: 28.r,
                                     height: 28.r,
                                     decoration: BoxDecoration(
-                                      color: (isDone || isActive) ? accentGreen : Colors.white,
+                                      color: (isDone || isActive)
+                                          ? accentGreen
+                                          : Colors.white,
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                        color: (isDone || isActive) ? accentGreen : Colors.grey.shade300,
+                                        color: (isDone || isActive)
+                                            ? accentGreen
+                                            : Colors.grey.shade300,
                                         width: 2,
                                       ),
                                     ),
                                     child: Center(
                                       child: isDone
-                                          ? const Icon(Icons.check_rounded, color: Colors.white, size: 16)
+                                          ? const Icon(
+                                              Icons.check_rounded,
+                                              color: Colors.white,
+                                              size: 16,
+                                            )
                                           : Text(
-                                        '${i + 1}',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 13.sp,
-                                          color: isActive ? Colors.white : textSecondary,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
+                                              '${i + 1}',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 13.sp,
+                                                color: isActive
+                                                    ? Colors.white
+                                                    : textSecondary,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
                                     ),
                                   ),
                                   8.height,
@@ -191,8 +236,12 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
                                     textAlign: TextAlign.center,
                                     style: GoogleFonts.poppins(
                                       fontSize: 10.sp,
-                                      color: isActive ? accentGreen : textSecondary,
-                                      fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                                      color: isActive
+                                          ? accentGreen
+                                          : textSecondary,
+                                      fontWeight: isActive
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
                                     ),
                                   ),
                                 ],
@@ -206,6 +255,7 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
                 }),
               ),
             ),
+*/
 
             // ── Form Content ────────────────────────────────────────────
             Expanded(
@@ -224,19 +274,21 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
                           if (_currentStep > 0)
                             Expanded(
                               child: OutlinedButton(
-                                onPressed: () =>
-                                    setState(() => _currentStep--),
+                                onPressed: () => setState(() => _currentStep--),
                                 style: OutlinedButton.styleFrom(
                                   side: BorderSide(color: Colors.grey.shade300),
-                                  padding:
-                                  EdgeInsets.symmetric(vertical: 14.h),
+                                  padding: EdgeInsets.symmetric(vertical: 14.h),
                                   shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                      BorderRadius.circular(14.r)),
+                                    borderRadius: BorderRadius.circular(14.r),
+                                  ),
                                 ),
-                                child: Text('Back',
-                                    style: GoogleFonts.poppins(
-                                        color: textSecondary, fontSize: 14.sp)),
+                                child: Text(
+                                  'Back',
+                                  style: GoogleFonts.poppins(
+                                    color: textSecondary,
+                                    fontSize: 14.sp,
+                                  ),
+                                ),
                               ),
                             ),
                           if (_currentStep > 0) 12.width,
@@ -250,18 +302,20 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
                                 elevation: 0,
                                 padding: EdgeInsets.symmetric(vertical: 14.h),
                                 shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14.r)),
+                                  borderRadius: BorderRadius.circular(14.r),
+                                ),
                               ),
                               child: _isLoading
                                   ? AppUI.buttonSpinner()
                                   : Text(
-                                _currentStep == _stepTitles.length - 1
-                                    ? 'Add Member'
-                                    : 'Next  →',
-                                style: GoogleFonts.poppins(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w700),
-                              ),
+                                      /* _currentStep == _stepTitles.length - 1
+                                          ?*/
+                                      'Add Member',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14.sp,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
                             ),
                           ),
                         ],
@@ -279,43 +333,53 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
   }
 
   void _handleNext() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    if (_currentStep < _stepTitles.length - 1) {
-      setState(() => _currentStep++);
-    } else {
-      setState(() => _isLoading = true);
-      try {
-        Map<String, dynamic> data = {
-          "username": _nameCtrl.text.trim(),
-          "mobile": _phoneCtrl.text.trim(),
-          "email": _emailCtrl.text.trim(),
-          "password": _passwordCtrl.text.trim(),
-          "emergencyContact": int.tryParse(_guardianPhoneCtrl.text.trim()) ?? 0,
-          "dob": _dobCtrl.text.trim().isNotEmpty
-              ? DateFormat('yyyy-MM-dd')
-              .format(DateFormat('dd/MM/yyyy').parse(_dobCtrl.text.trim()))
-              : "",
-          "gender": _selectedGender ?? "",
-          "medicalNotes": _medicalNotesCtrl.text.trim(),
-        };
-
-        bool success = await ClubApiService().AddMember(data);
-        if (success) {
-          Navigator.pop(context);
-          //toast('Member added successfully!', bgColor: accentGreen);
-          AppUI.success(context,'Member added successfully!');
-        } else {
-          //toast('Failed to add member. Please try again.');
-          AppUI.error(context, "Failed to add member, Please try again.");
-        }
-      } catch (e) {
-        //toast('Error: ${e.toString()}');
-        AppUI.error(context, "Failed to add member, Please try again.");
-      } finally {
-        if (mounted) setState(() => _isLoading = false);
-      }
+    if (!_formKey.currentState!.validate() || _isLoading) return;
+    if (_selectedGuardian == null) {
+      AppUI.success(context, 'Please select guardian');
+      return;
     }
+    if (_selectedGender == null) {
+      AppUI.success(context, 'Please select gender');
+      return;
+    }
+    /* if (_currentStep < _stepTitles.length - 1) {
+      setState(() => _currentStep++);
+    } else {*/
+    setState(() => _isLoading = true);
+    try {
+      Map<String, dynamic> data = {
+        "username": _nameCtrl.text.trim(),
+        "mobile": _phoneCtrl.text.trim(),
+        "email": _emailCtrl.text.trim(),
+        "password": _passwordCtrl.text.trim(),
+        "emergencyContact": int.tryParse(_guardianPhoneCtrl.text.trim()) ?? 0,
+        "dob": _dobCtrl.text.trim().isNotEmpty
+            ? DateFormat(
+                'yyyy-MM-dd',
+              ).format(DateFormat('dd/MM/yyyy').parse(_dobCtrl.text.trim()))
+            : "",
+        "gender": _selectedGender ?? "",
+        "medicalNotes": _medicalNotesCtrl.text.trim(),
+        "guardianUserId": _selectedGuardian!.guardianId,
+        "membershipAmount": 10,
+      };
+
+      bool success = await ClubApiService().AddMember(data);
+      if (success) {
+        Navigator.pop(context);
+        //toast('Member added successfully!', bgColor: accentGreen);
+        AppUI.success(context, 'Member added successfully!');
+      } else {
+        //toast('Failed to add member. Please try again.');
+        AppUI.error(context, "Failed to add member, Please try again.");
+      }
+    } catch (e) {
+      //toast('Error: ${e.toString()}');
+      AppUI.error(context, "Failed to add member, Please try again.");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+    //  }
   }
 
   Widget _stepContent() {
@@ -339,7 +403,7 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
         _heading('Personal Information'),
         12.height,
 
-        Center(
+        /*   Center(
           child: GestureDetector(
             onTap: () => toast('Pick profile photo'),
             child: Container(
@@ -365,31 +429,112 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
           ),
         ),
         20.height,
-
-        _formField('Full Name *', _nameCtrl, Icons.person_rounded,
-            hint: 'e.g., Abinesh Kumar'),
+*/
+        _formField(
+          'Full Name *',
+          _nameCtrl,
+          Icons.person_rounded,
+          hint: 'e.g., Abinesh Kumar',
+        ),
         12.height,
         _dateField('Date of Birth *', _dobCtrl, Icons.calendar_today_rounded),
         12.height,
-        _dropdownField('Gender *', _genders, _selectedGender,
-                (v) => setState(() => _selectedGender = v)),
+        _dropdownField(
+          'Gender *',
+          _genders,
+          _selectedGender,
+          (v) => setState(() => _selectedGender = v),
+        ),
         12.height,
-        _formField('Phone / WhatsApp *', _phoneCtrl, Icons.phone_rounded,
-            hint: '+91 XXXXX XXXXX',
-            keyboardType: TextInputType.phone),
+        _formField(
+          'Phone / WhatsApp *',
+          _phoneCtrl,
+          Icons.phone_rounded,
+          hint: '987453210',
+          keyboardType: TextInputType.phone,
+        ),
         12.height,
-        _formField('Email (optional)', _emailCtrl, Icons.email_rounded,
-            hint: 'member@email.com', required: false),
+        _formField(
+          'Email *',
+          _emailCtrl,
+          Icons.email_rounded,
+          hint: 'member@email.com',
+          required: true,
+        ),
         12.height,
-        _formField('Password *', _passwordCtrl, Icons.lock_outline_rounded,
-            hint: 'Create a password', obscureText: true),
+        _formField(
+          'Password *',
+          _passwordCtrl,
+          Icons.lock_outline_rounded,
+          hint: 'Create a password',
+          obscureText: true,
+        ),
         12.height,
-        _formField('Medical Notes (optional)', _medicalNotesCtrl,
-            Icons.medical_information_rounded,
-            hint: 'e.g., No known allergies', required: false),
+        _formField(
+          'Medical Notes',
+          _medicalNotesCtrl,
+          Icons.medical_information_rounded,
+          hint: 'e.g., No known allergies',
+          required: true,
+        ),
         12.height,
-        _formField('Address', _addressCtrl, Icons.home_rounded,
-            hint: 'Full address', maxLines: 2),
+        _formField(
+          'Emergency Contact',
+          _guardianPhoneCtrl,
+          keyboardType: TextInputType.number,
+          Icons.phone,
+          hint: '98745623210',
+          required: true,
+        ),
+        12.height,
+        8.height,
+        (_loadingGuardians)
+            ? const Center(child: CircularProgressIndicator())
+            : _guardians.isEmpty
+            ? Text('No guardians available')
+            : DropdownButtonFormField<GuardianData>(
+                value: _selectedGuardian,
+                hint: Text(
+                  'Choose guardian',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13.sp,
+                    color: textSecondary,
+                  ),
+                ),
+                isExpanded: true,
+                items: _guardians
+                    .map(
+                      (g) => DropdownMenuItem(
+                        value: g,
+                        child: Text(
+                          g.username,
+                          style: GoogleFonts.poppins(fontSize: 13.sp),
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedGuardian = v),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 14.w,
+                    vertical: 12.h,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                    borderSide: BorderSide(color: accentGreen, width: 1.5),
+                  ),
+                ),
+              ),
       ],
     );
   }
@@ -406,26 +551,48 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
           Colors.blue,
         ),
         16.height,
-        _dropdownField('Activity / Sport *', _activities, _selectedActivity,
-                (v) => setState(() => _selectedActivity = v)),
+        _dropdownField(
+          'Activity / Sport *',
+          _activities,
+          _selectedActivity,
+          (v) => setState(() => _selectedActivity = v),
+        ),
         12.height,
-        _dropdownField('Group *', _groups, _selectedGroup,
-                (v) => setState(() => _selectedGroup = v)),
+        _dropdownField(
+          'Group *',
+          _groups,
+          _selectedGroup,
+          (v) => setState(() => _selectedGroup = v),
+        ),
         12.height,
-        _dropdownField('Sub-group *', _subGroups, _selectedSubGroup,
-                (v) => setState(() => _selectedSubGroup = v)),
+        _dropdownField(
+          'Sub-group *',
+          _subGroups,
+          _selectedSubGroup,
+          (v) => setState(() => _selectedSubGroup = v),
+        ),
         12.height,
-        _formField('Jersey / ID Number (optional)', _jerseyCtrl,
-            Icons.tag_rounded,
-            hint: '#10', required: false),
+        _formField(
+          'Jersey / ID Number (optional)',
+          _jerseyCtrl,
+          Icons.tag_rounded,
+          hint: '#10',
+          required: false,
+        ),
         20.height,
         _heading('Membership & Payment'),
         12.height,
-        _dateField('Membership Start Date *', _membershipStartCtrl,
-            Icons.calendar_month_rounded),
+        _dateField(
+          'Membership Start Date *',
+          _membershipStartCtrl,
+          Icons.calendar_month_rounded,
+        ),
         12.height,
-        _dateField('Membership End Date *', _membershipEndCtrl,
-            Icons.event_rounded),
+        _dateField(
+          'Membership End Date *',
+          _membershipEndCtrl,
+          Icons.event_rounded,
+        ),
       ],
     );
   }
@@ -442,16 +609,14 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
           accentGreen,
         ),
         16.height,
-        _formField('Guardian Full Name *', _guardianNameCtrl,
-            Icons.person_rounded,
-            hint: 'e.g., Nandha Kumar'),
-        12.height,
-        _formField('Guardian Phone *', _guardianPhoneCtrl, Icons.phone_rounded,
-            hint: '+91 XXXXX XXXXX', keyboardType: TextInputType.phone),
-        12.height,
-        _formField('Guardian Email (optional)', _guardianEmailCtrl,
-            Icons.email_rounded,
-            hint: 'guardian@email.com', required: false),
+
+        _formField(
+          'Guardian Email (optional)',
+          _guardianEmailCtrl,
+          Icons.email_rounded,
+          hint: 'guardian@email.com',
+          required: false,
+        ),
         12.height,
         // _dropdownField('Relation to Member *', _relations, _selectedRelation,
         //         (v) => setState(() => _selectedRelation = v)),
@@ -468,17 +633,28 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Review Summary',
-                  style: GoogleFonts.montserrat(
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black)),
+              Text(
+                'Review Summary',
+                style: GoogleFonts.montserrat(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black,
+                ),
+              ),
               12.height,
-              _summaryRow('Name', _nameCtrl.text.isNotEmpty ? _nameCtrl.text : '—'),
+              _summaryRow(
+                'Name',
+                _nameCtrl.text.isNotEmpty ? _nameCtrl.text : '—',
+              ),
               _summaryRow('Activity', _selectedActivity ?? '—'),
               _summaryRow('Group', _selectedGroup ?? '—'),
               _summaryRow('Sub-group', _selectedSubGroup ?? '—'),
-              _summaryRow('Guardian', _guardianNameCtrl.text.isNotEmpty ? _guardianNameCtrl.text : '—'),
+              _summaryRow(
+                'Guardian',
+                _guardianNameCtrl.text.isNotEmpty
+                    ? _guardianNameCtrl.text
+                    : '—',
+              ),
             ],
           ),
         ),
@@ -493,15 +669,20 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
         children: [
           SizedBox(
             width: 90.w,
-            child: Text(label,
-                style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary)),
+            child: Text(
+              label,
+              style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary),
+            ),
           ),
           Expanded(
-            child: Text(value,
-                style: GoogleFonts.poppins(
-                    fontSize: 12.sp,
-                    color: Colors.black,
-                    fontWeight: FontWeight.w600)),
+            child: Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 12.sp,
+                color: Colors.black,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -511,7 +692,10 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
   Widget _heading(String text) => Text(
     text,
     style: GoogleFonts.montserrat(
-        fontSize: 16.sp, fontWeight: FontWeight.w800, color: Colors.black),
+      fontSize: 16.sp,
+      fontWeight: FontWeight.w800,
+      color: Colors.black,
+    ),
   );
 
   Widget _infoBox(String msg, IconData icon, Color color) => Container(
@@ -527,32 +711,39 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
         Icon(icon, color: color, size: 16.sp),
         8.width,
         Expanded(
-          child: Text(msg,
-              style: GoogleFonts.poppins(
-                  fontSize: 11.sp, color: color.withOpacity(0.85))),
+          child: Text(
+            msg,
+            style: GoogleFonts.poppins(
+              fontSize: 11.sp,
+              color: color.withOpacity(0.85),
+            ),
+          ),
         ),
       ],
     ),
   );
 
   Widget _formField(
-      String label,
-      TextEditingController ctrl,
-      IconData icon, {
-        String? hint,
-        bool required = true,
-        int maxLines = 1,
-        TextInputType? keyboardType,
-        bool obscureText = false,
-      }) {
+    String label,
+    TextEditingController ctrl,
+    IconData icon, {
+    String? hint,
+    bool required = true,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+    bool obscureText = false,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: GoogleFonts.poppins(
-                fontSize: 12.sp,
-                color: textSecondary,
-                fontWeight: FontWeight.w500)),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 12.sp,
+            color: textSecondary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         6.height,
         TextFormField(
           controller: ctrl,
@@ -560,46 +751,83 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
           keyboardType: keyboardType,
           obscureText: obscureText,
           validator: required
-              ? (v) => (v == null || v.trim().isEmpty) ? 'Required' : null
+              ? (v) => (v == null || v.trim().isEmpty)
+                    ? label == "Email *"
+                          ? validateEmail(v!)
+                          : 'Required'
+                    : null
               : null,
           style: GoogleFonts.poppins(fontSize: 13.sp, color: Colors.black),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: GoogleFonts.poppins(
-                fontSize: 12.sp, color: textSecondary.withOpacity(0.5)),
+              fontSize: 12.sp,
+              color: textSecondary.withOpacity(0.5),
+            ),
             prefixIcon: Icon(icon, color: textSecondary, size: 18.sp),
             filled: true,
             fillColor: Colors.white,
-            contentPadding:
-            EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: 14.w,
+              vertical: 13.h,
+            ),
             border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide(color: Colors.grey.shade300)),
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
             enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide(color: Colors.grey.shade300)),
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
             focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: const BorderSide(color: accentGreen, width: 1.5)),
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: const BorderSide(color: accentGreen, width: 1.5),
+            ),
             errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: const BorderSide(color: Colors.red)),
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: const BorderSide(color: Colors.red),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _dateField(
-      String label, TextEditingController ctrl, IconData icon) {
+  static String emailPattern =
+      r"^((([a-z]|\d|[!#\$%&'\*\+\-\/=\?\^_`{\|}~]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])+(\.([a-z]|\d|[!#\$%&'\*\+\-\/=\?\^_`{\|}~]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])+)*)|((\x22)((((\x20|\x09)*(\x0d\x0a))?(\x20|\x09)+)?(([\x01-\x08\x0b\x0c\x0e-\x1f\x7f]|\x21|[\x23-\x5b]|[\x5d-\x7e]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(\\([\x01-\x09\x0b\x0c\x0d-\x7f]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]))))*(((\x20|\x09)*(\x0d\x0a))?(\x20|\x09)+)?(\x22)))@((([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.)+(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))$";
+  static RegExp emailRegEx = RegExp(emailPattern);
+
+  // Validates an email address.
+  static bool isEmail(String value) {
+    if (emailRegEx.hasMatch(value.trim())) {
+      return true;
+    }
+    return false;
+  }
+
+  static String? validateEmail(String value) {
+    String email = value.trim();
+    if (email.isEmpty) {
+      return 'Email field is required';
+    }
+    if (!isEmail(email)) {
+      return 'Email error valid';
+    }
+    return null;
+  }
+
+  Widget _dateField(String label, TextEditingController ctrl, IconData icon) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: GoogleFonts.poppins(
-                fontSize: 12.sp,
-                color: textSecondary,
-                fontWeight: FontWeight.w500)),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 12.sp,
+            color: textSecondary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         6.height,
         TextFormField(
           controller: ctrl,
@@ -621,45 +849,61 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
               ctrl.text = DateFormat('dd/MM/yyyy').format(picked);
             }
           },
-          validator: (v) =>
-          (v == null || v.isEmpty) ? 'Required' : null,
+          validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
           style: GoogleFonts.poppins(fontSize: 13.sp, color: Colors.black),
           decoration: InputDecoration(
             hintText: 'DD/MM/YYYY',
             hintStyle: GoogleFonts.poppins(
-                fontSize: 12.sp, color: textSecondary.withOpacity(0.5)),
+              fontSize: 12.sp,
+              color: textSecondary.withOpacity(0.5),
+            ),
             prefixIcon: Icon(icon, color: textSecondary, size: 18.sp),
-            suffixIcon:
-            Icon(Icons.calendar_today_rounded, color: accentGreen, size: 18.sp),
+            suffixIcon: Icon(
+              Icons.calendar_today_rounded,
+              color: accentGreen,
+              size: 18.sp,
+            ),
             filled: true,
             fillColor: Colors.white,
-            contentPadding:
-            EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: 14.w,
+              vertical: 13.h,
+            ),
             border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide(color: Colors.grey.shade300)),
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
             enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide(color: Colors.grey.shade300)),
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
             focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: const BorderSide(color: accentGreen, width: 1.5)),
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: const BorderSide(color: accentGreen, width: 1.5),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _dropdownField(String label, List<String> items, String? value,
-      void Function(String?) onChange) {
+  Widget _dropdownField(
+    String label,
+    List<String> items,
+    String? value,
+    void Function(String?) onChange,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: GoogleFonts.poppins(
-                fontSize: 12.sp,
-                color: textSecondary,
-                fontWeight: FontWeight.w500)),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 12.sp,
+            color: textSecondary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         6.height,
         DropdownButtonFormField<String>(
           value: value,
@@ -669,25 +913,36 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.white,
-            contentPadding:
-            EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: 14.w,
+              vertical: 13.h,
+            ),
             border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide(color: Colors.grey.shade300)),
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
             enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide(color: Colors.grey.shade300)),
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
             focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: const BorderSide(color: accentGreen, width: 1.5)),
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: const BorderSide(color: accentGreen, width: 1.5),
+            ),
           ),
           items: items
-              .map((i) => DropdownMenuItem(
-            value: i,
-            child: Text(i,
-                style: GoogleFonts.poppins(
-                    fontSize: 13.sp, color: Colors.black)),
-          ))
+              .map(
+                (i) => DropdownMenuItem(
+                  value: i,
+                  child: Text(
+                    i,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13.sp,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+              )
               .toList(),
         ),
       ],

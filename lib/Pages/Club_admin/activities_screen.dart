@@ -80,12 +80,15 @@ class _ClubAdminActivitiesScreenState extends State<ClubAdminActivitiesScreen> {
                       16.width,
                       Text(
                         'Manage Activities',
-                        style: Theme.of(context).textTheme.headlineMedium
+                        style: Theme
+                            .of(context)
+                            .textTheme
+                            .headlineMedium
                             ?.copyWith(
-                              color: Colors.white,
-                              fontSize: widget.fromMap == true ? 14.sp : 20.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          color: Colors.white,
+                          fontSize: widget.fromMap == true ? 14.sp : 20.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -99,7 +102,7 @@ class _ClubAdminActivitiesScreenState extends State<ClubAdminActivitiesScreen> {
                 future: _activitiesFuture,
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const Center(child: Loader());
                   }
 
                   final activities = snapshot.data!;
@@ -125,17 +128,18 @@ class _ClubAdminActivitiesScreenState extends State<ClubAdminActivitiesScreen> {
                               context: context,
                               barrierDismissible: false,
 
-                              builder: (_) => AlertDialog(
-                                backgroundColor: Colors.transparent,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20.r),
-                                ),
-                                content: const Center(
-                                  child: CircularProgressIndicator(
-                                    backgroundColor: Colors.green,
+                              builder: (_) =>
+                                  AlertDialog(
+                                    backgroundColor: Colors.transparent,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20.r),
+                                    ),
+                                    content: const Center(
+                                      child: CircularProgressIndicator(
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
                             );
 
                             final res = await apiService.getMapActivitiesEvents(
@@ -145,7 +149,7 @@ class _ClubAdminActivitiesScreenState extends State<ClubAdminActivitiesScreen> {
                             Navigator.pop(context); // close loader
 
                             bool isAlreadyMapped = res.data!.any(
-                              (e) => e.eventId.toString() == widget.eventId,
+                                  (e) => e.eventId.toString() == widget.eventId,
                             );
 
                             // ✅ If already mapped → simple dialog
@@ -179,7 +183,8 @@ class _ClubAdminActivitiesScreenState extends State<ClubAdminActivitiesScreen> {
                                         ),
                                       ),
                                       content: Text(
-                                        'Are you sure you want to Map "${activities[index].name}"?',
+                                        'Are you sure you want to Map "${activities[index]
+                                            .name}"?',
                                         style: GoogleFonts.poppins(
                                           fontSize: 13.sp,
                                           color: textSecondary,
@@ -187,84 +192,84 @@ class _ClubAdminActivitiesScreenState extends State<ClubAdminActivitiesScreen> {
                                       ),
                                       actions: isLoad
                                           ? [
-                                              const Center(
-                                                child:
-                                                    CircularProgressIndicator(),
-                                              ),
-                                            ]
+                                        const Center(
+                                          child:
+                                          CircularProgressIndicator(),
+                                        ),
+                                      ]
                                           : [
-                                              TextButton(
-                                                onPressed: () =>
-                                                    Navigator.pop(context),
-                                                child: Text(
-                                                  'Cancel',
-                                                  style: GoogleFonts.poppins(
-                                                    color: textSecondary,
-                                                  ),
-                                                ),
-                                              ),
-                                              ElevatedButton(
-                                                onPressed: () async {
-                                                  setStateDialog(
-                                                    () => isLoad = true,
-                                                  );
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context),
+                                          child: Text(
+                                            'Cancel',
+                                            style: GoogleFonts.poppins(
+                                              color: textSecondary,
+                                            ),
+                                          ),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () async {
+                                            setStateDialog(
+                                                  () => isLoad = true,
+                                            );
 
-                                                  final data = await apiService
-                                                      .mapActivitiesEvents(
-                                                        activities[index]
-                                                            .activityId
-                                                            .toString(),
-                                                        widget.eventId ?? "",
-                                                      );
+                                            final data = await apiService
+                                                .mapActivitiesEvents(
+                                              activities[index]
+                                                  .activityId
+                                                  .toString(),
+                                              widget.eventId ?? "",
+                                            );
 
-                                                  if (data['success']) {
-                                                    toast(
-                                                      'Activity Mapped successfully',
-                                                      bgColor: Colors.green,
-                                                    );
-                                                    Navigator.pop(context);
-                                                  } else {
-                                                    toast(
-                                                      'Failed to map',
-                                                      bgColor: Colors.red,
-                                                    );
-                                                    setStateDialog(
-                                                      () => isLoad = false,
-                                                    );
-                                                  }
-                                                },
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: Colors.red,
-                                                  foregroundColor: Colors.white,
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          12.r,
-                                                        ),
-                                                  ),
-                                                ),
-                                                child: isLoad
-                                                    ? const SizedBox(
-                                                        height: 20,
-                                                        width: 20,
-                                                        child:
-                                                            CircularProgressIndicator(
-                                                              strokeWidth: 2,
-                                                              color:
-                                                                  Colors.white,
-                                                            ),
-                                                      )
-                                                    : Text(
-                                                        'Yes',
-                                                        style:
-                                                            GoogleFonts.poppins(
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold,
-                                                            ),
-                                                      ),
+                                            if (data['success']) {
+                                              toast(
+                                                'Activity Mapped successfully',
+                                                bgColor: Colors.green,
+                                              );
+                                              Navigator.pop(context);
+                                            } else {
+                                              toast(
+                                                'Failed to map',
+                                                bgColor: Colors.red,
+                                              );
+                                              setStateDialog(
+                                                    () => isLoad = false,
+                                              );
+                                            }
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red,
+                                            foregroundColor: Colors.white,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                              BorderRadius.circular(
+                                                12.r,
                                               ),
-                                            ],
+                                            ),
+                                          ),
+                                          child: isLoad
+                                              ? const SizedBox(
+                                            height: 20,
+                                            width: 20,
+                                            child:
+                                            CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color:
+                                              Colors.white,
+                                            ),
+                                          )
+                                              : Text(
+                                            'Yes',
+                                            style:
+                                            GoogleFonts.poppins(
+                                              fontWeight:
+                                              FontWeight
+                                                  .bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     );
                                   },
                                 );
@@ -320,10 +325,11 @@ class _ClubAdminActivitiesScreenState extends State<ClubAdminActivitiesScreen> {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ActivityCreationPage(
-          activityListData: activity,
-          id: activity.activityId,
-        ),
+        builder: (context) =>
+            ActivityCreationPage(
+              activityListData: activity,
+              id: activity.activityId,
+            ),
       ),
     );
     final data = await _fetchActivities();
@@ -362,69 +368,69 @@ class _ClubAdminActivitiesScreenState extends State<ClubAdminActivitiesScreen> {
               actions: isLoad
                   ? [Center(child: CircularProgressIndicator())]
                   : [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: Text(
-                          'Cancel',
-                          style: GoogleFonts.poppins(color: textSecondary),
-                        ),
-                      ),
-                      ElevatedButton(
-                        onPressed: () async {
-                          setStateDialog(() {
-                            isLoad = true;
-                          });
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    'Cancel',
+                    style: GoogleFonts.poppins(color: textSecondary),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    setStateDialog(() {
+                      isLoad = true;
+                    });
 
-                          final data = await apiService.deleteActivities(
-                            activity.activityId.toString(),
-                          );
+                    final data = await apiService.deleteActivities(
+                      activity.activityId.toString(),
+                    );
 
-                          if (data['success']) {
-                            toast(
-                              'Activity deleted successfully',
-                              bgColor: Colors.green,
-                            );
+                    if (data['success']) {
+                      toast(
+                        'Activity deleted successfully',
+                        bgColor: Colors.green,
+                      );
 
-                            final activities = await _fetchActivities();
+                      final activities = await _fetchActivities();
 
-                            setState(() {
-                              _activitiesFuture = Future.value(activities);
-                            });
+                      setState(() {
+                        _activitiesFuture = Future.value(activities);
+                      });
 
-                            Navigator.pop(context);
-                          } else {
-                            toast('Failed to delete', bgColor: Colors.red);
+                      Navigator.pop(context);
+                    } else {
+                      toast('Failed to delete', bgColor: Colors.red);
 
-                            setStateDialog(() {
-                              isLoad = false;
-                            });
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: isLoad
-                            ? SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : Text(
-                                'Delete',
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                      ),
-                    ],
+                      setStateDialog(() {
+                        isLoad = false;
+                      });
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: isLoad
+                      ? SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                      : Text(
+                    'Delete',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             );
           },
         );
@@ -532,7 +538,8 @@ class _ActivityCard extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12.r),
                 ),
-                itemBuilder: (_) => [
+                itemBuilder: (_) =>
+                [
                   PopupMenuItem(
                     onTap: onEdit,
                     child: Row(

@@ -8,7 +8,9 @@ import 'package:sports/utills/api_service.dart';
 
 import '../../config/colors.dart';
 import '../../model/member/profile_data.dart';
+import '../../utills/shared_preference.dart';
 import '../Member/edit_profile.dart';
+import '../splash.dart';
 
 class CoachChatScreen extends StatelessWidget {
   const CoachChatScreen({super.key});
@@ -535,7 +537,16 @@ class _CoachProfileScreenState extends State<CoachProfileScreen> {
                               Icons.chevron_right_rounded,
                               color: Colors.redAccent,
                             ),
-                            onTap: () => toast("Logging out..."),
+                            onTap: () {
+                              SharedPreferenceHelper.clear();
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const Splash(),
+                                ),
+                                (route) => false,
+                              );
+                            },
                           ),
                         ),
                         100.height,

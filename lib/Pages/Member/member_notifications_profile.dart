@@ -9,6 +9,8 @@ import 'package:sports/model/member/profile_data.dart';
 import 'package:sports/utills/api_service.dart';
 
 import '../../config/colors.dart';
+import '../../utills/shared_preference.dart';
+import '../splash.dart';
 
 class MemberNotificationsScreen extends StatefulWidget {
   const MemberNotificationsScreen({super.key});
@@ -634,7 +636,16 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                                 Icons.chevron_right_rounded,
                                 color: Colors.redAccent,
                               ),
-                              onTap: () => toast("Logging out..."),
+                              onTap: () {
+                                SharedPreferenceHelper.clear();
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const Splash(),
+                                  ),
+                                  (route) => false,
+                                );
+                              },
                             ),
                           ),
                           100.height,

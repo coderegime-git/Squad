@@ -13,10 +13,12 @@ class ClubAdminAddGuardianScreen extends StatefulWidget {
   const ClubAdminAddGuardianScreen({super.key});
 
   @override
-  State<ClubAdminAddGuardianScreen> createState() => _ClubAdminAddGuardianScreenState();
+  State<ClubAdminAddGuardianScreen> createState() =>
+      _ClubAdminAddGuardianScreenState();
 }
 
-class _ClubAdminAddGuardianScreenState extends State<ClubAdminAddGuardianScreen> {
+class _ClubAdminAddGuardianScreenState
+    extends State<ClubAdminAddGuardianScreen> {
   final _formKey = GlobalKey<FormState>();
   int _currentStep = 0;
   bool _isLoading = false;
@@ -39,7 +41,13 @@ class _ClubAdminAddGuardianScreenState extends State<ClubAdminAddGuardianScreen>
     'Confirm',
   ];
 
-  final List<String> _relations = ['Father', 'Mother', 'Grandparent', 'Legal Guardian', 'Other'];
+  final List<String> _relations = [
+    'Father',
+    'Mother',
+    'Grandparent',
+    'Legal Guardian',
+    'Other',
+  ];
 
   final List<String> _availableChildren = [
     'Abinesh Kumar (Under-14 A - Football)',
@@ -90,17 +98,21 @@ class _ClubAdminAddGuardianScreenState extends State<ClubAdminAddGuardianScreen>
                     children: [
                       GestureDetector(
                         onTap: () => Navigator.pop(context),
-                        child: Icon(Icons.arrow_back_ios_rounded,
-                            color: Colors.white, size: 20.sp),
+                        child: Icon(
+                          Icons.arrow_back_ios_rounded,
+                          color: Colors.white,
+                          size: 20.sp,
+                        ),
                       ),
                       16.width,
                       Text(
                         'Add New Guardian',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: Colors.white,
-                          fontSize: 20.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
+                              color: Colors.white,
+                              fontSize: 20.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                     ],
                   ),
@@ -109,6 +121,7 @@ class _ClubAdminAddGuardianScreenState extends State<ClubAdminAddGuardianScreen>
             ),
 
             // ── Step Indicator ──────────────────────────────────────────
+            /*
             Container(
               color: Colors.white,
               padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
@@ -130,7 +143,9 @@ class _ClubAdminAddGuardianScreenState extends State<ClubAdminAddGuardianScreen>
                                   top: 13.r,
                                   child: Container(
                                     height: 2.h,
-                                    color: i < _currentStep ? accentGreen : Colors.grey.shade300,
+                                    color: i < _currentStep
+                                        ? accentGreen
+                                        : Colors.grey.shade300,
                                   ),
                                 ),
 
@@ -141,24 +156,34 @@ class _ClubAdminAddGuardianScreenState extends State<ClubAdminAddGuardianScreen>
                                     width: 28.r,
                                     height: 28.r,
                                     decoration: BoxDecoration(
-                                      color: (isDone || isActive) ? accentGreen : Colors.white,
+                                      color: (isDone || isActive)
+                                          ? accentGreen
+                                          : Colors.white,
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                        color: (isDone || isActive) ? accentGreen : Colors.grey.shade300,
+                                        color: (isDone || isActive)
+                                            ? accentGreen
+                                            : Colors.grey.shade300,
                                         width: 2,
                                       ),
                                     ),
                                     child: Center(
                                       child: isDone
-                                          ? const Icon(Icons.check_rounded, color: Colors.white, size: 16)
+                                          ? const Icon(
+                                              Icons.check_rounded,
+                                              color: Colors.white,
+                                              size: 16,
+                                            )
                                           : Text(
-                                        '${i + 1}',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 13.sp,
-                                          color: isActive ? Colors.white : textSecondary,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
+                                              '${i + 1}',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 13.sp,
+                                                color: isActive
+                                                    ? Colors.white
+                                                    : textSecondary,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
                                     ),
                                   ),
                                   8.height,
@@ -167,8 +192,12 @@ class _ClubAdminAddGuardianScreenState extends State<ClubAdminAddGuardianScreen>
                                     textAlign: TextAlign.center,
                                     style: GoogleFonts.poppins(
                                       fontSize: 10.sp,
-                                      color: isActive ? accentGreen : textSecondary,
-                                      fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                                      color: isActive
+                                          ? accentGreen
+                                          : textSecondary,
+                                      fontWeight: isActive
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
                                     ),
                                   ),
                                 ],
@@ -182,6 +211,7 @@ class _ClubAdminAddGuardianScreenState extends State<ClubAdminAddGuardianScreen>
                 }),
               ),
             ),
+*/
 
             // ── Form Content ────────────────────────────────────────────
             Expanded(
@@ -205,11 +235,16 @@ class _ClubAdminAddGuardianScreenState extends State<ClubAdminAddGuardianScreen>
                                   side: BorderSide(color: Colors.grey.shade300),
                                   padding: EdgeInsets.symmetric(vertical: 14.h),
                                   shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14.r)),
+                                    borderRadius: BorderRadius.circular(14.r),
+                                  ),
                                 ),
-                                child: Text('Back',
-                                    style: GoogleFonts.poppins(
-                                        color: textSecondary, fontSize: 14.sp)),
+                                child: Text(
+                                  'Back',
+                                  style: GoogleFonts.poppins(
+                                    color: textSecondary,
+                                    fontSize: 14.sp,
+                                  ),
+                                ),
                               ),
                             ),
                           if (_currentStep > 0) 12.width,
@@ -223,18 +258,20 @@ class _ClubAdminAddGuardianScreenState extends State<ClubAdminAddGuardianScreen>
                                 elevation: 0,
                                 padding: EdgeInsets.symmetric(vertical: 14.h),
                                 shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14.r)),
+                                  borderRadius: BorderRadius.circular(14.r),
+                                ),
                               ),
                               child: _isLoading
                                   ? AppUI.buttonSpinner()
                                   : Text(
-                                _currentStep == _stepTitles.length - 1
-                                    ? 'Add Guardian'
-                                    : 'Next  →',
-                                style: GoogleFonts.poppins(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w700),
-                              ),
+                                      _currentStep == _stepTitles.length - 1
+                                          ? 'Add Guardian'
+                                          : 'Next  →',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14.sp,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
                             ),
                           ),
                         ],
@@ -253,36 +290,36 @@ class _ClubAdminAddGuardianScreenState extends State<ClubAdminAddGuardianScreen>
 
   void _handleNext() async {
     // Validate current step before proceeding
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate() || _isLoading) return;
+    if (_selectedRelation == null) {
+      AppUI.success(context, 'Please select relationship');
+      return;
+    }
+    // Final submit – call API
+    setState(() => _isLoading = true);
+    try {
+      Map<String, dynamic> data = {
+        "username": _nameCtrl.text.trim(),
+        "mobile": _phoneCtrl.text.trim(),
+        "email": _emailCtrl.text.trim(),
+        "password": _passwordCtrl.text.trim(),
+        "relation": _selectedRelation ?? "",
+        "emergencyContact":
+            int.tryParse(_emergencyContactCtrl.text.trim()) ?? 0,
+      };
 
-    if (_currentStep < _stepTitles.length - 1) {
-      setState(() => _currentStep++);
-    } else {
-      // Final submit – call API
-      setState(() => _isLoading = true);
-      try {
-        Map<String, dynamic> data = {
-          "username": _nameCtrl.text.trim(),
-          "mobile": _phoneCtrl.text.trim(),
-          "email": _emailCtrl.text.trim(),
-          "password": _passwordCtrl.text.trim(),
-          "relation": _selectedRelation ?? "",
-          "emergencyContact": int.tryParse(_emergencyContactCtrl.text.trim()) ?? 0,
-        };
+      bool success = await ClubApiService().AddGuardian(data);
 
-        bool success = await ClubApiService().AddGuardian(data);
-
-        if (success) {
-          Navigator.pop(context);
-          AppUI.success(context,'Guardian added successfully!');
-        } else {
-          AppUI.error(context,'Failed to add guardian. Please try again.');
-        }
-      } catch (e) {
-        toast('Failed to add guardian');
-      } finally {
-        if (mounted) setState(() => _isLoading = false);
+      if (success) {
+        Navigator.pop(context);
+        AppUI.success(context, 'Guardian added successfully!');
+      } else {
+        AppUI.error(context, 'Failed to add guardian. Please try again.');
       }
+    } catch (e) {
+      toast('Failed to add guardian');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -307,54 +344,127 @@ class _ClubAdminAddGuardianScreenState extends State<ClubAdminAddGuardianScreen>
         _heading('Guardian Information'),
         12.height,
 
-        Center(
-          child: GestureDetector(
-            onTap: () => toast('Pick guardian profile photo (optional)'),
-            child: Container(
-              width: 80.r,
-              height: 80.r,
-              decoration: BoxDecoration(
-                color: accentGreen.withOpacity(0.1),
-                shape: BoxShape.circle,
-                border: Border.all(color: accentGreen.withOpacity(0.4), width: 2),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.camera_alt_rounded, color: accentGreen, size: 26.sp),
-                  4.height,
-                  Text('Photo (opt)',
-                      style: GoogleFonts.poppins(
-                          fontSize: 10.sp, color: accentGreen)),
-                ],
-              ),
-            ),
-          ),
-        ),
+        // Center(
+        //   child: GestureDetector(
+        //     onTap: () => toast('Pick guardian profile photo (optional)'),
+        //     child: Container(
+        //       width: 80.r,
+        //       height: 80.r,
+        //       decoration: BoxDecoration(
+        //         color: accentGreen.withOpacity(0.1),
+        //         shape: BoxShape.circle,
+        //         border: Border.all(
+        //           color: accentGreen.withOpacity(0.4),
+        //           width: 2,
+        //         ),
+        //       ),
+        //       child: Column(
+        //         mainAxisAlignment: MainAxisAlignment.center,
+        //         children: [
+        //           Icon(
+        //             Icons.camera_alt_rounded,
+        //             color: accentGreen,
+        //             size: 26.sp,
+        //           ),
+        //           4.height,
+        //           Text(
+        //             'Photo (opt)',
+        //             style: GoogleFonts.poppins(
+        //               fontSize: 10.sp,
+        //               color: accentGreen,
+        //             ),
+        //           ),
+        //         ],
+        //       ),
+        //     ),
+        //   ),
+        // ),
+        // Center(
+        //   child: GestureDetector(
+        //     onTap: () => toast('Pick guardian profile photo (optional)'),
+        //     child: Container(
+        //       width: 80.r,
+        //       height: 80.r,
+        //       decoration: BoxDecoration(
+        //         color: accentGreen.withOpacity(0.1),
+        //         shape: BoxShape.circle,
+        //         border: Border.all(
+        //           color: accentGreen.withOpacity(0.4),
+        //           width: 2,
+        //         ),
+        //       ),
+        //       child: Column(
+        //         mainAxisAlignment: MainAxisAlignment.center,
+        //         children: [
+        //           Icon(
+        //             Icons.camera_alt_rounded,
+        //             color: accentGreen,
+        //             size: 26.sp,
+        //           ),
+        //           4.height,
+        //           Text(
+        //             'Photo (opt)',
+        //             style: GoogleFonts.poppins(
+        //               fontSize: 10.sp,
+        //               color: accentGreen,
+        //             ),
+        //           ),
+        //         ],
+        //       ),
+        //     ),
+        //   ),
+        // ),
         20.height,
 
-        _formField('Full Name *', _nameCtrl, Icons.person_rounded,
-            hint: 'e.g., Nandha Kumar'),
+        _formField(
+          'Full Name *',
+          _nameCtrl,
+          Icons.person_rounded,
+          hint: 'e.g., Nandha Kumar',
+        ),
         12.height,
-        _formField('Phone / WhatsApp *', _phoneCtrl, Icons.phone_rounded,
-            hint: '+91 XXXXX XXXXX', keyboardType: TextInputType.phone),
+        _formField(
+          'Phone / WhatsApp *',
+          _phoneCtrl,
+          Icons.phone_rounded,
+          hint: '+91 XXXXX XXXXX',
+          keyboardType: TextInputType.phone,
+        ),
         12.height,
-        _formField('Email (optional)', _emailCtrl, Icons.email_rounded,
-            hint: 'guardian@example.com', required: false),
+        _formField(
+          'Email *',
+          _emailCtrl,
+          Icons.email_rounded,
+          hint: 'guardian@example.com',
+          required: true,
+        ),
         12.height,
-        _formField('Password *', _passwordCtrl, Icons.lock_outline_rounded,
-            hint: 'Create a password', obscureText: true),
+        _formField(
+          'Password *',
+          _passwordCtrl,
+          Icons.lock_outline_rounded,
+          hint: 'Create a password',
+          obscureText: true,
+        ),
         12.height,
-        _formField('Emergency Contact *', _emergencyContactCtrl,
-            Icons.contact_phone_rounded,
-            hint: '+91 XXXXX XXXXX', keyboardType: TextInputType.phone),
+        _formField(
+          'Emergency Contact *',
+          _emergencyContactCtrl,
+          Icons.contact_phone_rounded,
+          hint: '+91 XXXXX XXXXX',
+          keyboardType: TextInputType.phone,
+        ),
+        // 12.height,
+        // _formField('Occupation (optional)', _occupationCtrl,
+        //     Icons.work_rounded,
+        //     hint: 'e.g., Software Engineer', required: false),
         12.height,
-        _formField('Occupation (optional)', _occupationCtrl,
-            Icons.work_rounded,
-            hint: 'e.g., Software Engineer', required: false),
-        12.height,
-        _dropdownField('Relation to Child(ren) *', _relations, _selectedRelation,
-                (v) => setState(() => _selectedRelation = v)),
+        _dropdownField(
+          'Relation to Child(ren) *',
+          _relations,
+          _selectedRelation,
+          (v) => setState(() => _selectedRelation = v),
+        ),
       ],
     );
   }
@@ -394,7 +504,13 @@ class _ClubAdminAddGuardianScreenState extends State<ClubAdminAddGuardianScreen>
             children: _availableChildren.map((child) {
               final selected = _selectedChildren.contains(child);
               return FilterChip(
-                label: Text(child, style: GoogleFonts.poppins(fontSize: 12.sp, color: Colors.grey)),
+                label: Text(
+                  child,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12.sp,
+                    color: Colors.grey,
+                  ),
+                ),
                 selected: selected,
                 onSelected: (sel) {
                   setState(() {
@@ -408,7 +524,9 @@ class _ClubAdminAddGuardianScreenState extends State<ClubAdminAddGuardianScreen>
                 selectedColor: accentGreen.withOpacity(0.15),
                 checkmarkColor: accentGreen,
                 backgroundColor: Colors.white,
-                shape: StadiumBorder(side: BorderSide(color: Colors.grey.shade300)),
+                shape: StadiumBorder(
+                  side: BorderSide(color: Colors.grey.shade300),
+                ),
               );
             }).toList(),
           ),
@@ -440,18 +558,40 @@ class _ClubAdminAddGuardianScreenState extends State<ClubAdminAddGuardianScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Summary',
-                  style: GoogleFonts.montserrat(
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black)),
+              Text(
+                'Summary',
+                style: GoogleFonts.montserrat(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black,
+                ),
+              ),
               12.height,
-              _summaryRow('Name', _nameCtrl.text.isNotEmpty ? _nameCtrl.text : '—'),
-              _summaryRow('Phone', _phoneCtrl.text.isNotEmpty ? _phoneCtrl.text : '—'),
-              _summaryRow('Email', _emailCtrl.text.isNotEmpty ? _emailCtrl.text : '—'),
+              _summaryRow(
+                'Name',
+                _nameCtrl.text.isNotEmpty ? _nameCtrl.text : '—',
+              ),
+              _summaryRow(
+                'Phone',
+                _phoneCtrl.text.isNotEmpty ? _phoneCtrl.text : '—',
+              ),
+              _summaryRow(
+                'Email',
+                _emailCtrl.text.isNotEmpty ? _emailCtrl.text : '—',
+              ),
               _summaryRow('Relation', _selectedRelation ?? '—'),
-              _summaryRow('Emergency', _emergencyContactCtrl.text.isNotEmpty ? _emergencyContactCtrl.text : '—'),
-              _summaryRow('Linked Children', _selectedChildren.isNotEmpty ? '${_selectedChildren.length} selected' : 'None'),
+              _summaryRow(
+                'Emergency',
+                _emergencyContactCtrl.text.isNotEmpty
+                    ? _emergencyContactCtrl.text
+                    : '—',
+              ),
+              _summaryRow(
+                'Linked Children',
+                _selectedChildren.isNotEmpty
+                    ? '${_selectedChildren.length} selected'
+                    : 'None',
+              ),
             ],
           ),
         ),
@@ -467,15 +607,20 @@ class _ClubAdminAddGuardianScreenState extends State<ClubAdminAddGuardianScreen>
         children: [
           SizedBox(
             width: 110.w,
-            child: Text(label,
-                style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary)),
+            child: Text(
+              label,
+              style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary),
+            ),
           ),
           Expanded(
-            child: Text(value,
-                style: GoogleFonts.poppins(
-                    fontSize: 12.sp,
-                    color: Colors.black,
-                    fontWeight: FontWeight.w600)),
+            child: Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 12.sp,
+                color: Colors.black,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -485,7 +630,10 @@ class _ClubAdminAddGuardianScreenState extends State<ClubAdminAddGuardianScreen>
   Widget _heading(String text) => Text(
     text,
     style: GoogleFonts.montserrat(
-        fontSize: 16.sp, fontWeight: FontWeight.w800, color: Colors.black),
+      fontSize: 16.sp,
+      fontWeight: FontWeight.w800,
+      color: Colors.black,
+    ),
   );
 
   Widget _infoBox(String msg, IconData icon, Color color) => Container(
@@ -501,32 +649,39 @@ class _ClubAdminAddGuardianScreenState extends State<ClubAdminAddGuardianScreen>
         Icon(icon, color: color, size: 16.sp),
         8.width,
         Expanded(
-          child: Text(msg,
-              style: GoogleFonts.poppins(
-                  fontSize: 11.sp, color: color.withOpacity(0.85))),
+          child: Text(
+            msg,
+            style: GoogleFonts.poppins(
+              fontSize: 11.sp,
+              color: color.withOpacity(0.85),
+            ),
+          ),
         ),
       ],
     ),
   );
 
   Widget _formField(
-      String label,
-      TextEditingController ctrl,
-      IconData icon, {
-        String? hint,
-        bool required = true,
-        int maxLines = 1,
-        TextInputType? keyboardType,
-        bool obscureText = false,
-      }) {
+    String label,
+    TextEditingController ctrl,
+    IconData icon, {
+    String? hint,
+    bool required = true,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+    bool obscureText = false,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: GoogleFonts.poppins(
-                fontSize: 12.sp,
-                color: textSecondary,
-                fontWeight: FontWeight.w500)),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 12.sp,
+            color: textSecondary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         6.height,
         TextFormField(
           controller: ctrl,
@@ -534,46 +689,88 @@ class _ClubAdminAddGuardianScreenState extends State<ClubAdminAddGuardianScreen>
           keyboardType: keyboardType,
           obscureText: obscureText,
           validator: required
-              ? (v) => (v == null || v.trim().isEmpty) ? 'Required' : null
+              ? (v) => (v == null || v.trim().isEmpty)
+                    ? label == "Email *"
+                          ? validateEmail(v!)
+                          : 'Required'
+                    : null
               : null,
           style: GoogleFonts.poppins(fontSize: 13.sp, color: Colors.black),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: GoogleFonts.poppins(
-                fontSize: 12.sp, color: textSecondary.withOpacity(0.5)),
+              fontSize: 12.sp,
+              color: textSecondary.withOpacity(0.5),
+            ),
             prefixIcon: Icon(icon, color: textSecondary, size: 18.sp),
             filled: true,
             fillColor: Colors.white,
-            contentPadding:
-            EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: 14.w,
+              vertical: 13.h,
+            ),
             border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide(color: Colors.grey.shade300)),
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
             enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide(color: Colors.grey.shade300)),
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
             focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: const BorderSide(color: accentGreen, width: 1.5)),
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: const BorderSide(color: accentGreen, width: 1.5),
+            ),
             errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: const BorderSide(color: Colors.red)),
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: const BorderSide(color: Colors.red),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _dropdownField(String label, List<String> items, String? value,
-      void Function(String?) onChange) {
+  static String emailPattern =
+      r"^((([a-z]|\d|[!#\$%&'\*\+\-\/=\?\^_`{\|}~]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])+(\.([a-z]|\d|[!#\$%&'\*\+\-\/=\?\^_`{\|}~]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])+)*)|((\x22)((((\x20|\x09)*(\x0d\x0a))?(\x20|\x09)+)?(([\x01-\x08\x0b\x0c\x0e-\x1f\x7f]|\x21|[\x23-\x5b]|[\x5d-\x7e]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(\\([\x01-\x09\x0b\x0c\x0d-\x7f]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]))))*(((\x20|\x09)*(\x0d\x0a))?(\x20|\x09)+)?(\x22)))@((([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.)+(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))$";
+  static RegExp emailRegEx = RegExp(emailPattern);
+
+  // Validates an email address.
+  static bool isEmail(String value) {
+    if (emailRegEx.hasMatch(value.trim())) {
+      return true;
+    }
+    return false;
+  }
+
+  static String? validateEmail(String value) {
+    String email = value.trim();
+    if (email.isEmpty) {
+      return 'Email field is required';
+    }
+    if (!isEmail(email)) {
+      return 'Email error valid';
+    }
+    return null;
+  }
+
+  Widget _dropdownField(
+    String label,
+    List<String> items,
+    String? value,
+    void Function(String?) onChange,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: GoogleFonts.poppins(
-                fontSize: 12.sp,
-                color: textSecondary,
-                fontWeight: FontWeight.w500)),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 12.sp,
+            color: textSecondary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         6.height,
         DropdownButtonFormField<String>(
           value: value,
@@ -583,25 +780,36 @@ class _ClubAdminAddGuardianScreenState extends State<ClubAdminAddGuardianScreen>
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.white,
-            contentPadding:
-            EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: 14.w,
+              vertical: 13.h,
+            ),
             border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide(color: Colors.grey.shade300)),
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
             enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide(color: Colors.grey.shade300)),
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
             focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: const BorderSide(color: accentGreen, width: 1.5)),
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: const BorderSide(color: accentGreen, width: 1.5),
+            ),
           ),
           items: items
-              .map((i) => DropdownMenuItem(
-            value: i,
-            child: Text(i,
-                style: GoogleFonts.poppins(
-                    fontSize: 13.sp, color: Colors.black)),
-          ))
+              .map(
+                (i) => DropdownMenuItem(
+                  value: i,
+                  child: Text(
+                    i,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13.sp,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+              )
               .toList(),
         ),
       ],

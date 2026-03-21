@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sports/model/clubAdmin/activities_data.dart';
 import 'package:sports/model/clubAdmin/add_guardians.dart';
+import 'package:sports/model/clubAdmin/dashboard_data.dart';
 import 'package:sports/model/clubAdmin/get_groups.dart';
 import 'package:sports/model/coach/event_attendance_data.dart';
 import 'package:sports/model/coach/group_memebers_data.dart';
@@ -386,6 +387,14 @@ class ClubApiService {
       print("Login failed: $e");
       return false;
     }
+  }
+
+  Future<DashboardData> getDashboardData() async {
+    final fullResponse = await _helper.get("api/dashboard/admin");
+    print(fullResponse);
+    print(fullResponse['data']['events']);
+    print(fullResponse['data']['payments']);
+    return DashboardData.fromJson(fullResponse["data"]);
   }
 
   Future<bool> AddGuardian(Map<String, dynamic> data) async {
