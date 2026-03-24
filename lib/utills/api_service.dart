@@ -1504,7 +1504,6 @@ class MemberApiService {
     }
   }
 
-  /// GET /api/member/events/pending — pending events only
   Future<GetMemberEvents> getMemberPendingEvents() async {
     try {
       final fullResponse = await _helper.get("api/member/events/pending");
@@ -1524,7 +1523,7 @@ class MemberApiService {
       print("updateMemberEventStatus eventId: $eventId status: $status");
       final fullResponse = await _helper.put("api/member/events/status", {
         "eventId": eventId,
-        "status": status,
+        "status": "$status",
       });
       print("updateMemberEventStatus response: $fullResponse");
       if (fullResponse['success'] == true) {

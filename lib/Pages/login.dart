@@ -25,7 +25,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final passwordCtrl = TextEditingController();
   bool _hasAttemptedLogin = false;
   bool _isLoading = false;
-
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
 
@@ -58,7 +57,6 @@ class _LoginScreenState extends State<LoginScreen> {
           SharedPreferenceHelper.setClubId(jwtData['clubId'].toString());
           print("userId from JWT: $userId");
         }
-        // ──────────────────────────────────────────────────────────────
 
         final taskData = await ClubApiService().getTasks();
         print("getTasks RAW response: $taskData");
@@ -134,7 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
         backgroundColor: Colors.grey.shade100,
         body: Column(
           children: [
-            const SizedBox(height: 20),
+            const SizedBox(height: 35),
             Container(
               margin: EdgeInsets.all(5.w),
               height: 90.h,
@@ -180,26 +178,20 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         40.height,
-                        AppTextField(
+                        TextField(
                           controller: mobileCtrl,
-                          textFieldType: TextFieldType.USERNAME,
-                          textStyle: primaryTextStyle(color: textPrimary),
-                          keyboardType: TextInputType.name,
-                          decoration:
-                              inputDecoration(
-                                context,
-                                hintText: 'User name',
-                                prefixIcon: Icon(
-                                  Icons.person,
-                                  color: accentGreen,
-                                ),
-                              ).copyWith(
-                                hintStyle: secondaryTextStyle(
-                                  color: textSecondary,
-                                ),
-                              ),
-                          validator: (v) =>
-                              (v == null) ? 'Enter your username' : null,
+                          style: primaryTextStyle(color: textPrimary),
+                          //keyboardType: TextInputType.name,
+                          decoration: inputDecoration(
+                            context,
+                            hintText: 'User name',
+                            prefixIcon: Icon(
+                              Icons.person,
+                              color: accentGreen,
+                            ),
+                          ).copyWith(
+                            hintStyle: secondaryTextStyle(color: textSecondary),
+                          ),
                         ),
                         20.height,
                         TextField(
@@ -277,29 +269,29 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         40.height,
-                        Center(
-                          child: GestureDetector(
-                            onTap: () => Navigator.pushNamed(
-                              context,
-                              AppRoutes.roleSelection,
-                            ),
-                            child: RichText(
-                              text: TextSpan(
-                                style: secondaryTextStyle(
-                                  color: textSecondary,
-                                  size: 14,
-                                ),
-                                children: [
-                                  const TextSpan(text: "New to SQUAD? "),
-                                  TextSpan(
-                                    text: "Create account",
-                                    style: boldTextStyle(color: Colors.black),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
+                        // Center(
+                        //   child: GestureDetector(
+                        //     onTap: () => Navigator.pushNamed(
+                        //       context,
+                        //       AppRoutes.roleSelection,
+                        //     ),
+                        //     child: RichText(
+                        //       text: TextSpan(
+                        //         style: secondaryTextStyle(
+                        //           color: textSecondary,
+                        //           size: 14,
+                        //         ),
+                        //         children: [
+                        //           const TextSpan(text: "New to SQUAD? "),
+                        //           TextSpan(
+                        //             text: "Create account",
+                        //             style: boldTextStyle(color: Colors.black),
+                        //           ),
+                        //         ],
+                        //       ),
+                        //     ),
+                        //   ),
+                        // ),
                         60.height,
                       ],
                     ),

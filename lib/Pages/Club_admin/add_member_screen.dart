@@ -124,7 +124,7 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
         body: Column(
           children: [
             Container(
-              height: 85.h,
+              //height: 85.h,
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.black,

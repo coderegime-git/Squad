@@ -1,4 +1,4 @@
-package com.squad.app
+package com.squad.squadapp
 
 import io.flutter.embedding.android.FlutterActivity
 

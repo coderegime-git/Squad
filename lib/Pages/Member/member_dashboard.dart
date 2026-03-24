@@ -44,7 +44,7 @@ class _MemberDashboardState extends State<MemberDashboard> {
     final success = await _api.updateMemberEventStatus(eventId, status);
     if (mounted) {
       if (success) {
-        toast(status == 'ACCEPTED' ? 'Event accepted!' : 'Event declined');
+        toast(status == 'ACCEPT' ? 'Event accepted!' : 'Event declined');
         _refresh();
       } else {
         toast('Failed to update status');
@@ -207,7 +207,7 @@ class _MemberDashboardState extends State<MemberDashboard> {
                                   onAccept: () =>
                                       _updateStatus(e.eventId, 'ACCEPT'),
                                   onDecline: () =>
-                                      _updateStatus(e.eventId, 'REJECTED'),
+                                      _updateStatus(e.eventId, 'REJECT'),
                                 ),
                               ),
                               16.height,
@@ -222,7 +222,7 @@ class _MemberDashboardState extends State<MemberDashboard> {
                         builder: (context, snapshot) {
                           final all = snapshot.data?.data ?? [];
                           final accepted = all
-                              .where((e) => e.status == 'ACCEPTED')
+                              .where((e) => e.status == 'ACCEPT')
                               .length;
                           final pending = all
                               .where((e) => e.status == 'PENDING')
@@ -309,13 +309,13 @@ class _MemberDashboardState extends State<MemberDashboard> {
                                     onAccept: e.status == 'PENDING'
                                         ? () => _updateStatus(
                                             e.eventId,
-                                            'ACCEPTED',
+                                            'ACCEPT',
                                           )
                                         : null,
                                     onDecline: e.status == 'PENDING'
                                         ? () => _updateStatus(
                                             e.eventId,
-                                            'REJECTED',
+                                            'REJECT',
                                           )
                                         : null,
                                   ),

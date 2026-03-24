@@ -39,9 +39,9 @@ class _GuardianProfileScreenState extends State<GuardianProfileScreen> {
     super.initState();
   }
 
-  void getProfileData(isLoad) async {
+  void getProfileData(isLoads) async {
     setState(() {
-      isLoad = isLoad;
+      isLoad = isLoads;
     });
 
     memberProfileData = await apiService.getParentProfile();

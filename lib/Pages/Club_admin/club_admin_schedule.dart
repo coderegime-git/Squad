@@ -12,6 +12,7 @@ import '../../model/clubAdmin/get_coaches.dart';
 import '../../model/clubAdmin/get_event_details.dart';
 import '../../model/clubAdmin/get_event_details_by_id.dart';
 import '../../utills/api_service.dart';
+import '../../utills/helper.dart';
 import 'activities_screen.dart';
 import 'event_groups.dart';
 
@@ -31,7 +32,6 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen> {
   final ClubApiService _apiService = ClubApiService();
   List<Data> _allEvents = [];
   bool _loadingEvents = true;
-
   EventData? _event;
 
   @override
@@ -833,8 +833,9 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
   Set<int> _selectedCoachIds = {};
   bool _loadingCoaches = true;
   bool _submitting = false;
+  bool _showDateErrors = false;
 
-  final List<String> _eventTypes = ['TRAINING', 'MATCH', 'TOURNAMENT'];
+  final List<String> _eventTypes = ['TRAINING', 'MATCH', 'TOURNAMENT','SINGLE_EVENT'];
   final List<String> _statusOptions = [
     'SCHEDULED',
     'ONGOING',
@@ -899,18 +900,149 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
 
   String _formatTime(TimeOfDay t) =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+  Future<bool> _showConfirmDialog(String message) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF3CD),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.warning_amber_rounded,
+                color: Color(0xFFF57C00),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Confirm Schedule',
+              style: GoogleFonts.montserrat(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF111827),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            color: const Color(0xFF6B7280),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Go Back',
+              style: GoogleFonts.poppins(color: const Color(0xFF6B7280)),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: accentGreen,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Yes, Continue',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    ) ??
+        false;
+  }
+  Widget _buildDateValidationBanner_PATCH() {
+    final error = EventDateTimeValidator.validate(
+      date: _eventDate,
+      startTime: _startTime,
+      endTime: _endTime,
+    );
+    final isWarn =
+        error != null && !EventDateTimeValidator.isBlockingError(error);
+    final isError =
+        error != null && EventDateTimeValidator.isBlockingError(error);
+    final isOk = error == null &&
+        _eventDate != null &&
+        _startTime != null &&
+        _endTime != null;
 
+    if (!isOk && !isWarn && !isError) return const SizedBox.shrink();
+
+    Color bgColor, borderColor, iconColor, textColor;
+    IconData icon;
+
+    if (isOk) {
+      bgColor = accentGreen.withOpacity(0.07);
+      borderColor = accentGreen.withOpacity(0.25);
+      iconColor = accentGreen;
+      textColor = accentGreen;
+      icon = Icons.check_circle_outline;
+    } else if (isWarn) {
+      bgColor = const Color(0xFFFFF8E1);
+      borderColor = const Color(0xFFFFCC02).withOpacity(0.6);
+      iconColor = const Color(0xFFF57C00);
+      textColor = const Color(0xFFE65100);
+      icon = Icons.info_outline;
+    } else {
+      bgColor = Colors.red.withOpacity(0.07);
+      borderColor = Colors.red.withOpacity(0.3);
+      iconColor = Colors.red;
+      textColor = Colors.red;
+      icon = Icons.error_outline;
+    }
+
+    final label = isOk
+        ? 'Duration: ${EventDateTimeValidator.durationLabel(_eventDate!, _startTime!, _endTime!)}'
+        : error!;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: bgColor,
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: iconColor),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: textColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
   Future<void> _submit() async {
+    setState(() => _showDateErrors = true);
+
     if (_eventNameController.text.trim().isEmpty) {
       toast('Please enter event name');
-      return;
-    }
-    if (_eventDate == null) {
-      toast('Please select event date');
-      return;
-    }
-    if (_startTime == null || _endTime == null) {
-      toast('Please select start and end time');
       return;
     }
     if (_locationController.text.trim().isEmpty) {
@@ -928,6 +1060,22 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
     if (_selectedCoachIds.isEmpty) {
       toast('Please select at least one coach');
       return;
+    }
+
+    final dateMsg = EventDateTimeValidator.validate(
+      date: _eventDate,
+      startTime: _startTime,
+      endTime: _endTime,
+    );
+
+    if (EventDateTimeValidator.isBlockingError(dateMsg)) {
+      toast(dateMsg!, bgColor: Colors.red);
+      return;
+    }
+
+    if (dateMsg != null) {
+      final confirmed = await _showConfirmDialog(dateMsg);
+      if (!confirmed) return;
     }
 
     setState(() => _submitting = true);
@@ -955,6 +1103,7 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
       toast('Failed to create event. Please try again.');
     }
   }
+
 
   @override
   void dispose() {

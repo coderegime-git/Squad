@@ -149,7 +149,7 @@ class _CoachEventTeamsScreenState extends State<CoachEventTeamsScreen> {
         children: [
           // Header
           Container(
-            height: 85.h,
+            //height: 85.h,
             width: double.infinity,
             decoration: BoxDecoration(
               color: Colors.black,

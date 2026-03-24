@@ -43,12 +43,12 @@ class _SplashState extends State<Splash> {
             Navigator.pushReplacementNamed(context, AppRoutes.memberBar);
             break;
           default:
-            // Role not saved or unknown → go to login
+          // Role not saved or unknown → go to login
             Navigator.pushReplacementNamed(context, AppRoutes.login);
         }
       } else {
-        // No token → go to login
-        Navigator.pushReplacementNamed(context, AppRoutes.login);
+        print("GO TO Login");
+        Navigator.pushReplacementNamed(context, AppRoutes.landing);
       }
     });
   }
@@ -63,7 +63,10 @@ class _SplashState extends State<Splash> {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(20),
-                child: Image.asset("assets/images/squad.png", height: 250),
+                child: Image.asset(
+                  "assets/images/squad.png",
+                  height: 250,
+                ),
               ),
               const SizedBox(height: 40),
               Text(

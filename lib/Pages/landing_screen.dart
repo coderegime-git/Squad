@@ -173,29 +173,29 @@ class _LandingScreenState extends State<LandingScreen> {
                                 20.height,
 
 
-                                SizedBox(
-                                  width: 220.w,
-                                  height: 45.h,
-                                  child: AppButton(
-                                    text: 'SIGN UP',
-                                    textStyle: GoogleFonts.montserrat(
-                                      color: Colors.black,
-                                      fontSize: 15.sp,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0,
-                                    ),
-
-                                    color: Colors.white,
-                                    // shapeBorder: RoundedRectangleBorder(
-                                    //   borderRadius: BorderRadius.circular(12.r),
-                                    // ),
-                                    padding: EdgeInsets.zero,
-                                    elevation: 4,
-                                    onTap: () {
-                                      Navigator.pushNamed(context, AppRoutes.signup);
-                                    },
-                                  ),
-                                ),
+                                // SizedBox(
+                                //   width: 220.w,
+                                //   height: 45.h,
+                                //   child: AppButton(
+                                //     text: 'SIGN UP',
+                                //     textStyle: GoogleFonts.montserrat(
+                                //       color: Colors.black,
+                                //       fontSize: 15.sp,
+                                //       fontWeight: FontWeight.w700,
+                                //       letterSpacing: 0,
+                                //     ),
+                                //
+                                //     color: Colors.white,
+                                //     // shapeBorder: RoundedRectangleBorder(
+                                //     //   borderRadius: BorderRadius.circular(12.r),
+                                //     // ),
+                                //     padding: EdgeInsets.zero,
+                                //     elevation: 4,
+                                //     onTap: () {
+                                //       Navigator.pushNamed(context, AppRoutes.signup);
+                                //     },
+                                //   ),
+                                // ),
                               ],
                             ),
                           ),

@@ -11,7 +11,7 @@ class CoachCreateEditEventSheet extends StatefulWidget {
   final VoidCallback onSuccess;
   final int clubId;
   final String clubName;
-  final CoachEventModel? event; // If provided, we're editing
+  final CoachEventModel? event;
 
   const CoachCreateEditEventSheet({
     Key? key,
@@ -280,7 +280,6 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
                       ),
                       16.height,
 
-                      // Event Type
                       _buildLabel("Event Type"),
                       8.height,
                       DropdownButtonFormField<String>(
@@ -296,8 +295,6 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
                         decoration: _inputDecor(""),
                       ),
                       16.height,
-
-                      // Status
                       _buildLabel("Status"),
                       8.height,
                       DropdownButtonFormField<String>(

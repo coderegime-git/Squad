@@ -187,7 +187,7 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
           children: [
             // Header
             Container(
-              height: 95.h,
+              //height: 95.h,
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.black,

@@ -40,8 +40,6 @@ class _EventTeamMembersScreenState extends State<EventTeamMembersScreen> {
   }
 
   void _refresh() => setState(() => _teamMembersFuture = _fetchTeamMembers());
-
-  // ── Assign Members Sheet ───────────────────────────────────────────────────
   void _showAssignSheet() async {
     setState(() => _loadingAllMembers = true);
     List<Data> allMembers = [];
@@ -332,9 +330,8 @@ class _EventTeamMembersScreenState extends State<EventTeamMembersScreen> {
         backgroundColor: Colors.grey.shade100,
         body: Column(
           children: [
-            // ── Header ──────────────────────────────────────────────────
             Container(
-              height: 85.h,
+              //height: 85.h,
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.black,
@@ -526,7 +523,6 @@ class _EventTeamMembersScreenState extends State<EventTeamMembersScreen> {
           ],
         ),
 
-        // ── FAB ─────────────────────────────────────────────────────────
         floatingActionButton: _loadingAllMembers
             ? FloatingActionButton(
           onPressed: null,

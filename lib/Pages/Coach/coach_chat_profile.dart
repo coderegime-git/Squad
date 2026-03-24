@@ -243,9 +243,9 @@ class _CoachProfileScreenState extends State<CoachProfileScreen> {
     super.initState();
   }
 
-  void getProfileData(isLoad) async {
+  void getProfileData(isLoads) async {
     setState(() {
-      isLoad = isLoad;
+      isLoad = isLoads;
     });
 
     memberProfileData = await apiService.getCouchProfile();

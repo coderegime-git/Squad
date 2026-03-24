@@ -265,8 +265,6 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
                       ],
 
                       24.height,
-
-                      // ── Recent Club Updates (static) ─────────────────
                       Text(
                         "Recent Club Updates",
                         style: GoogleFonts.montserrat(

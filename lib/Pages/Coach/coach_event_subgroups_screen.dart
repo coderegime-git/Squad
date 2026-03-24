@@ -365,7 +365,7 @@ class _CoachEventSubGroupsScreenState extends State<CoachEventSubGroupsScreen> {
         children: [
           // Header
           Container(
-            height: 85.h,
+            //height: 85.h,
             width: double.infinity,
             decoration: BoxDecoration(
               color: Colors.black,

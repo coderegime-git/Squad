@@ -367,9 +367,8 @@ class _ClubAdminLinkChildGuardianScreenState
         backgroundColor: Colors.grey.shade100,
         body: Column(
           children: [
-            // ── Header ──────────────────────────────────────────────────
             Container(
-              height: 85.h,
+              //height: 85.h,
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.black,
@@ -407,7 +406,6 @@ class _ClubAdminLinkChildGuardianScreenState
               ),
             ),
 
-            // ── Main Content ────────────────────────────────────────────
             Expanded(
               child: (_loadingGuardians || _loadingMembers)
                   ? const Center(child: CircularProgressIndicator())
@@ -418,7 +416,6 @@ class _ClubAdminLinkChildGuardianScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ── Guardian Dropdown ──────────────────────────
                     Text(
                       'Select Guardian',
                       style: GoogleFonts.montserrat(
@@ -475,7 +472,6 @@ class _ClubAdminLinkChildGuardianScreenState
                     ),
                     24.height,
 
-                    // ── Members Checklist ──────────────────────────
                     Text(
                       'Select Children',
                       style: GoogleFonts.montserrat(
@@ -555,7 +551,6 @@ class _ClubAdminLinkChildGuardianScreenState
 
                     28.height,
 
-                    // ── Link Button ────────────────────────────────
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(

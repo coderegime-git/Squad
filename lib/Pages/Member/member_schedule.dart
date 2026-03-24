@@ -256,14 +256,14 @@ class _MemberScheduleScreenState extends State<MemberScheduleScreen> {
                                           ? () =>
                                           _updateStatus(
                                               e.eventId,
-                                              'ACCEPTED')
+                                              'ACCEPT')
                                           : null,
                                       onDecline: e.status ==
                                           'PENDING'
                                           ? () =>
                                           _updateStatus(
                                               e.eventId,
-                                              'REJECTED')
+                                              'REJECT')
                                           : null,
                                     ),
                               )

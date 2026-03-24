@@ -282,12 +282,12 @@ class _EventTeamsScreenState extends State<EventTeamsScreen> {
 
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => EventTeamMembersScreen(team: team),
-          ),
-        );
+        // Navigator.push(
+        //   context,
+        //   MaterialPageRoute(
+        //     builder: (_) => EventTeamMembersScreen(team: team),
+        //   ),
+        // );
       },
       child: Container(
         padding: EdgeInsets.all(14.w),
@@ -326,16 +326,16 @@ class _EventTeamsScreenState extends State<EventTeamsScreen> {
                         style: GoogleFonts.poppins(
                             fontSize: 11.sp, color: textSecondary)),
                   4.height,
-                  Row(
-                    children: [
-                      Icon(Icons.arrow_forward_ios_rounded,
-                          size: 10.sp, color: textSecondary),
-                      4.width,
-                      Text('Tap to manage members',
-                          style: GoogleFonts.poppins(
-                              fontSize: 10.sp, color: textSecondary)),
-                    ],
-                  ),
+                  // Row(
+                  //   children: [
+                  //     Icon(Icons.arrow_forward_ios_rounded,
+                  //         size: 10.sp, color: textSecondary),
+                  //     4.width,
+                  //     Text('Tap to manage members',
+                  //         style: GoogleFonts.poppins(
+                  //             fontSize: 10.sp, color: textSecondary)),
+                  //   ],
+                  // ),
                 ],
               ),
             ),
@@ -439,7 +439,7 @@ class _EventTeamsScreenState extends State<EventTeamsScreen> {
           children: [
             // ── Header ──────────────────────────────────────────────────
             Container(
-              height: 85.h,
+              //height: 85.h,
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.black,

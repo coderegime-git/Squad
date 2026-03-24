@@ -150,7 +150,7 @@ class _CoachEventGroupsScreenState extends State<CoachEventGroupsScreen> {
         children: [
           // Header
           Container(
-            height: 85.h,
+            //height: 85.h,
             width: double.infinity,
             decoration: BoxDecoration(
               color: Colors.black,
@@ -486,7 +486,7 @@ class _GroupFormPageState extends State<_GroupFormPage> {
         children: [
           // Header — same style as list screen
           Container(
-            height: 85.h,
+           // height: 85.h,
             width: double.infinity,
             decoration: BoxDecoration(
               color: Colors.black,

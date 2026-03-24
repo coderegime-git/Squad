@@ -22,7 +22,7 @@ class _CoachBottomNavState extends State<CoachBottomNav> {
 
   final List<Widget> _screens = [
     const CoachDashboard(),
-    const CoachGroupsScreen(),
+    //const CoachGroupsScreen(),
     const CoachEventsScreen(),
     const CoachChatScreen(),
     const CoachProfileScreen(),
