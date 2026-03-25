@@ -27,13 +27,16 @@ import '../model/clubAdmin/get_teams.dart';
 import '../model/coach/club.dart';
 import '../model/coach/club_member.dart';
 import '../model/coach/coach_event.dart';
+import '../model/coach/event_performance_data.dart';
 import '../model/guardian/getGuardianEvents.dart';
 import '../model/member/get_events_members.dart';
 
 // late GlobalKey<NavigatorState> _navigatorKey;
 final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
-clearUserData() async {}
+void clearUserData() async {
+  SharedPreferenceHelper.clear();
+}
 
 class ApiBaseHelper {
   void initApiService(GlobalKey<NavigatorState> navigatorKey) {}
@@ -1116,6 +1119,39 @@ class ClubApiService {
     } catch (e) {
       print("Add Event failed: $e");
       return -1;
+    }
+  }
+
+  Future<bool> addPerformanceNotes({
+    required String eventId,
+    required String memberId,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      final fullResponse = await _helper.post(
+        "api/events/$eventId/members/$memberId/performance",
+        data,
+      );
+      final jsonResponse = jsonEncode(fullResponse);
+      return fullResponse['success'];
+    } catch (e) {
+      print("Add Event failed: $e");
+      return false;
+    }
+  }
+
+  Future<PerformanceNotesData> getEventsPerformanceNotes({
+    required String eventId,
+  }) async {
+    try {
+      final fullResponse = await _helper.get(
+        "/api/events/$eventId/performance-notes",
+      );
+      final jsonResponse = jsonEncode(fullResponse);
+      return PerformanceNotesData.fromJson(fullResponse);
+    } catch (e) {
+      print("Add Event failed: $e");
+      return PerformanceNotesData.fromJson({});
     }
   }
 }

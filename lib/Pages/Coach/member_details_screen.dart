@@ -6,6 +6,7 @@ import 'package:nb_utils/nb_utils.dart';
 import '../../config/app_theme.dart';
 import '../../config/colors.dart';
 import '../../model/coach/club_member.dart';
+import 'club_events_list_screen.dart';
 
 class MemberDetailsScreen extends StatefulWidget {
   final int clubId;
@@ -79,7 +80,9 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                     radius: 50.r,
                     backgroundColor: accentGreen.withOpacity(0.1),
                     child: Text(
-                      member.username.isNotEmpty ? member.username[0].toUpperCase() : '?',
+                      member.username.isNotEmpty
+                          ? member.username[0].toUpperCase()
+                          : '?',
                       style: GoogleFonts.montserrat(
                         fontSize: 40.sp,
                         fontWeight: FontWeight.bold,
@@ -97,7 +100,10 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                   ),
                   4.height,
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 12.w,
+                      vertical: 4.h,
+                    ),
                     decoration: BoxDecoration(
                       color: accentGreen.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20.r),
@@ -125,7 +131,10 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                 _buildInfoRow("Email", member.email),
                 _buildInfoRow("Gender", member.gender),
                 _buildInfoRow("Date of Birth", _formatDate(member.dob)),
-                _buildInfoRow("Member Since", _formatDateTime(member.createdAt)),
+                _buildInfoRow(
+                  "Member Since",
+                  _formatDateTime(member.createdAt),
+                ),
               ],
             ),
 
@@ -145,7 +154,11 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.medical_services, color: Colors.orange, size: 20.sp),
+                      Icon(
+                        Icons.medical_services,
+                        color: Colors.orange,
+                        size: 20.sp,
+                      ),
                       8.width,
                       Text(
                         "Medical Notes",
@@ -158,10 +171,14 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                   ),
                   12.height,
                   Text(
-                    member.medicalNotes.isEmpty ? "No medical notes available" : member.medicalNotes,
+                    member.medicalNotes.isEmpty
+                        ? "No medical notes available"
+                        : member.medicalNotes,
                     style: GoogleFonts.poppins(
                       fontSize: 14.sp,
-                      color: member.medicalNotes.isEmpty ? Colors.grey : Colors.black87,
+                      color: member.medicalNotes.isEmpty
+                          ? Colors.grey
+                          : Colors.black87,
                     ),
                   ),
                 ],
@@ -200,7 +217,17 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                     icon: Icons.event,
                     label: "Events",
                     color: AppColors.orange,
-                    onTap: () => toast("View member events"),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ClubEventsListScreen(
+                            clubId: widget.clubId,
+                            clubName: widget.clubName,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
                 12.width,
@@ -220,7 +247,10 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
     );
   }
 
-  Widget _buildInfoSection({required String title, required List<Widget> children}) {
+  Widget _buildInfoSection({
+    required String title,
+    required List<Widget> children,
+  }) {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(16.w),

@@ -9,7 +9,6 @@ import 'coach_dashboard.dart';
 import 'coach_events_screen.dart';
 import 'coach_groups_events.dart';
 
-
 class CoachBottomNav extends StatefulWidget {
   const CoachBottomNav({super.key});
 
@@ -22,7 +21,7 @@ class _CoachBottomNavState extends State<CoachBottomNav> {
 
   final List<Widget> _screens = [
     const CoachDashboard(),
-    //const CoachGroupsScreen(),
+    const CoachGroupsScreen(),
     const CoachEventsScreen(),
     const CoachChatScreen(),
     const CoachProfileScreen(),
@@ -35,11 +34,7 @@ class _CoachBottomNavState extends State<CoachBottomNav> {
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-          boxShadow: [
-            BoxShadow(
-              offset: const Offset(0, -4),
-            ),
-          ],
+          boxShadow: [BoxShadow(offset: const Offset(0, -4))],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
@@ -61,10 +56,22 @@ class _CoachBottomNavState extends State<CoachBottomNav> {
             ),
             items: const [
               BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-              BottomNavigationBarItem(icon: Icon(Icons.group_rounded), label: 'Groups'),
-              BottomNavigationBarItem(icon: Icon(Icons.event_rounded), label: 'Events'),
-              BottomNavigationBarItem(icon: Icon(Icons.chat_rounded), label: 'Chat'),
-              BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.group_rounded),
+                label: 'Groups',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.event_rounded),
+                label: 'Events',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.chat_rounded),
+                label: 'Chat',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.person),
+                label: 'Profile',
+              ),
             ],
           ),
         ),

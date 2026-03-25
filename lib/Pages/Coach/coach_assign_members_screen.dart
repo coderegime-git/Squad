@@ -30,8 +30,10 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
 
   // All club members
   List<dynamic> _allMembers = [];
+
   // Already assigned members
   List<dynamic> _assignedMembers = [];
+
   // Selected member IDs for new assignment
   Set<int> _selectedIds = {};
 
@@ -67,15 +69,15 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
 
   Future<void> _loadAssignedMembers() async {
     setState(() => _loadingAssigned = true);
-    try {
-      final result = await _api.getTeamMembers(widget.teamId);
-      setState(() {
-        _assignedMembers = result.data ?? [];
-        _loadingAssigned = false;
-      });
-    } catch (e) {
-      setState(() => _loadingAssigned = false);
-    }
+    // try {
+    final result = await _api.getTeamMembers(widget.teamId);
+    setState(() {
+      _assignedMembers = result.data ?? [];
+      _loadingAssigned = false;
+    });
+    // } catch (e) {
+    //   setState(() => _loadingAssigned = false);
+    // }
   }
 
   int? _getMemberId(dynamic member) {
@@ -87,9 +89,7 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
   }
 
   Set<int> get _alreadyAssignedIds {
-    return _assignedMembers
-        .map<int>((m) => m.memberId as int)
-        .toSet();
+    return _assignedMembers.map<int>((m) => m.memberId as int).toSet();
   }
 
   List<dynamic> get _filteredMembers {
@@ -134,8 +134,10 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text("Remove Member",
-            style: GoogleFonts.montserrat(fontWeight: FontWeight.w700)),
+        title: Text(
+          "Remove Member",
+          style: GoogleFonts.montserrat(fontWeight: FontWeight.w700),
+        ),
         content: Text(
           "Remove $name from ${widget.teamName}?",
           style: GoogleFonts.poppins(),
@@ -147,10 +149,8 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            child: const Text("Remove",
-                style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            child: const Text("Remove", style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -205,16 +205,16 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
               ),
               child: SafeArea(
                 child: Padding(
-                  padding:
-                      EdgeInsets.only(top: 5.h, left: 20.w, right: 20.w),
+                  padding: EdgeInsets.only(top: 5.h, left: 20.w, right: 20.w),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       GestureDetector(
                         onTap: () => Navigator.pop(context),
                         child: const Icon(
-                            Icons.arrow_back_ios_new_rounded,
-                            color: Colors.white),
+                          Icons.arrow_back_ios_new_rounded,
+                          color: Colors.white,
+                        ),
                       ),
                       16.width,
                       Expanded(
@@ -224,9 +224,7 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
                           children: [
                             Text(
                               widget.teamName,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineMedium
+                              style: Theme.of(context).textTheme.headlineMedium
                                   ?.copyWith(
                                     color: Colors.white,
                                     fontSize: 18.sp,
@@ -237,7 +235,9 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
                             Text(
                               widget.subGroupName,
                               style: GoogleFonts.poppins(
-                                  fontSize: 11.sp, color: Colors.white60),
+                                fontSize: 11.sp,
+                                color: Colors.white60,
+                              ),
                             ),
                           ],
                         ),
@@ -256,7 +256,9 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
                 unselectedLabelColor: Colors.grey,
                 indicatorColor: accentGreen,
                 labelStyle: GoogleFonts.poppins(
-                    fontSize: 13.sp, fontWeight: FontWeight.w600),
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w600,
+                ),
                 tabs: [
                   Tab(
                     child: Row(
@@ -274,9 +276,7 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
                       children: [
                         const Icon(Icons.people_rounded, size: 18),
                         6.width,
-                        Text(
-                          "Assigned (${_assignedMembers.length})",
-                        ),
+                        Text("Assigned (${_assignedMembers.length})"),
                       ],
                     ),
                   ),
@@ -287,10 +287,7 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
             // Tab Views
             Expanded(
               child: TabBarView(
-                children: [
-                  _buildAssignTab(),
-                  _buildAssignedTab(),
-                ],
+                children: [_buildAssignTab(), _buildAssignedTab()],
               ),
             ),
           ],
@@ -306,8 +303,9 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
                     : Text(
                         "Assign ${_selectedIds.length} Member${_selectedIds.length > 1 ? 's' : ''}",
                         style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600),
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                 icon: _assigning
                     ? const SizedBox.shrink()
@@ -330,8 +328,10 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
           children: [
             Icon(Icons.people_outline, size: 48.sp, color: Colors.grey),
             12.height,
-            Text("No members found",
-                style: GoogleFonts.poppins(color: Colors.grey)),
+            Text(
+              "No members found",
+              style: GoogleFonts.poppins(color: Colors.grey),
+            ),
           ],
         ),
       );
@@ -352,8 +352,10 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
             onChanged: (v) => setState(() => _searchQuery = v),
             decoration: InputDecoration(
               hintText: "Search members...",
-              hintStyle:
-                  GoogleFonts.poppins(fontSize: 13.sp, color: Colors.grey),
+              hintStyle: GoogleFonts.poppins(
+                fontSize: 13.sp,
+                color: Colors.grey,
+              ),
               prefixIcon: const Icon(Icons.search_rounded),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
@@ -392,7 +394,9 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
                 Text(
                   "${available.length} available",
                   style: GoogleFonts.poppins(
-                      fontSize: 12.sp, color: Colors.grey.shade600),
+                    fontSize: 12.sp,
+                    color: Colors.grey.shade600,
+                  ),
                 ),
                 if (_selectedIds.isNotEmpty)
                   GestureDetector(
@@ -400,9 +404,10 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
                     child: Text(
                       "Clear selection",
                       style: GoogleFonts.poppins(
-                          fontSize: 12.sp,
-                          color: Colors.redAccent,
-                          fontWeight: FontWeight.w600),
+                        fontSize: 12.sp,
+                        color: Colors.redAccent,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
               ],
@@ -422,8 +427,10 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
                   ),
                 )
               : ListView.builder(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 4.h,
+                  ),
                   itemCount: available.length,
                   itemBuilder: (_, i) {
                     final member = available[i];
@@ -494,8 +501,9 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
                                   Text(
                                     member.email ?? '',
                                     style: GoogleFonts.poppins(
-                                        fontSize: 11.sp,
-                                        color: Colors.grey.shade500),
+                                      fontSize: 11.sp,
+                                      color: Colors.grey.shade500,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -517,8 +525,11 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
                                 ),
                               ),
                               child: isSelected
-                                  ? const Icon(Icons.check,
-                                      color: Colors.white, size: 14)
+                                  ? const Icon(
+                                      Icons.check,
+                                      color: Colors.white,
+                                      size: 14,
+                                    )
                                   : null,
                             ),
                           ],
@@ -547,13 +558,17 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
           children: [
             Icon(Icons.person_off_outlined, size: 48.sp, color: Colors.grey),
             12.height,
-            Text("No members assigned yet",
-                style: GoogleFonts.poppins(color: Colors.grey)),
+            Text(
+              "No members assigned yet",
+              style: GoogleFonts.poppins(color: Colors.grey),
+            ),
             8.height,
             Text(
               "Go to Assign tab to add members",
               style: GoogleFonts.poppins(
-                  fontSize: 12.sp, color: Colors.grey.shade400),
+                fontSize: 12.sp,
+                color: Colors.grey.shade400,
+              ),
             ),
           ],
         ),
@@ -612,7 +627,9 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
                       Text(
                         member.email ?? '',
                         style: GoogleFonts.poppins(
-                            fontSize: 11.sp, color: Colors.grey.shade500),
+                          fontSize: 11.sp,
+                          color: Colors.grey.shade500,
+                        ),
                       ),
                     ],
                   ),
@@ -620,8 +637,11 @@ class _CoachAssignMembersScreenState extends State<CoachAssignMembersScreen> {
                 IconButton(
                   onPressed: () =>
                       _removeMember(memberId, member.username ?? 'Member'),
-                  icon: Icon(Icons.remove_circle_outline,
-                      color: Colors.redAccent, size: 22.sp),
+                  icon: Icon(
+                    Icons.remove_circle_outline,
+                    color: Colors.redAccent,
+                    size: 22.sp,
+                  ),
                 ),
               ],
             ),
