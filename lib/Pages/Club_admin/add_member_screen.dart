@@ -41,6 +41,7 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
   String? _selectedGroup;
   String? _selectedSubGroup;
   final _jerseyCtrl = TextEditingController();
+  final TextEditingController _membershipAmountCtrl = TextEditingController();
   final _membershipStartCtrl = TextEditingController();
   final _membershipEndCtrl = TextEditingController();
   final _feeCtrl = TextEditingController();
@@ -89,6 +90,7 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
     _passwordCtrl.dispose();
     _medicalNotesCtrl.dispose();
     _jerseyCtrl.dispose();
+    _membershipAmountCtrl.dispose();
     _membershipStartCtrl.dispose();
     _membershipEndCtrl.dispose();
     _feeCtrl.dispose();
@@ -581,6 +583,16 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
         ),
         20.height,
         _heading('Membership & Payment'),
+        12.height,
+        _formField(
+          'Membership Amount *',
+          _membershipAmountCtrl,
+          Icons.currency_rupee_rounded,
+          hint: '0.00',
+          keyboardType: TextInputType.numberWithOptions(
+            decimal: true,
+          ),
+        ),
         12.height,
         _dateField(
           'Membership Start Date *',

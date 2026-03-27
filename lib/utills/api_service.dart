@@ -4,8 +4,6 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sports/model/clubAdmin/activities_data.dart';
 import 'package:sports/model/clubAdmin/add_guardians.dart';
 import 'package:sports/model/clubAdmin/dashboard_data.dart';
@@ -26,10 +24,12 @@ import '../model/clubAdmin/get_members.dart';
 import '../model/clubAdmin/get_teams.dart';
 import '../model/coach/club.dart';
 import '../model/coach/club_member.dart';
+import '../model/coach/coach_dashboard_data.dart';
 import '../model/coach/coach_event.dart';
 import '../model/coach/event_performance_data.dart';
 import '../model/guardian/getGuardianEvents.dart';
 import '../model/member/get_events_members.dart';
+import '../model/member/get_member_dashboard.dart';
 
 // late GlobalKey<NavigatorState> _navigatorKey;
 final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
@@ -65,7 +65,6 @@ class ApiBaseHelper {
 
   dynamic _returnResponse(Response response) {
     print("response.statusCode");
-    print(response.statusCode);
     switch (response.statusCode) {
       case 200:
         var responseJson = response.data;
@@ -96,7 +95,7 @@ class ApiBaseHelper {
     print("Print ${token}");
     Map<String, String> headers = {'Content-Type': 'application/json'};
 
-    if (token != null && token != "") {
+    if (token != "") {
       headers['Authorization'] = '$token';
     }
     return headers;
@@ -363,7 +362,6 @@ class ClubApiService {
         print("Body says failure: ${fullResponse['message']}");
         return false;
       }
-      return false;
     } catch (e) {
       print("Login failed: $e");
       return false;
@@ -385,7 +383,6 @@ class ClubApiService {
         print("Body says failure: ${fullResponse['message']}");
         return false;
       }
-      return false;
     } catch (e) {
       print("Login failed: $e");
       return false;
@@ -415,7 +412,6 @@ class ClubApiService {
         print("Body says failure: ${fullResponse['message']}");
         return false;
       }
-      return false;
     } catch (e) {
       print("Login failed: $e");
       return false;
@@ -437,7 +433,6 @@ class ClubApiService {
         print("Body says failure: ${fullResponse['message']}");
         return false;
       }
-      return false;
     } catch (e) {
       print("Add Coach failed: $e");
       return false;
@@ -459,7 +454,6 @@ class ClubApiService {
         print("Body says failure: ${fullResponse['message']}");
         return false;
       }
-      return false;
     } catch (e) {
       print("Add Coach failed: $e");
       return false;
@@ -509,7 +503,6 @@ class ClubApiService {
         print("Body says failure: ${fullResponse['message']}");
         return false;
       }
-      return false;
     } catch (e) {
       print("delete failed: $e");
       return false;
@@ -561,7 +554,6 @@ class ClubApiService {
         print("Body says failure: ${fullResponse['message']}");
         return false;
       }
-      return false;
     } catch (e) {
       print("delete failed: $e");
       return false;
@@ -583,7 +575,6 @@ class ClubApiService {
         print("Body says failure: ${fullResponse['message']}");
         return false;
       }
-      return false;
     } catch (e) {
       print("delete failed: $e");
       return false;
@@ -740,7 +731,7 @@ class ClubApiService {
         body,
       );
       print("getMemberEvents success: ${fullResponse}");
-      final jsonResponse = jsonEncode(fullResponse);
+      jsonEncode(fullResponse);
       return activityDataFromJson(fullResponse);
     } catch (e) {
       print("getMemberEvents failed: $e");
@@ -755,7 +746,7 @@ class ClubApiService {
         body,
       );
       print("getMemberEvents success: ${fullResponse}");
-      final jsonResponse = jsonEncode(fullResponse);
+      jsonEncode(fullResponse);
       return activityDataFromJson(fullResponse);
     } catch (e) {
       print("getMemberEvents failed: $e");
@@ -766,7 +757,7 @@ class ClubApiService {
   Future<dynamic> deleteActivities(String activityId) async {
     try {
       final fullResponse = await _helper.delete("api/activities/$activityId");
-      final jsonResponse = jsonEncode(fullResponse);
+      jsonEncode(fullResponse);
       return fullResponse;
     } catch (e) {
       print("getMemberEvents failed: $e");
@@ -779,7 +770,7 @@ class ClubApiService {
       final fullResponse = await _helper.post(
         "api/activities/$activityId/events/$eventId",
       );
-      final jsonResponse = jsonEncode(fullResponse);
+      jsonEncode(fullResponse);
       return fullResponse;
     } catch (e) {
       print("getMemberEvents failed: $e");
@@ -794,7 +785,7 @@ class ClubApiService {
       final fullResponse = await _helper.get(
         "api/activities/$activityId/events",
       );
-      final jsonResponse = jsonEncode(fullResponse);
+      jsonEncode(fullResponse);
       return activityMappedEventDataFromJson(fullResponse);
     } catch (e) {
       print("getMemberEvents failed: $e");
@@ -809,7 +800,7 @@ class ClubApiService {
       print("getMemberEvents success: $fullResponse");
 
       List<ActivityListData> data = [];
-      final jsonResponse = jsonEncode(fullResponse);
+      jsonEncode(fullResponse);
 
       for (var item in fullResponse['data']) {
         data.add(ActivityListData.fromJson(item));
@@ -1171,7 +1162,7 @@ class CoachApiService {
     try {
       final fullResponse = await _helper.get("api/profile");
       print("getMemberEvents success: ${fullResponse['success']}");
-      final jsonResponse = jsonEncode(fullResponse);
+      jsonEncode(fullResponse);
       return profileDataFromJson(fullResponse);
     } catch (e) {
       print("getMemberEvents failed: $e");
@@ -1195,6 +1186,25 @@ class CoachApiService {
     } catch (e) {
       print("getCoachClubs failed: $e");
       return []; // Return empty list on error
+    }
+  }
+
+  Future<CoachDashboardData> getCoachDashboard(int clubId) async {
+    try {
+      print("Fetching coach dashboard for club: $clubId");
+      final fullResponse = await _helper.get("api/dashboard/coach/$clubId");
+      print("getCoachDashboard raw response: $fullResponse");
+
+      if (fullResponse['success'] == true && fullResponse['data'] != null) {
+        final data = Map<String, dynamic>.from(fullResponse['data']);
+        return CoachDashboardData.fromJson(data);
+      } else {
+        print("Dashboard API failure: ${fullResponse['message']}");
+        return CoachDashboardData.empty();
+      }
+    } catch (e) {
+      print("getCoachDashboard failed: $e");
+      return CoachDashboardData.empty();
     }
   }
 
@@ -1352,7 +1362,7 @@ class CoachApiService {
     try {
       final fullResponse = await _helper.get("api/groups/$groupId/members");
       print("getMemberEvents success: ${fullResponse}");
-      final jsonResponse = jsonEncode(fullResponse);
+      jsonEncode(fullResponse);
       return groupMembersDataFromJson(fullResponse);
     } catch (e) {
       print("getMemberEvents failed: $e");
@@ -1364,7 +1374,7 @@ class CoachApiService {
     try {
       final fullResponse = await _helper.get("api/events/$eventId/attendance");
       print("getMemberEvents success: ${fullResponse}");
-      final jsonResponse = jsonEncode(fullResponse);
+      jsonEncode(fullResponse);
       return eventAttendanceDataFromJson(fullResponse);
     } catch (e) {
       print("getMemberEvents failed: $e");
@@ -1384,7 +1394,7 @@ class CoachApiService {
         payload,
       );
       print("getMemberEvents success: ${fullResponse['success']}");
-      final jsonResponse = jsonEncode(fullResponse);
+      jsonEncode(fullResponse);
       return eventAttendanceDataFromJson(fullResponse);
     } catch (e) {
       print("getMemberEvents failed: $e");
@@ -1426,7 +1436,7 @@ class ParentApiService {
     try {
       final fullResponse = await _helper.get("api/profile");
       print("getMemberEvents success: ${fullResponse['success']}");
-      final jsonResponse = jsonEncode(fullResponse);
+      jsonEncode(fullResponse);
       return profileDataFromJson(fullResponse);
     } catch (e) {
       print("getMemberEvents failed: $e");
@@ -1528,11 +1538,30 @@ class MemberApiService {
     }
   }
 
+  Future<GetMemberDashboard> getMemberDashboard(int clubId) async {
+    try {
+      print("Fetching member dashboard for club: $clubId");
+      final fullResponse = await _helper.get("api/dashboard/member/$clubId");
+      print("getMemberDashboard raw response: $fullResponse");
+
+      if (fullResponse['success'] == true && fullResponse['data'] != null) {
+        final data = Map<String, dynamic>.from(fullResponse);
+        return GetMemberDashboard.fromJson(data);
+      } else {
+        print("Dashboard API failure: ${fullResponse['message']}");
+        return GetMemberDashboard.empty();
+      }
+    } catch (e) {
+      print("getMemberDashboard failed: $e");
+      return GetMemberDashboard.empty();
+    }
+  }
+
   Future<MemberProfileData> getMemberProfile() async {
     try {
       final fullResponse = await _helper.get("api/profile");
       print("getMemberEvents success: ${fullResponse['success']}");
-      final jsonResponse = jsonEncode(fullResponse);
+      jsonEncode(fullResponse);
       return profileDataFromJson(fullResponse);
     } catch (e) {
       print("getMemberEvents failed: $e");

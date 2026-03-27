@@ -1,4 +1,3 @@
-// screens/coach/coach_dashboard.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -11,13 +10,12 @@ import '../../config/app_theme.dart';
 import '../../config/colors.dart';
 import '../../model/coach/club.dart';
 import '../../model/coach/coach_event.dart';
+import '../../model/coach/coach_dashboard_data.dart';
 import '../../routes/app_routes.dart';
 import '../../utills/api_service.dart';
 import '../../utills/helper.dart';
 import 'club_members_list_screen.dart';
-import 'coach_create_event_sheet.dart';
-import 'coach_events_screen.dart';
-import 'event_details_screen.dart';
+import 'coach_event_groups_screen.dart';
 
 class CoachDashboard extends StatefulWidget {
   const CoachDashboard({super.key});
@@ -27,247 +25,69 @@ class CoachDashboard extends StatefulWidget {
 }
 
 class _CoachDashboardState extends State<CoachDashboard> {
-  int _totalMembers = 0;
-  bool _isLoadingMembers = false;
-  late Future<CoachProfile> _profileFuture;
-  late Future<List<TodaySession>> _todaySessionsFuture;
-  late Future<List<CoachEvent>> _upcomingEventsFuture;
-  late Future<AttendanceSummary> _attendanceSummaryFuture;
-  late Future<List<Club>> _clubsFuture;
+
+  bool _isNavigating = false;
+
+  late Future<List<Club>>        _clubsFuture;
+  late Future<List<CoachEvent>>  _upcomingEventsFuture;
+  late Future<CoachDashboardData> _dashboardFuture;
+
+  void _showLoader() => setState(() => _isNavigating = true);
+  void _hideLoader() => setState(() => _isNavigating = false);
 
   final CoachApiService _coachApiService = CoachApiService();
-
-  Future<void> _fetchTotalMembers() async {
-    setState(() => _isLoadingMembers = true);
-    try {
-      final clubs = await _coachApiService.getCoachClubs();
-      if (clubs.isNotEmpty) {
-        final members = await _coachApiService.getClubMembers(
-          clubs.first.clubId,
-        );
-        setState(() => _totalMembers = members.length);
-      }
-    } catch (e) {
-      print("Error fetching total members: $e");
-    } finally {
-      if (!mounted) return;
-      setState(() => _isLoadingMembers = false);
-    }
-  }
-
-  void _navigateToMembersList() async {
-    final clubs = await _coachApiService.getCoachClubs();
-    if (clubs.isEmpty) {
-      toast("No clubs available");
-      return;
-    }
-
-    if (clubs.length == 1) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ClubMembersListScreen(
-            clubId: clubs.first.clubId,
-            clubName: clubs.first.clubName,
-          ),
-        ),
-      );
-    } else {
-      showModalBottomSheet(
-        context: context,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
-        ),
-        builder: (context) {
-          return Container(
-            padding: EdgeInsets.all(20.w),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40.w,
-                  height: 4.h,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2.r),
-                  ),
-                ),
-                16.height,
-                Text(
-                  "Select Club",
-                  style: GoogleFonts.montserrat(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                16.height,
-                ...clubs
-                    .map(
-                      (club) => ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: accentGreen.withOpacity(0.1),
-                          child: Text(
-                            club.clubName[0].toUpperCase(),
-                            style: TextStyle(color: accentGreen),
-                          ),
-                        ),
-                        title: Text(club.clubName),
-                        subtitle: Text(club.description),
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ClubMembersListScreen(
-                                clubId: club.clubId,
-                                clubName: club.clubName,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    )
-                    .toList(),
-              ],
-            ),
-          );
-        },
-      );
-    }
-  }
-
-  void _navigateToGroupsList() async {
-    final clubs = await _coachApiService.getCoachClubs();
-    if (clubs.isEmpty) {
-      toast("No clubs available");
-      return;
-    }
-
-    if (clubs.length == 1) {
-      // You'll need to create this screen
-      toast("Navigate to groups for ${clubs.first.clubName}");
-    } else {
-      showModalBottomSheet(
-        context: context,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
-        ),
-        builder: (context) {
-          return Container(
-            padding: EdgeInsets.all(20.w),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40.w,
-                  height: 4.h,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2.r),
-                  ),
-                ),
-                16.height,
-                Text(
-                  "Select Club",
-                  style: GoogleFonts.montserrat(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                16.height,
-                ...clubs
-                    .map(
-                      (club) => ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: accentGreen.withOpacity(0.1),
-                          child: Text(
-                            club.clubName[0].toUpperCase(),
-                            style: TextStyle(color: accentGreen),
-                          ),
-                        ),
-                        title: Text(club.clubName),
-                        subtitle: Text(club.description),
-                        onTap: () {
-                          Navigator.pop(context);
-                          toast("Navigate to groups for ${club.clubName}");
-                        },
-                      ),
-                    )
-                    .toList(),
-              ],
-            ),
-          );
-        },
-      );
-    }
-  }
 
   @override
   void initState() {
     super.initState();
-    _profileFuture = _fetchProfile();
-    _todaySessionsFuture = _fetchTodaySessions();
-    _upcomingEventsFuture = _fetchUpcomingEvents();
-    _attendanceSummaryFuture = _fetchAttendanceSummary();
-    _clubsFuture = _fetchClubs();
-    _fetchTotalMembers();
+    _clubsFuture           = _fetchClubs();
+    _upcomingEventsFuture  = _fetchUpcomingEvents();
+    _dashboardFuture       = _fetchDashboard();
   }
 
-  Future<CoachProfile> _fetchProfile() async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    return CoachProfile(name: "Coach Raj", specialization: "Football");
+  Future<List<Club>> _fetchClubs() async {
+    try {
+      return await _coachApiService.getCoachClubs();
+    } catch (e) {
+      print("Error fetching clubs: $e");
+      return [];
+    }
   }
 
-  Future<List<TodaySession>> _fetchTodaySessions() async {
-    await Future.delayed(const Duration(milliseconds: 700));
-    return [
-      TodaySession(
-        groupName: "Under-14 A",
-        time: "4:00 PM - 6:00 PM",
-        location: "Main Ground",
-        attendanceTaken: false,
-      ),
-      TodaySession(
-        groupName: "Under-12 B",
-        time: "6:30 PM - 8:00 PM",
-        location: "Side Pitch",
-        attendanceTaken: true,
-      ),
-    ];
+  Future<CoachDashboardData> _fetchDashboard() async {
+    try {
+      final clubs = await _coachApiService.getCoachClubs();
+      if (clubs.isEmpty) return CoachDashboardData.empty();
+      return await _coachApiService.getCoachDashboard(clubs.first.clubId);
+    } catch (e) {
+      print("Error fetching dashboard: $e");
+      return CoachDashboardData.empty();
+    }
   }
 
   Future<List<CoachEvent>> _fetchUpcomingEvents() async {
     try {
       final clubs = await _coachApiService.getCoachClubs();
       if (clubs.isEmpty) return [];
-
-      // Get events from first club (or you can aggregate from all clubs)
       final events = await _coachApiService.getClubEvents(clubs.first.clubId);
-
-      // Filter upcoming events and convert to CoachEvent model
       return events
-          .where(
-            (e) => e.eventDate.isAfter(
-              DateTime.now().subtract(const Duration(days: 1)),
-            ),
-          )
-          .take(3) // Show only first 3 upcoming events
-          .map(
-            (e) => CoachEvent(
-              eventId: e.eventId,
-              title: e.eventName,
-              date: e.eventDate,
-              location: e.location,
-              type: e.eventType,
-              clubId: e.clubId,
-              startTime: e.startTime,
-              endTime: e.endTime,
-              status: e.status,
-              createdByUserId: e.createdByUserId,
-              createdByUsername: e.createdByUsername,
-              coachIds: e.coachIds,
-            ),
-          )
+          .where((e) => e.eventDate.isAfter(
+          DateTime.now().subtract(const Duration(days: 1))))
+          .take(3)
+          .map((e) => CoachEvent(
+        eventId:           e.eventId,
+        title:             e.eventName,
+        date:              e.eventDate,
+        location:          e.location,
+        type:              e.eventType,
+        clubId:            e.clubId,
+        startTime:         e.startTime,
+        endTime:           e.endTime,
+        status:            e.status,
+        createdByUserId:   e.createdByUserId,
+        createdByUsername: e.createdByUsername,
+        coachIds:          e.coachIds,
+      ))
           .toList();
     } catch (e) {
       print("Error fetching upcoming events: $e");
@@ -275,762 +95,556 @@ class _CoachDashboardState extends State<CoachDashboard> {
     }
   }
 
-  Future<AttendanceSummary> _fetchAttendanceSummary() async {
-    await Future.delayed(const Duration(milliseconds: 800));
-    return AttendanceSummary(
-      pendingCount: 2,
-      completedToday: 1,
-      totalSessions: 5,
+  void _refreshAll() {
+    setState(() {
+      _clubsFuture          = _fetchClubs();
+      _upcomingEventsFuture = _fetchUpcomingEvents();
+      _dashboardFuture      = _fetchDashboard();
+    });
+  }
+
+  // ── Navigation helpers ─────────────────────────────────────────────────────
+  void _navigateToMembersList() async {
+    final clubs = await _coachApiService.getCoachClubs();
+    if (clubs.isEmpty) { toast("No clubs available"); return; }
+    if (clubs.length == 1) {
+      Navigator.push(context, MaterialPageRoute(
+        builder: (_) => ClubMembersListScreen(
+          clubId:   clubs.first.clubId,
+          clubName: clubs.first.clubName,
+        ),
+      ));
+    } else {
+      _showClubPickerSheet(clubs, (club) {
+        Navigator.push(context, MaterialPageRoute(
+          builder: (_) => ClubMembersListScreen(
+            clubId:   club.clubId,
+            clubName: club.clubName,
+          ),
+        ));
+      });
+    }
+  }
+
+  void _navigateToGroupsList() async {
+    final clubs = await _coachApiService.getCoachClubs();
+    if (clubs.isEmpty) { toast("No clubs available"); return; }
+    if (clubs.length == 1) {
+      toast("Navigate to groups for ${clubs.first.clubName}");
+    } else {
+      _showClubPickerSheet(clubs, (club) {
+        toast("Navigate to groups for ${club.clubName}");
+      });
+    }
+  }
+
+  void _navigateToAllEvents() async {
+    final clubs = await _coachApiService.getCoachClubs();
+    if (clubs.isEmpty) { toast("No clubs available"); return; }
+    if (clubs.length == 1) {
+      Navigator.push(context, MaterialPageRoute(
+        builder: (_) => ClubEventsListScreen(
+          clubId:   clubs.first.clubId,
+          clubName: clubs.first.clubName,
+        ),
+      )).then((_) => setState(() => _upcomingEventsFuture = _fetchUpcomingEvents()));
+    } else {
+      _showClubPickerSheet(clubs, (club) {
+        Navigator.push(context, MaterialPageRoute(
+          builder: (_) => ClubEventsListScreen(
+            clubId:   club.clubId,
+            clubName: club.clubName,
+          ),
+        )).then((_) => setState(() => _upcomingEventsFuture = _fetchUpcomingEvents()));
+      });
+    }
+  }
+
+  void _handleCreateEvent() async {
+    _showLoader();
+    try {
+      final clubs = await _coachApiService.getCoachClubs();
+      _hideLoader();
+      if (clubs.isEmpty) { toast("No clubs available"); return; }
+      if (clubs.length == 1) {
+        _openCreateSheet(clubs.first);
+      } else {
+        _showClubPickerSheet(clubs, _openCreateSheet);
+      }
+    } catch (e) {
+      _hideLoader();
+      toast("Failed to load clubs");
+    }
+  }
+
+  void _openCreateSheet(Club club) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => CoachCreateEditEventSheet(
+        clubId:   club.clubId,
+        clubName: club.clubName,
+        onSuccess: () {
+          setState(() => _upcomingEventsFuture = _fetchUpcomingEvents());
+          AppUI.success(context, "Event created successfully!");
+        },
+      ),
     );
   }
 
-  Future<List<Club>> _fetchClubs() async {
-    try {
-      // Call the actual API
-      final clubs = await _coachApiService.getCoachClubs();
-      return clubs;
-    } catch (e) {
-      print("Error fetching clubs: $e");
-      return []; // Return empty list on error
-    }
-  }
-
-  void _navigateToAllEvents() {
-    _showClubSelectionForEvents();
-  }
-
-  void _showClubSelectionForEvents() async {
-    final clubs = await _coachApiService.getCoachClubs();
-    if (clubs.isEmpty) {
-      toast("No clubs available");
-      return;
-    }
-
-    if (clubs.length == 1) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ClubEventsListScreen(
-            clubId: clubs.first.clubId,
-            clubName: clubs.first.clubName,
-          ),
-        ),
-      ).then((_) {
-        setState(() {
-          _upcomingEventsFuture = _fetchUpcomingEvents();
-        });
-      });
-    } else {
-      showModalBottomSheet(
-        context: context,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
-        ),
-        builder: (context) {
-          return Container(
-            padding: EdgeInsets.all(20.w),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40.w,
-                  height: 4.h,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2.r),
-                  ),
-                ),
-                16.height,
-                Text(
-                  "Select Club",
-                  style: GoogleFonts.montserrat(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                16.height,
-                ...clubs
-                    .map(
-                      (club) => ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: accentGreen.withOpacity(0.1),
-                          child: Text(
-                            club.clubName[0].toUpperCase(),
-                            style: TextStyle(color: accentGreen),
-                          ),
-                        ),
-                        title: Text(club.clubName),
-                        subtitle: Text(club.description),
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ClubEventsListScreen(
-                                clubId: club.clubId,
-                                clubName: club.clubName,
-                              ),
-                            ),
-                          ).then((_) {
-                            setState(() {
-                              _upcomingEventsFuture = _fetchUpcomingEvents();
-                            });
-                          });
-                        },
-                      ),
-                    )
-                    .toList(),
-              ],
-            ),
-          );
-        },
-      );
-    }
-  }
-
-  // Handle create event
-  void _handleCreateEvent() {
-    _showClubSelectionForCreateEvent();
-  }
-
-  void _showClubSelectionForCreateEvent() async {
-    final clubs = await _coachApiService.getCoachClubs();
-    if (clubs.isEmpty) {
-      toast("No clubs available");
-      return;
-    }
-
-    if (clubs.length == 1) {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (_) => CoachCreateEditEventSheet(
-          clubId: clubs.first.clubId,
-          clubName: clubs.first.clubName,
-          onSuccess: () {
-            setState(() {
-              _upcomingEventsFuture = _fetchUpcomingEvents();
-            });
-            AppUI.success(context, "Event created successfully!");
-          },
-        ),
-      );
-    } else {
-      showModalBottomSheet(
-        context: context,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
-        ),
-        builder: (context) {
-          return Container(
-            padding: EdgeInsets.all(20.w),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40.w,
-                  height: 4.h,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2.r),
-                  ),
-                ),
-                16.height,
-                Text(
-                  "Select Club for Event",
-                  style: GoogleFonts.montserrat(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                16.height,
-                ...clubs
-                    .map(
-                      (club) => ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: accentGreen.withOpacity(0.1),
-                          child: Text(
-                            club.clubName[0].toUpperCase(),
-                            style: TextStyle(color: accentGreen),
-                          ),
-                        ),
-                        title: Text(club.clubName),
-                        subtitle: Text(club.description),
-                        onTap: () {
-                          Navigator.pop(context);
-                          showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (_) => CoachCreateEditEventSheet(
-                              clubId: club.clubId,
-                              clubName: club.clubName,
-                              onSuccess: () {
-                                setState(() {
-                                  _upcomingEventsFuture =
-                                      _fetchUpcomingEvents();
-                                });
-                                AppUI.success(
-                                  context,
-                                  "Event created successfully!",
-                                );
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                    )
-                    .toList(),
-              ],
-            ),
-          );
-        },
-      );
-    }
-  }
-
-  // Handle event tap for editing/viewing
   void _handleEventTap(CoachEvent event) async {
     if (event.clubId == null || event.eventId == null) {
       toast("Event information not available");
       return;
     }
-
-    // Get club details to get club name
+    _showLoader();
     final clubs = await _coachApiService.getCoachClubs();
-    final club = clubs.firstWhere(
-      (c) => c.clubId == event.clubId,
-      orElse: () =>
-          Club(clubId: event.clubId!, clubName: "Club", description: ""),
+    final club  = clubs.firstWhere(
+          (c) => c.clubId == event.clubId,
+      orElse: () => Club(clubId: event.clubId!, clubName: "Club", description: ""),
     );
-
-    // Fetch full event details
     try {
-      final fullEvent = await _coachApiService.getEventDetails(
-        event.clubId!,
-        event.eventId!,
-      );
+      final fullEvent = await _coachApiService.getEventDetails(event.clubId!, event.eventId!);
+      _hideLoader();
 
-      if (fullEvent != null) {
-        // Convert CoachEvent to CoachEventModel
-        final eventModel = CoachEventModel(
-          eventId: fullEvent.eventId,
-          eventName: fullEvent.eventName,
-          eventDate: fullEvent.eventDate,
-          startTime: fullEvent.startTime,
-          endTime: fullEvent.endTime,
-          location: fullEvent.location,
-          eventType: fullEvent.eventType,
-          status: fullEvent.status,
-          clubId: fullEvent.clubId,
-          createdByUserId: fullEvent.createdByUserId,
-          createdByUsername: fullEvent.createdByUsername,
-          coachIds: fullEvent.coachIds,
-          createdAt: fullEvent.createdAt,
-        );
+      if (fullEvent == null) { toast("Could not load event details"); return; }
 
-        // Open edit sheet
-        showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          builder: (_) => CoachCreateEditEventSheet(
-            clubId: event.clubId!,
-            clubName: club.clubName,
-            event: eventModel,
-            onSuccess: () {
-              setState(() {
-                _upcomingEventsFuture = _fetchUpcomingEvents();
-              });
-            },
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CoachEventGroupsScreen(
+            eventId:   fullEvent.eventId!,
+            eventName: fullEvent.eventName,
           ),
-        );
-      } else {
-        toast("Could not load event details");
-      }
+        ),
+      );
     } catch (e) {
       print("Error loading event details: $e");
       toast("Error loading event details");
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
-        statusBarColor: Colors.white,
-        statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
+  void _handleEventEdit(CoachEvent event) async {
+    if (event.clubId == null || event.eventId == null) {
+      toast("Event information not available");
+      return;
+    }
+
+    _showLoader();
+    try {
+      final clubs = await _coachApiService.getCoachClubs();
+      final club  = clubs.firstWhere(
+            (c) => c.clubId == event.clubId,
+        orElse: () => Club(clubId: event.clubId!, clubName: "Club", description: ""),
+      );
+      final fullEvent = await _coachApiService.getEventDetails(event.clubId!, event.eventId!);
+      _hideLoader();
+
+      if (fullEvent == null) { toast("Could not load event details"); return; }
+
+      final eventModel = CoachEventModel(
+        eventId:           fullEvent.eventId,
+        eventName:         fullEvent.eventName,
+        eventDate:         fullEvent.eventDate,
+        startTime:         fullEvent.startTime,
+        endTime:           fullEvent.endTime,
+        location:          fullEvent.location,
+        eventType:         fullEvent.eventType,
+        status:            fullEvent.status,
+        clubId:            fullEvent.clubId,
+        createdByUserId:   fullEvent.createdByUserId,
+        createdByUsername: fullEvent.createdByUsername,
+        coachIds:          fullEvent.coachIds,
+        createdAt:         fullEvent.createdAt,
+      );
+
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => CoachCreateEditEventSheet(
+          clubId:   event.clubId!,
+          clubName: club.clubName,
+          event:    eventModel,
+          onSuccess: () => setState(() => _upcomingEventsFuture = _fetchUpcomingEvents()),
+        ),
+      );
+    } catch (e) {
+      _hideLoader();
+      print("Error loading event for edit: $e");
+      toast("Error loading event details");
+    }
+  }
+
+  // ── Reusable club-picker bottom sheet ─────────────────────────────────────
+  void _showClubPickerSheet(List<Club> clubs, void Function(Club) onSelect, {String title = "Select Club"}) {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
       ),
-      child: Scaffold(
-        backgroundColor: Colors.grey.shade100,
-        body: Column(
+      builder: (_) => Container(
+        padding: EdgeInsets.all(20.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Header
             Container(
-              height: 85.h, // slightly taller → better proportions
-              width: double.infinity,
+              width: 40.w, height: 4.h,
               decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(16),
-                  bottomRight: Radius.circular(16),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.25),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    top: 5.h, // same as your original top padding
-                    left: 20.w,
-                    right: 20.w,
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // ← We keep your exact same greeting text here
-                      Text(
-                        "Hello, Coach Ram",
-                        style: Theme.of(context).textTheme.headlineMedium
-                            ?.copyWith(
-                              color: Colors.white,
-                              // changed to white for visibility on black
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      const Spacer(),
-
-                      // ← Your exact same notifications widget (unchanged)
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pushNamed(
-                            context,
-                            AppRoutes.guardianNotifications,
-                          );
-                        },
-                        child: Stack(
-                          children: [
-                            Icon(
-                              Icons.notifications_none_rounded,
-                              color: Colors.white, // white on black
-                              size: 26.sp,
-                            ),
-                            Positioned(
-                              right: 0,
-                              top: 0,
-                              child: Container(
-                                width: 10.r,
-                                height: 10.r,
-                                decoration: BoxDecoration(
-                                  color: accentOrange,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.black,
-                                    width: 1.5,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2.r),
               ),
             ),
-
-            // Main Content
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.symmetric(horizontal: 20.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 24.height,
-                    //
-                    // // Quick Stats
-                    // FutureBuilder<AttendanceSummary>(
-                    //   future: _attendanceSummaryFuture,
-                    //   builder: (context, snapshot) {
-                    //     final summary = snapshot.data ?? AttendanceSummary.empty();
-                    //     return Row(
-                    //       children: [
-                    //         _buildStatCard(
-                    //           icon: Icons.pending_actions_rounded,
-                    //           label: "Pending",
-                    //           value: "${summary.pendingCount}",
-                    //           color: accentOrange,
-                    //           subtitle: "Attendance",
-                    //         ),
-                    //         _buildStatCard(
-                    //           icon: Icons.check_circle_outline_rounded,
-                    //           label: "Completed",
-                    //           value: "${summary.completedToday}",
-                    //           color: accentGreen,
-                    //           subtitle: "Today",
-                    //         ),
-                    //       ],
-                    //     );
-                    //   },
-                    // ),
-                    24.height,
-
-                    // MY CLUBS SECTION - Place this right after header
-                    _buildMyClubsSection(),
-
-                    24.height,
-                    Text(
-                      "Overview ",
-                      style: GoogleFonts.montserrat(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                    10.height,
-                    Row(
-                      children: [
-                        Expanded(
-                          child: StatCard(
-                            title: 'Today\'s Sessions',
-                            value: '2',
-                            icon: Icons.sports_soccer,
-                            color: AppColors.info,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: StatCard(
-                            title: 'Pending',
-                            value: '5',
-                            icon: Icons.pending_actions,
-                            color: AppColors.warning,
-                          ),
-                        ),
-                      ],
-                    ),
-                    16.height,
-
-                    //
-                    // FutureBuilder<List<TodaySession>>(
-                    //   future: _todaySessionsFuture,
-                    //   builder: (context, snapshot) {
-                    //     if (!snapshot.hasData) {
-                    //       return const _SessionCardShimmer();
-                    //     }
-                    //     final sessions = snapshot.data!;
-                    //     if (sessions.isEmpty) {
-                    //       return Container(
-                    //         padding: EdgeInsets.all(20.w),
-                    //         decoration: BoxDecoration(
-                    //           color: cardDark,
-                    //           borderRadius: BorderRadius.circular(20.r),
-                    //           border: Border.all(color: Colors.grey.shade300),
-                    //         ),
-                    //         child: Center(
-                    //           child: Text(
-                    //             "No sessions scheduled today",
-                    //             style: GoogleFonts.poppins(color: textSecondary),
-                    //           ),
-                    //         ),
-                    //       );
-                    //     }
-                    //     return Column(
-                    //       children: sessions.map((s) => _TodaySessionCard(session: s)).toList(),
-                    //     );
-                    //   },
-                    // ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: _navigateToMembersList,
-                            child: StatCard(
-                              title: 'Total Members',
-                              value: _isLoadingMembers
-                                  ? '...'
-                                  : '$_totalMembers',
-                              icon: Icons.people_outline,
-                              color: AppColors.green,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: _navigateToGroupsList,
-                            child: StatCard(
-                              title: 'Groups',
-                              value: '3',
-                              icon: Icons.groups_outlined,
-                              color: AppColors.orange,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "Today's Session ",
-                          style: GoogleFonts.montserrat(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {},
-                          child: const Text('View All'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    _buildSessionCard(
-                      context,
-                      title: 'Under-14 A Training',
-                      time: '4:00 PM - 5:30 PM',
-                      location: 'Main Ground',
-                      members: 15,
-                      status: 'Upcoming',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildSessionCard(
-                      context,
-                      title: 'Under-16 Practice',
-                      time: '6:00 PM - 7:30 PM',
-                      location: 'Field B',
-                      members: 17,
-                      status: 'Upcoming',
-                    ),
-                    const SizedBox(height: 24),
-                    // Upcoming Events
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "Upcoming Events",
-                          style: GoogleFonts.montserrat(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: _navigateToAllEvents,
-                          child: Text(
-                            "See All",
-                            style: GoogleFonts.montserrat(
-                              color: accentGreen,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    12.height,
-
-                    FutureBuilder<List<CoachEvent>>(
-                      future: _upcomingEventsFuture,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const _EventCardShimmer();
-                        }
-
-                        if (snapshot.hasError ||
-                            !snapshot.hasData ||
-                            snapshot.data!.isEmpty) {
-                          return Container(
-                            padding: EdgeInsets.all(20.w),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16.r),
-                            ),
-                            child: Center(
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    Icons.event_busy,
-                                    size: 40.sp,
-                                    color: Colors.grey.shade400,
-                                  ),
-                                  12.height,
-                                  Text(
-                                    "No upcoming events",
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14.sp,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                  8.height,
-                                  ElevatedButton(
-                                    onPressed: _handleCreateEvent,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: accentGreen,
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 20.w,
-                                        vertical: 8.h,
-                                      ),
-                                    ),
-                                    child: Text("Create Event"),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }
-
-                        final events = snapshot.data!;
-                        return Column(
-                          children: events
-                              .map(
-                                (event) => _UpcomingEventCard(
-                                  event: event,
-                                  onTap: () => _handleEventTap(event),
-                                ),
-                              )
-                              .toList(),
-                        );
-                      },
-                    ),
-
-                    24.height,
-
-                    // Quick Actions
-                    Text(
-                      "Quick Actions",
-                      style: GoogleFonts.montserrat(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                    16.height,
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _QuickActionButton(
-                          icon: Icons.add_circle_outline_rounded,
-                          label: "Create Event",
-                          onTap: _handleCreateEvent,
-                        ),
-                        _QuickActionButton(
-                          icon: Icons.assignment_turned_in_rounded,
-                          label: "Take Attendance",
-                          onTap: () => toast("Take attendance"),
-                        ),
-                        _QuickActionButton(
-                          icon: Icons.rate_review_rounded,
-                          label: "Add Feedback",
-                          onTap: () => toast("Add feedback"),
-                        ),
-                      ],
-                    ),
-
-                    100.height,
-                  ],
-                ),
+            16.height,
+            Text(title,
+                style: GoogleFonts.montserrat(fontSize: 18.sp, fontWeight: FontWeight.w700)),
+            16.height,
+            ...clubs.map((club) => ListTile(
+              leading: CircleAvatar(
+                backgroundColor: accentGreen.withOpacity(0.1),
+                child: Text(club.clubName[0].toUpperCase(),
+                    style: TextStyle(color: accentGreen)),
               ),
-            ),
+              title:    Text(club.clubName),
+              subtitle: Text(club.description),
+              onTap: () { Navigator.pop(context); onSelect(club); },
+            )),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMyClubsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  // ── Build ──────────────────────────────────────────────────────────────────
+  @override
+  Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor:          Colors.white,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness:     Brightness.dark,
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.grey.shade100,
+        body: Stack(
           children: [
-            Text(
-              "My Clubs",
-              style: GoogleFonts.montserrat(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w700,
-                color: Colors.grey.shade800,
-              ),
-            ),
-            // TextButton(
-            //   onPressed: () => toast("View all clubs"),
-            //   style: TextButton.styleFrom(
-            //     padding: EdgeInsets.zero,
-            //     minimumSize: Size(50.w, 30.h),
-            //   ),
-            //   child: Text(
-            //     "View All",
-            //     style: GoogleFonts.montserrat(
-            //       color: accentGreen,
-            //       fontSize: 12.sp,
-            //       fontWeight: FontWeight.w600,
-            //     ),
-            //   ),
-            // ),
-          ],
-        ),
-        12.height,
-
-        // Clubs List from API
-        FutureBuilder<List<Club>>(
-          future: _clubsFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return _buildClubShimmer();
-            }
-
-            if (snapshot.hasError) {
-              return Container(
-                padding: EdgeInsets.all(16.w),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16.r),
-                  border: Border.all(color: Colors.red.shade200),
-                ),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Icon(Icons.error_outline, color: Colors.red, size: 32.sp),
-                      8.height,
-                      Text(
-                        "Failed to load clubs",
-                        style: GoogleFonts.poppins(
-                          color: Colors.red,
-                          fontSize: 14.sp,
-                        ),
+            Column(
+              children: [
+                _buildHeader(),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: () async => _refreshAll(),
+                    color: accentGreen,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: EdgeInsets.symmetric(horizontal: 20.w),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          24.height,
+                          _buildMyClubsSection(),
+                          24.height,
+                          _buildOverviewSection(),
+                          24.height,
+                          _buildTodaySessionsSection(),
+                          24.height,
+                          _buildUpcomingEventsSection(),
+                          24.height,
+                          _buildQuickActions(),
+                          100.height,
+                        ],
                       ),
-                      4.height,
-                      TextButton(
-                        onPressed: () {
-                          setState(() {
-                            _clubsFuture = _fetchClubs();
-                          });
-                        },
-                        child: Text("Retry"),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              );
-            }
+              ],
+            ),
 
-            if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return Container(
+            // ── Full-screen loading overlay ──────────────────────────────
+            if (_isNavigating)
+              Container(
+                color: Colors.black.withOpacity(0.35),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.black,
+                    strokeWidth: 3,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Header ─────────────────────────────────────────────────────────────────
+  Widget _buildHeader() {
+    return Container(
+      height: 85.h,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: const BorderRadius.only(
+          bottomLeft:  Radius.circular(16),
+          bottomRight: Radius.circular(16),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.25),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.only(top: 5.h, left: 20.w, right: 20.w),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                "Hello, Coach Ram",
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: Colors.white, fontSize: 20.sp, fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              GestureDetector(
+                onTap: () => Navigator.pushNamed(context, AppRoutes.guardianNotifications),
+                child: Stack(
+                  children: [
+                    Icon(Icons.notifications_none_rounded, color: Colors.white, size: 26.sp),
+                    Positioned(
+                      right: 0, top: 0,
+                      child: Container(
+                        width: 10.r, height: 10.r,
+                        decoration: BoxDecoration(
+                          color: accentOrange,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.black, width: 1.5),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Overview stat cards (from dashboard API) ───────────────────────────────
+  // Widget _buildOverviewSection() {
+  //   return FutureBuilder<CoachDashboardData>(
+  //     future: _dashboardFuture,
+  //     builder: (context, snapshot) {
+  //       final isLoading = snapshot.connectionState == ConnectionState.waiting;
+  //       final data      = snapshot.data ?? CoachDashboardData.empty();
+  //
+  //       return Column(
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: [
+  //           Text("Overview",
+  //               style: GoogleFonts.montserrat(
+  //                 fontSize: 14.sp, fontWeight: FontWeight.w700, color: Colors.grey.shade700,
+  //               )),
+  //           10.height,
+  //
+  //           // Row 1 — sessions + upcoming events
+  //           Row(
+  //             children: [
+  //               Expanded(
+  //                 child: StatCard(
+  //                   title: "Today's Sessions",
+  //                   value: isLoading ? '...' : '${data.todaySessions.length}',
+  //                   icon:  Icons.sports_soccer,
+  //                   color: AppColors.info,
+  //                 ),
+  //               ),
+  //               const SizedBox(width: 12),
+  //               Expanded(
+  //                 child: StatCard(
+  //                   title: 'Pending ',
+  //                   value: isLoading ? '...' : '${data.attendance.pending}',
+  //                   icon:  Icons.pending_actions_rounded,
+  //                   color: AppColors.warning,
+  //                 ),
+  //               ),
+  //             ],
+  //           ),
+  //           16.height,
+  //
+  //           // Row 2 — members + groups (tappable)
+  //           Row(
+  //             children: [
+  //               Expanded(
+  //                 child: GestureDetector(
+  //                   onTap: _navigateToMembersList,
+  //                   child: StatCard(
+  //                     title: 'Total Members',
+  //                     value: isLoading ? '...' : '${data.stats.totalMembers}',
+  //                     icon:  Icons.people_outline,
+  //                     color: AppColors.green,
+  //                   ),
+  //                 ),
+  //               ),
+  //               const SizedBox(width: 12),
+  //               Expanded(
+  //                 child: GestureDetector(
+  //                   onTap: _navigateToGroupsList,
+  //                   child: StatCard(
+  //                     title: 'Groups',
+  //                     value: isLoading ? '...' : '${data.stats.totalGroups}',
+  //                     icon:  Icons.groups_outlined,
+  //                     color: AppColors.orange,
+  //                   ),
+  //                 ),
+  //               ),
+  //             ],
+  //           ),
+  //           16.height,
+  //
+  //           // Attendance progress bar (only when data available)
+  //           // if (!isLoading && data.attendance.totalSessions > 0)
+  //           //   _AttendanceSummaryCard(attendance: data.attendance),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
+
+  Widget _buildOverviewSection() {
+    return FutureBuilder<CoachDashboardData>(
+      future: _dashboardFuture,
+      builder: (context, snapshot) {
+        final isLoading = snapshot.connectionState == ConnectionState.waiting;
+        final data      = snapshot.data ?? CoachDashboardData.empty();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Overview",
+              style: GoogleFonts.montserrat(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w700,
+                color: Colors.grey.shade700,
+              ),
+            ),
+            10.height,
+
+            // Row 1 — today's sessions + upcoming events
+            Row(
+              children: [
+                Expanded(
+                  child: StatCard(
+                    title: "Today's Sessions",
+                    value: isLoading ? '...' : '${data.todaySessions.length}',
+                    icon:  Icons.sports_soccer,
+                    color: AppColors.info,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: StatCard(
+                    title: 'Upcoming Events',
+                    value: isLoading ? '...' : '${data.events.upcoming}',
+                    icon:  Icons.event_rounded,
+                    color: Colors.deepPurple,
+                  ),
+                ),
+              ],
+            ),
+            16.height,
+
+            // Row 2 — pending attendance + completed today
+            Row(
+              children: [
+                Expanded(
+                  child: StatCard(
+                    title: 'Pending',
+                    value: isLoading ? '...' : '${data.attendance.pending}',
+                    icon:  Icons.pending_actions_rounded,
+                    color: AppColors.warning,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: StatCard(
+                    title: 'Completed Today',
+                    value: isLoading ? '...' : '${data.attendance.completedToday}',
+                    icon:  Icons.check_circle_outline_rounded,
+                    color: accentGreen,
+                  ),
+                ),
+              ],
+            ),
+            16.height,
+
+            // Row 3 — members + groups (tappable)
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: _navigateToMembersList,
+                    child: StatCard(
+                      title: 'Total Members',
+                      value: isLoading ? '...' : '${data.stats.totalMembers}',
+                      icon:  Icons.people_outline,
+                      color: AppColors.green,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: _navigateToGroupsList,
+                    child: StatCard(
+                      title: 'Groups',
+                      value: isLoading ? '...' : '${data.stats.totalGroups}',
+                      icon:  Icons.groups_outlined,
+                      color: AppColors.orange,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ── Today's Sessions (from dashboard API) ─────────────────────────────────
+  Widget _buildTodaySessionsSection() {
+    return FutureBuilder<CoachDashboardData>(
+      future: _dashboardFuture,
+      builder: (context, snapshot) {
+        final isLoading = snapshot.connectionState == ConnectionState.waiting;
+        final sessions  = snapshot.data?.todaySessions ?? [];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text("Today's Sessions",
+                    style: GoogleFonts.montserrat(
+                      fontSize: 14.sp, fontWeight: FontWeight.w700, color: Colors.grey.shade700,
+                    )),
+                TextButton(onPressed: () {}, child: const Text('View All')),
+              ],
+            ),
+            8.height,
+
+            if (isLoading)
+              const _SessionCardShimmer()
+            else if (sessions.isEmpty)
+              Container(
                 padding: EdgeInsets.all(20.w),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -1040,101 +654,247 @@ class _CoachDashboardState extends State<CoachDashboard> {
                 child: Center(
                   child: Column(
                     children: [
-                      Icon(
-                        Icons.sports_soccer,
-                        size: 48.sp,
-                        color: Colors.grey.shade400,
-                      ),
+                      Icon(Icons.sports_soccer, size: 40.sp, color: Colors.grey.shade400),
                       12.height,
-                      Text(
-                        "No clubs assigned yet",
-                        style: GoogleFonts.poppins(
-                          fontSize: 14.sp,
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w500,
+                      Text("No sessions scheduled today",
+                          style: GoogleFonts.poppins(fontSize: 13.sp, color: Colors.grey.shade500)),
+                    ],
+                  ),
+                ),
+              )
+            else
+              Column(
+                children: sessions
+                    .map((s) => _DashboardSessionCard(session: s))
+                    .toList(),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ── Upcoming Events ────────────────────────────────────────────────────────
+  Widget _buildUpcomingEventsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text("Upcoming Events",
+                style: GoogleFonts.montserrat(
+                  fontSize: 14.sp, fontWeight: FontWeight.w700, color: Colors.grey.shade700,
+                )),
+            TextButton(
+              onPressed: _navigateToAllEvents,
+              child: Text("See All",
+                  style: GoogleFonts.montserrat(color: accentGreen, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+        12.height,
+        FutureBuilder<List<CoachEvent>>(
+          future: _upcomingEventsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const _EventCardShimmer();
+            }
+            if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+              return Container(
+                padding: EdgeInsets.all(20.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(Icons.event_busy, size: 40.sp, color: Colors.grey.shade400),
+                      12.height,
+                      Text("No upcoming events",
+                          style: GoogleFonts.poppins(fontSize: 14.sp, color: Colors.grey.shade600)),
+                      8.height,
+                      ElevatedButton(
+                        onPressed: _handleCreateEvent,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: accentGreen,
+                          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
                         ),
-                      ),
-                      4.height,
-                      Text(
-                        "You'll be assigned to clubs soon",
-                        style: GoogleFonts.poppins(
-                          fontSize: 12.sp,
-                          color: Colors.grey.shade500,
-                        ),
+                        child: const Text("Create Event"),
                       ),
                     ],
                   ),
                 ),
               );
             }
-
-            final clubs = snapshot.data!;
-
-            // If there are clubs, show them in a horizontal scrollable list
-            // or in a column based on how many clubs
-            if (clubs.length > 2) {
-              return SizedBox(
-                height: 160.h,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: clubs.length,
-                  itemBuilder: (context, index) {
-                    return _buildClubCard(clubs[index], index);
-                  },
-                ),
-              );
-            } else {
-              return Column(
-                children: clubs
-                    .map((club) => _buildClubCard(club, clubs.indexOf(club)))
-                    .toList(),
-              );
-            }
+            return Column(
+              children: snapshot.data!
+                  .map((e) => _UpcomingEventCard(event: e,
+                  onTap: () => _handleEventTap(e),
+                  onEdit: () => _handleEventEdit(e),
+            ))
+                  .toList(),
+            );
           },
         ),
       ],
     );
   }
 
-  Widget _buildClubCard(Club club, int index) {
-    // Generate different gradient colors for each club
-    final List<List<Color>> gradients = [
-      [Color(0xFF667eea), Color(0xFF764ba2)], // Purple
-      [Color(0xFFf093fb), Color(0xFFf5576c)], // Pink/Red
-      [Color(0xFF4facfe), Color(0xFF00f2fe)], // Blue
-      [Color(0xFF43e97b), Color(0xFF38f9d7)], // Green
-      [Color(0xFFfa709a), Color(0xFFfee140)], // Orange/Yellow
-    ];
+  // ── Quick Actions ──────────────────────────────────────────────────────────
+  Widget _buildQuickActions() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("Quick Actions",
+            style: GoogleFonts.montserrat(
+              fontSize: 14.sp, fontWeight: FontWeight.w700, color: Colors.grey.shade700,
+            )),
+        16.height,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _QuickActionButton(
+              icon:  Icons.add_circle_outline_rounded,
+              label: "Create Event",
+              onTap: _handleCreateEvent,
+            ),
+            _QuickActionButton(
+              icon:  Icons.assignment_turned_in_rounded,
+              label: "Take Attendance",
+              onTap: () => toast("Take attendance"),
+            ),
+            _QuickActionButton(
+              icon:  Icons.rate_review_rounded,
+              label: "Add Feedback",
+              onTap: () => toast("Add feedback"),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
+  // ── My Clubs section ───────────────────────────────────────────────────────
+  Widget _buildMyClubsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("My Clubs",
+            style: GoogleFonts.montserrat(
+              fontSize: 16.sp, fontWeight: FontWeight.w700, color: Colors.grey.shade800,
+            )),
+        12.height,
+        FutureBuilder<List<Club>>(
+          future: _clubsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return _buildClubShimmer();
+            }
+            if (snapshot.hasError) {
+              return _buildClubError();
+            }
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return _buildNoClubs();
+            }
+            final clubs = snapshot.data!;
+            if (clubs.length > 2) {
+              return SizedBox(
+                height: 160.h,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: clubs.length,
+                  itemBuilder: (_, i) => _buildClubCard(clubs[i], i),
+                ),
+              );
+            }
+            return Column(
+              children: clubs
+                  .asMap()
+                  .entries
+                  .map((e) => _buildClubCard(e.value, e.key))
+                  .toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildClubError() {
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: Colors.red.shade200),
+      ),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(Icons.error_outline, color: Colors.red, size: 32.sp),
+            8.height,
+            Text("Failed to load clubs",
+                style: GoogleFonts.poppins(color: Colors.red, fontSize: 14.sp)),
+            TextButton(
+              onPressed: () => setState(() => _clubsFuture = _fetchClubs()),
+              child: const Text("Retry"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoClubs() {
+    return Container(
+      padding: EdgeInsets.all(20.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(Icons.sports_soccer, size: 48.sp, color: Colors.grey.shade400),
+            12.height,
+            Text("No clubs assigned yet",
+                style: GoogleFonts.poppins(fontSize: 14.sp, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+            4.height,
+            Text("You'll be assigned to clubs soon",
+                style: GoogleFonts.poppins(fontSize: 12.sp, color: Colors.grey.shade500)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClubCard(Club club, int index) {
+    final List<List<Color>> gradients = [
+      [const Color(0xFF667eea), const Color(0xFF764ba2)],
+      [const Color(0xFFf093fb), const Color(0xFFf5576c)],
+      [const Color(0xFF4facfe), const Color(0xFF00f2fe)],
+      [const Color(0xFF43e97b), const Color(0xFF38f9d7)],
+      [const Color(0xFFfa709a), const Color(0xFFfee140)],
+    ];
     final gradient = gradients[index % gradients.length];
 
     return Container(
       width: 350.w,
-      // Fixed width for horizontal scrolling
       margin: EdgeInsets.only(right: 12.w, bottom: 8.h),
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: gradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: LinearGradient(colors: gradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(20.r),
-        boxShadow: [
-          BoxShadow(
-            color: gradient[0].withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: gradient[0].withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Top row with club icon and arrow
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 padding: EdgeInsets.all(8.w),
@@ -1142,261 +902,97 @@ class _CoachDashboardState extends State<CoachDashboard> {
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12.r),
                 ),
-                child: Icon(
-                  Icons.sports_soccer,
-                  color: Colors.white,
-                  size: 20.sp,
-                ),
+                child: Icon(Icons.sports_soccer, color: Colors.white, size: 20.sp),
               ),
-              const Spacer(),
-              // Icon(
-              //   Icons.arrow_forward_ios_rounded,
-              //   color: Colors.white.withOpacity(0.7),
-              //   size: 16.sp,
-              // ),
             ],
           ),
-
-          // Club name and description
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                club.clubName,
-                style: GoogleFonts.montserrat(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+              Text(club.clubName,
+                  style: GoogleFonts.montserrat(fontSize: 16.sp, fontWeight: FontWeight.w700, color: Colors.white),
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
               4.height,
-              Text(
-                club.description,
-                style: GoogleFonts.poppins(
-                  fontSize: 11.sp,
-                  color: Colors.white.withOpacity(0.9),
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              8.height,
-              // Member since if available
-              if (club.createdAt != null)
+              Text(club.description,
+                  style: GoogleFonts.poppins(fontSize: 11.sp, color: Colors.white.withOpacity(0.9)),
+                  maxLines: 2, overflow: TextOverflow.ellipsis),
+              if (club.createdAt != null) ...[
+                8.height,
                 Row(
                   children: [
-                    Icon(
-                      Icons.calendar_today_rounded,
-                      size: 10.sp,
-                      color: Colors.white.withOpacity(0.7),
-                    ),
+                    Icon(Icons.calendar_today_rounded, size: 10.sp, color: Colors.white.withOpacity(0.7)),
                     4.width,
-                    Text(
-                      "Since ${_formatDate(club.createdAt!)}",
-                      style: GoogleFonts.poppins(
-                        fontSize: 9.sp,
-                        color: Colors.white.withOpacity(0.7),
-                      ),
-                    ),
+                    Text("Since ${_formatDate(club.createdAt!)}",
+                        style: GoogleFonts.poppins(fontSize: 9.sp, color: Colors.white.withOpacity(0.7))),
                   ],
                 ),
+              ],
             ],
           ),
-
-          // Quick stats for the club (you can add more details here)
-          8.height,
-          // Row(
-          //   children: [
-          //     _buildClubStat(icon: Icons.group, value: "12", label: "Teams"),
-          //     12.width,
-          //     _buildClubStat(icon: Icons.people, value: "45", label: "Members"),
-          //   ],
-          // ),
         ],
       ),
     );
   }
 
-  // Helper method for club stats
-  Widget _buildClubStat({
-    required IconData icon,
-    required String value,
-    required String label,
-  }) {
-    return Row(
-      children: [
-        Icon(icon, color: Colors.white.withOpacity(0.9), size: 12.sp),
-        4.width,
-        Text(
-          value,
-          style: GoogleFonts.montserrat(
-            fontSize: 11.sp,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        2.width,
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 9.sp,
-            color: Colors.white.withOpacity(0.7),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // NEW METHOD: Build shimmer for clubs
   Widget _buildClubShimmer() {
     return SizedBox(
       height: 160.h,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: 2,
-        itemBuilder: (context, index) {
-          return Container(
-            width: 280.w,
-            margin: EdgeInsets.only(right: 12.w),
-            padding: EdgeInsets.all(16.w),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20.r),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 36.w,
-                      height: 36.w,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      width: 20.w,
-                      height: 20.w,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ],
-                ),
-                12.height,
-                Container(
-                  width: 180.w,
-                  height: 16.h,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(4.r),
-                  ),
-                ),
-                8.height,
-                Container(
-                  width: double.infinity,
-                  height: 12.h,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(4.r),
-                  ),
-                ),
-                8.height,
-                Container(
-                  width: 120.w,
-                  height: 10.h,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(4.r),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  // Helper method to format date
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date).inDays;
-
-    if (difference < 30) {
-      return '$difference days';
-    } else if (difference < 365) {
-      final months = (difference / 30).floor();
-      return '$months ${months == 1 ? 'month' : 'months'}';
-    } else {
-      final years = (difference / 365).floor();
-      return '$years ${years == 1 ? 'year' : 'years'}';
-    }
-  }
-
-  Widget _buildStatCard({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-    required String subtitle,
-  }) {
-    return Expanded(
-      child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 6.w),
-        padding: EdgeInsets.all(16.w),
-        decoration: BoxDecoration(
-          color: cardDark,
-          borderRadius: BorderRadius.circular(20.r),
-          border: Border.all(color: color.withOpacity(0.35), width: 1.5),
-        ),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: color, size: 28.sp),
-                8.width,
-                Text(
-                  value,
-                  style: GoogleFonts.montserrat(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.w800,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
-            8.height,
-            Text(
-              label,
-              style: GoogleFonts.poppins(fontSize: 13.sp, color: textSecondary),
-            ),
-            2.height,
-            Text(
-              subtitle,
-              style: GoogleFonts.poppins(
-                fontSize: 11.sp,
-                color: textSecondary.withOpacity(0.7),
+        itemBuilder: (_, __) => Container(
+          width: 280.w,
+          margin: EdgeInsets.only(right: 12.w),
+          padding: EdgeInsets.all(16.w),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20.r),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(width: 36.w, height: 36.w,
+                      decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(12.r))),
+                  const Spacer(),
+                  Container(width: 20.w, height: 20.w,
+                      decoration: BoxDecoration(color: Colors.grey.shade300, shape: BoxShape.circle)),
+                ],
               ),
-            ),
-          ],
+              12.height,
+              Container(width: 180.w, height: 16.h,
+                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(4.r))),
+              8.height,
+              Container(width: double.infinity, height: 12.h,
+                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(4.r))),
+              8.height,
+              Container(width: 120.w, height: 10.h,
+                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(4.r))),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    final diff = DateTime.now().difference(date).inDays;
+    if (diff < 30)  return '$diff days ago';
+    if (diff < 365) { final m = (diff / 30).floor(); return '$m ${m == 1 ? 'month' : 'months'} ago'; }
+    final y = (diff / 365).floor();
+    return '$y ${y == 1 ? 'year' : 'years'} ago';
   }
 }
 
-// Today's Session Card
-class _TodaySessionCard extends StatelessWidget {
-  final TodaySession session;
+// ═══════════════════════════════════════════════════════════════════════════════
+// WIDGETS
+// ═══════════════════════════════════════════════════════════════════════════════
 
-  const _TodaySessionCard({required this.session});
+/// Session card driven by DashboardSession from the API
+class _DashboardSessionCard extends StatelessWidget {
+  final DashboardSession session;
+  const _DashboardSessionCard({required this.session});
 
   @override
   Widget build(BuildContext context) {
@@ -1404,10 +1000,10 @@ class _TodaySessionCard extends StatelessWidget {
       margin: EdgeInsets.only(bottom: 12.h),
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: cardDark,
-        borderRadius: BorderRadius.circular(20.r),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
         border: Border.all(
-          color: session.attendanceTaken
+          color: session.attendanceMarked
               ? accentGreen.withOpacity(0.3)
               : accentOrange.withOpacity(0.3),
           width: 1.5,
@@ -1415,19 +1011,20 @@ class _TodaySessionCard extends StatelessWidget {
       ),
       child: Row(
         children: [
+          // Status icon
           Container(
             padding: EdgeInsets.all(12.w),
             decoration: BoxDecoration(
-              color: session.attendanceTaken
-                  ? accentGreen.withOpacity(0.15)
-                  : accentOrange.withOpacity(0.15),
+              color: session.attendanceMarked
+                  ? accentGreen.withOpacity(0.12)
+                  : accentOrange.withOpacity(0.12),
               borderRadius: BorderRadius.circular(12.r),
             ),
             child: Icon(
-              session.attendanceTaken
+              session.attendanceMarked
                   ? Icons.check_circle_rounded
                   : Icons.access_time_rounded,
-              color: session.attendanceTaken ? accentGreen : accentOrange,
+              color: session.attendanceMarked ? accentGreen : accentOrange,
               size: 24.sp,
             ),
           ),
@@ -1436,50 +1033,43 @@ class _TodaySessionCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  session.groupName,
-                  style: GoogleFonts.montserrat(
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black,
-                  ),
-                ),
+                Text(session.groupName,
+                    style: GoogleFonts.montserrat(
+                      fontSize: 14.sp, fontWeight: FontWeight.w700, color: Colors.black87,
+                    )),
                 4.height,
-                Text(
-                  session.time,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12.sp,
-                    color: textSecondary,
+                if (session.formattedTime.isNotEmpty)
+                  Row(
+                    children: [
+                      Icon(Icons.access_time, size: 12.sp, color: Colors.grey.shade500),
+                      4.width,
+                      Text(session.formattedTime,
+                          style: GoogleFonts.poppins(fontSize: 12.sp, color: Colors.grey.shade600)),
+                    ],
                   ),
-                ),
-                Text(
-                  session.location,
-                  style: GoogleFonts.poppins(
-                    fontSize: 11.sp,
-                    color: textSecondary,
-                  ),
+                4.height,
+                Row(
+                  children: [
+                    Icon(Icons.location_on_outlined, size: 12.sp, color: Colors.grey.shade500),
+                    4.width,
+                    Text(session.location,
+                        style: GoogleFonts.poppins(fontSize: 11.sp, color: Colors.grey.shade600)),
+                  ],
                 ),
               ],
             ),
           ),
-          if (!session.attendanceTaken)
+          // Take attendance button for unmarked sessions
+          if (!session.attendanceMarked)
             ElevatedButton(
-              onPressed: () => toast("Take attendance"),
+              onPressed: () => toast("Take attendance for ${session.groupName}"),
               style: ElevatedButton.styleFrom(
                 backgroundColor: accentGreen,
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
+                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
               ),
-              child: Text(
-                "Take",
-                style: GoogleFonts.poppins(
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
+              child: Text("Take",
+                  style: GoogleFonts.poppins(fontSize: 12.sp, fontWeight: FontWeight.w600, color: Colors.white)),
             ),
         ],
       ),
@@ -1487,90 +1077,16 @@ class _TodaySessionCard extends StatelessWidget {
   }
 }
 
-// Upcoming Event Card
-// class _UpcomingEventCard extends StatelessWidget {
-//   final CoachEvent event;
-//
-//   const _UpcomingEventCard({required this.event});
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return Container(
-//       margin: EdgeInsets.only(bottom: 12.h),
-//       padding: EdgeInsets.all(16.w),
-//       decoration: BoxDecoration(
-//         color: cardDark,
-//         borderRadius: BorderRadius.circular(20.r),
-//         border: Border.all(color: accentGreen.withOpacity(0.3), width: 1.5),
-//       ),
-//       child: Column(
-//         crossAxisAlignment: CrossAxisAlignment.start,
-//         children: [
-//           Row(
-//             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//             children: [
-//               Expanded(
-//                 child: Text(
-//                   event.title,
-//                   style: Theme.of(context).textTheme.displayMedium?.copyWith(fontSize: 13.sp),
-//                 ),
-//               ),
-//               Container(
-//                 padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-//                 decoration: BoxDecoration(
-//                   color: accentGreen.withOpacity(0.15),
-//                   borderRadius: BorderRadius.circular(20.r),
-//                 ),
-//                 child: Text(
-//                   event.type,
-//                   style: GoogleFonts.poppins(
-//                     fontSize: 11.sp,
-//                     color: accentGreen,
-//                     fontWeight: FontWeight.w600,
-//                   ),
-//                 ),
-//               ),
-//             ],
-//           ),
-//           8.height,
-//           Text(
-//             event.groupName,
-//             style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary),
-//           ),
-//           4.height,
-//           Row(
-//             children: [
-//               Icon(Icons.calendar_today_rounded, size: 14.sp, color: textSecondary),
-//               6.width,
-//               Text(
-//                 "In ${event.date.difference(DateTime.now()).inDays} days",
-//                 style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary),
-//               ),
-//             ],
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
-
-// Quick Action Button
-
 class _UpcomingEventCard extends StatelessWidget {
   final CoachEvent event;
   final VoidCallback onTap;
-
-  const _UpcomingEventCard({required this.event, required this.onTap});
+  final VoidCallback onEdit;
+  const _UpcomingEventCard({required this.event, required this.onTap, required this.onEdit});
 
   @override
   Widget build(BuildContext context) {
-    // Calculate days difference
     final daysDiff = event.date.difference(DateTime.now()).inDays;
-    final daysText = daysDiff == 0
-        ? "Today"
-        : daysDiff == 1
-        ? "Tomorrow"
-        : "In $daysDiff days";
+    final daysText = daysDiff == 0 ? "Today" : daysDiff == 1 ? "Tomorrow" : "In $daysDiff days";
 
     return GestureDetector(
       onTap: onTap,
@@ -1578,104 +1094,73 @@ class _UpcomingEventCard extends StatelessWidget {
         margin: EdgeInsets.only(bottom: 12.h),
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
-          color: cardDark,
-          borderRadius: BorderRadius.circular(20.r),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16.r),
           border: Border.all(color: accentGreen.withOpacity(0.3), width: 1.5),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Text(
-                    event.title,
-                    style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  child: Text(event.title,
+                      style: Theme.of(context).textTheme.displayMedium
+                          ?.copyWith(fontSize: 14.sp, fontWeight: FontWeight.w600)),
                 ),
                 Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 6.h,
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(event.status).withOpacity(0.15),
+                    color: _statusColor(event.status).withOpacity(0.12),
                     borderRadius: BorderRadius.circular(20.r),
                   ),
-                  child: Text(
-                    event.status,
-                    style: GoogleFonts.poppins(
-                      fontSize: 11.sp,
-                      color: _getStatusColor(event.status),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  child: Text(event.status,
+                      style: GoogleFonts.poppins(
+                          fontSize: 11.sp, color: _statusColor(event.status), fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
             8.height,
-            Text(
-              event.location,
-              style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary),
-            ),
-            4.height,
             Row(
               children: [
-                Icon(
-                  Icons.calendar_today_rounded,
-                  size: 14.sp,
-                  color: textSecondary,
-                ),
-                6.width,
-                Text(
-                  daysText,
-                  style: GoogleFonts.poppins(
-                    fontSize: 11.sp,
-                    color: textSecondary,
-                  ),
-                ),
-                12.width,
-                if (event.startTime.isNotEmpty)
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.access_time,
-                        size: 14.sp,
-                        color: textSecondary,
-                      ),
-                      4.width,
-                      Text(
-                        _formatTime(event.startTime),
-                        style: GoogleFonts.poppins(
-                          fontSize: 11.sp,
-                          color: textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
+                Icon(Icons.location_on_outlined, size: 13.sp, color: Colors.grey.shade500),
+                4.width,
+                Text(event.location,
+                    style: GoogleFonts.poppins(fontSize: 12.sp, color: Colors.grey.shade600)),
+              ],
+            ),
+            6.height,
+            Row(
+              children: [
+                Icon(Icons.calendar_today_rounded, size: 13.sp, color: Colors.grey.shade500),
+                4.width,
+                Text(daysText, style: GoogleFonts.poppins(fontSize: 11.sp, color: Colors.grey.shade600)),
+                if (event.startTime.isNotEmpty) ...[
+                  12.width,
+                  Icon(Icons.access_time, size: 13.sp, color: Colors.grey.shade500),
+                  4.width,
+                  Text(_formatTime(event.startTime),
+                      style: GoogleFonts.poppins(fontSize: 11.sp, color: Colors.grey.shade600)),
+                ],
               ],
             ),
             8.height,
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Text(
-                  "Tap to view details",
-                  style: GoogleFonts.poppins(
-                    fontSize: 10.sp,
-                    color: accentGreen,
-                    fontWeight: FontWeight.w500,
+                GestureDetector(
+                  onTap: onEdit, // → CoachCreateEditEventSheet
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit_outlined, size: 12.sp, color: Colors.grey.shade500),
+                      4.width,
+                      Text("Edit",
+                          style: GoogleFonts.poppins(
+                              fontSize: 10.sp, color: Colors.grey.shade500, fontWeight: FontWeight.w500)),
+                      4.width,
+                      Icon(Icons.arrow_forward_ios_rounded, size: 10.sp, color: Colors.grey.shade500),
+                    ],
                   ),
-                ),
-                4.width,
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 10.sp,
-                  color: accentGreen,
                 ),
               ],
             ),
@@ -1685,33 +1170,26 @@ class _UpcomingEventCard extends StatelessWidget {
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'SCHEDULED':
-        return Colors.blue;
-      case 'ONGOING':
-        return Colors.green;
-      case 'COMPLETED':
-        return Colors.grey;
-      case 'CANCELLED':
-        return Colors.red;
-      default:
-        return accentGreen;
+  Color _statusColor(String s) {
+    switch (s) {
+      case 'SCHEDULED': return Colors.blue;
+      case 'ONGOING':   return Colors.green;
+      case 'COMPLETED': return Colors.grey;
+      case 'CANCELLED': return Colors.red;
+      default:          return accentGreen;
     }
   }
 
   String _formatTime(String time) {
     try {
-      if (time.isEmpty) return '';
       final parts = time.split(':');
       if (parts.length < 2) return time;
-
-      final hour = int.parse(parts[0]);
-      final minute = parts[1];
-      final period = hour >= 12 ? 'PM' : 'AM';
-      final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
-      return '$displayHour:$minute $period';
-    } catch (e) {
+      final h = int.parse(parts[0]);
+      final m = parts[1];
+      final period = h >= 12 ? 'PM' : 'AM';
+      final dh = h > 12 ? h - 12 : h == 0 ? 12 : h;
+      return '$dh:$m $period';
+    } catch (_) {
       return time.length >= 5 ? time.substring(0, 5) : time;
     }
   }
@@ -1721,12 +1199,7 @@ class _QuickActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-
-  const _QuickActionButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
+  const _QuickActionButton({required this.icon, required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -1743,76 +1216,43 @@ class _QuickActionButton extends StatelessWidget {
             child: Icon(icon, color: accentGreen, size: 28.sp),
           ),
           8.height,
-          Text(
-            label,
-            style: GoogleFonts.poppins(fontSize: 11.sp, color: Colors.black),
-            textAlign: TextAlign.center,
-          ),
+          Text(label,
+              style: GoogleFonts.poppins(fontSize: 11.sp, color: Colors.black),
+              textAlign: TextAlign.center),
         ],
       ),
     );
   }
 }
 
-// Shimmer Widgets
 class _SessionCardShimmer extends StatelessWidget {
   const _SessionCardShimmer();
-
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 90.h,
-      decoration: BoxDecoration(
-        color: Colors.grey[300],
-        borderRadius: BorderRadius.circular(20.r),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+    height: 90.h,
+    decoration: BoxDecoration(
+        color: Colors.grey[300], borderRadius: BorderRadius.circular(16.r)),
+  );
 }
 
 class _EventCardShimmer extends StatelessWidget {
   const _EventCardShimmer();
-
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 80.h,
-      decoration: BoxDecoration(
-        color: Colors.grey[300],
-        borderRadius: BorderRadius.circular(20.r),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+    height: 80.h,
+    decoration: BoxDecoration(
+        color: Colors.grey[300], borderRadius: BorderRadius.circular(16.r)),
+  );
 }
 
-// Models
-class CoachProfile {
-  final String name;
-  final String specialization;
-
-  CoachProfile({required this.name, required this.specialization});
-}
-
-class TodaySession {
-  final String groupName;
-  final String time;
-  final String location;
-  final bool attendanceTaken;
-
-  TodaySession({
-    required this.groupName,
-    required this.time,
-    required this.location,
-    required this.attendanceTaken,
-  });
-}
+// ── Local models still needed (CoachProfile, TodaySession, AttendanceSummary removed) ──
 
 class CoachEvent {
   final int? eventId;
-  final String title; // maps to eventName in API
-  final DateTime date; // maps to eventDate in API
+  final String title;
+  final DateTime date;
   final String location;
-  final String type; // maps to eventType in API
+  final String type;
   final int? clubId;
   final String startTime;
   final String endTime;
@@ -1836,42 +1276,20 @@ class CoachEvent {
     this.coachIds,
   });
 
-  // Convert from API response
-  factory CoachEvent.fromJson(Map<String, dynamic> json) {
-    return CoachEvent(
-      eventId: json['eventId'] ?? 0,
-      title: json['eventName'] ?? '',
-      date: json['eventDate'] != null
-          ? DateTime.parse(json['eventDate'])
-          : DateTime.now(),
-      location: json['location'] ?? '',
-      type: json['eventType'] ?? '',
-      clubId: json['clubId'] ?? 0,
-      startTime: json['startTime'] ?? '',
-      endTime: json['endTime'] ?? '',
-      status: json['status'] ?? 'SCHEDULED',
-      createdByUserId: json['createdByUserId'],
-      createdByUsername: json['createdByUsername'],
-      coachIds: json['coachIds'] != null
-          ? List<int>.from(json['coachIds'])
-          : [],
-    );
-  }
-}
-
-class AttendanceSummary {
-  final int pendingCount;
-  final int completedToday;
-  final int totalSessions;
-
-  AttendanceSummary({
-    required this.pendingCount,
-    required this.completedToday,
-    required this.totalSessions,
-  });
-
-  factory AttendanceSummary.empty() =>
-      AttendanceSummary(pendingCount: 0, completedToday: 0, totalSessions: 0);
+  factory CoachEvent.fromJson(Map<String, dynamic> json) => CoachEvent(
+    eventId:           json['eventId'],
+    title:             json['eventName'] ?? '',
+    date: json['eventDate'] != null ? DateTime.parse(json['eventDate']) : DateTime.now(),
+    location:          json['location'] ?? '',
+    type:              json['eventType'] ?? '',
+    clubId:            json['clubId'],
+    startTime:         json['startTime'] ?? '',
+    endTime:           json['endTime'] ?? '',
+    status:            json['status'] ?? 'SCHEDULED',
+    createdByUserId:   json['createdByUserId'],
+    createdByUsername: json['createdByUsername'],
+    coachIds: json['coachIds'] != null ? List<int>.from(json['coachIds']) : [],
+  );
 }
 
 class StatCard extends StatelessWidget {
@@ -1906,185 +1324,19 @@ class StatCard extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(8),
-              ),
+              decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(8)),
               child: Icon(icon, color: AppColors.white, size: 20),
             ),
             const SizedBox(height: 12),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                color: color,
-                fontSize: 15.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            Text(value,
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                    color: color, fontSize: 15.sp, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
-            Text(
-              title,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.darkGrey),
-            ),
+            Text(title,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.darkGrey)),
           ],
         ),
       ),
     );
   }
-}
-
-class InfoCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color? iconColor;
-  final VoidCallback? onTap;
-
-  const InfoCard({
-    Key? key,
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    this.iconColor,
-    this.onTap,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppConstants.radiusLarge),
-        child: Padding(
-          padding: const EdgeInsets.all(AppConstants.paddingMedium),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: (iconColor ?? AppColors.green).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  icon,
-                  color: iconColor ?? AppColors.green,
-                  size: AppConstants.iconSizeMedium,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-              if (onTap != null)
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: AppColors.mediumGrey,
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-Widget _buildSessionCard(
-  BuildContext context, {
-  required String title,
-  required String time,
-  required String location,
-  required int members,
-  required String status,
-}) {
-  return Card(
-    child: InkWell(
-      onTap: () {},
-      borderRadius: BorderRadius.circular(AppConstants.radiusLarge),
-      child: Padding(
-        padding: const EdgeInsets.all(AppConstants.paddingMedium),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.displayMedium?.copyWith(fontSize: 13.sp),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    status,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.orange,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(Icons.access_time, size: 16, color: AppColors.mediumGrey),
-                const SizedBox(width: 8),
-                Text(time, style: Theme.of(context).textTheme.bodyMedium),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(
-                  Icons.location_on_outlined,
-                  size: 16,
-                  color: AppColors.mediumGrey,
-                ),
-                const SizedBox(width: 8),
-                Text(location, style: Theme.of(context).textTheme.bodyMedium),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(
-                  Icons.people_outline,
-                  size: 16,
-                  color: AppColors.mediumGrey,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '$members members',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
 }
