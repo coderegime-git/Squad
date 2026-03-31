@@ -48,11 +48,12 @@ class _CoachEventTeamsScreenState extends State<CoachEventTeamsScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => _TeamFormPage(
-          subGroupId: widget.subGroupId,
-          subGroupName: widget.subGroupName,
-          eventName: widget.eventName,
-        ),
+        builder: (_) =>
+            _TeamFormPage(
+              subGroupId: widget.subGroupId,
+              subGroupName: widget.subGroupName,
+              eventName: widget.eventName,
+            ),
       ),
     ).then((created) {
       if (created == true) _refresh();
@@ -64,12 +65,13 @@ class _CoachEventTeamsScreenState extends State<CoachEventTeamsScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => _TeamFormPage(
-          subGroupId: widget.subGroupId,
-          subGroupName: widget.subGroupName,
-          eventName: widget.eventName,
-          existing: team,
-        ),
+        builder: (_) =>
+            _TeamFormPage(
+              subGroupId: widget.subGroupId,
+              subGroupName: widget.subGroupName,
+              eventName: widget.eventName,
+              existing: team,
+            ),
       ),
     ).then((updated) {
       if (updated == true) _refresh();
@@ -80,51 +82,53 @@ class _CoachEventTeamsScreenState extends State<CoachEventTeamsScreen> {
   void _confirmDelete(TeamData team) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-        title: Text(
-          "Delete Team",
-          style: GoogleFonts.montserrat(fontWeight: FontWeight.w700),
-        ),
-        content: Text(
-          'Are you sure you want to delete "${team.name}"?\nThis action cannot be undone.',
-          style: GoogleFonts.poppins(fontSize: 13.sp),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child:
-            Text("Cancel", style: GoogleFonts.poppins(color: Colors.grey)),
+      builder: (_) =>
+          AlertDialog(
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+            title: Text(
+              "Delete Team",
+              style: GoogleFonts.montserrat(fontWeight: FontWeight.w700),
+            ),
+            content: Text(
+              'Are you sure you want to delete "${team
+                  .name}"?\nThis action cannot be undone.',
+              style: GoogleFonts.poppins(fontSize: 13.sp),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child:
+                Text("Cancel", style: GoogleFonts.poppins(color: Colors.grey)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                onPressed: () async {
+                  Navigator.pop(context);
+                  final success =
+                  await _api.deleteTeam(widget.subGroupId, team.teamId);
+                  if (success) {
+                    _refresh();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Team deleted"),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Delete failed. Please try again."),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                  }
+                },
+                child:
+                Text("Delete", style: GoogleFonts.poppins(color: Colors.white)),
+              ),
+            ],
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () async {
-              Navigator.pop(context);
-              final success =
-              await _api.deleteTeam(widget.subGroupId, team.teamId);
-              if (success) {
-                _refresh();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Team deleted"),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Delete failed. Please try again."),
-                    backgroundColor: Colors.orange,
-                  ),
-                );
-              }
-            },
-            child:
-            Text("Delete", style: GoogleFonts.poppins(color: Colors.white)),
-          ),
-        ],
-      ),
     );
   }
 
@@ -184,7 +188,8 @@ class _CoachEventTeamsScreenState extends State<CoachEventTeamsScreen> {
                         children: [
                           Text(
                             "Teams",
-                            style: Theme.of(context)
+                            style: Theme
+                                .of(context)
                                 .textTheme
                                 .headlineMedium
                                 ?.copyWith(
@@ -285,11 +290,12 @@ class _CoachEventTeamsScreenState extends State<CoachEventTeamsScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => CoachAssignMembersScreen(
-                                teamId: team.teamId,
-                                teamName: team.name ?? 'Team',
-                                subGroupName: widget.subGroupName,
-                              ),
+                              builder: (_) =>
+                                  CoachAssignMembersScreen(
+                                    teamId: team.teamId,
+                                    teamName: team.name ?? 'Team',
+                                    subGroupName: widget.subGroupName,
+                                  ),
                             ),
                           ).then((_) => _refresh());
                         },
@@ -502,7 +508,9 @@ class _TeamFormPageState extends State<_TeamFormPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-              _isEdit ? "Team updated successfully" : "Team created successfully"),
+              _isEdit
+                  ? "Team updated successfully"
+                  : "Team created successfully"),
           backgroundColor: Colors.blue,
         ),
       );
@@ -560,7 +568,8 @@ class _TeamFormPageState extends State<_TeamFormPage> {
                         children: [
                           Text(
                             _isEdit ? "Edit Team" : "Create Team",
-                            style: Theme.of(context)
+                            style: Theme
+                                .of(context)
                                 .textTheme
                                 .headlineMedium
                                 ?.copyWith(
@@ -656,7 +665,9 @@ class _TeamFormPageState extends State<_TeamFormPage> {
                             ),
                             style: GoogleFonts.poppins(fontSize: 14.sp),
                             validator: (v) =>
-                            (v == null || v.trim().isEmpty)
+                            (v == null || v
+                                .trim()
+                                .isEmpty)
                                 ? "Team name is required"
                                 : null,
                           ),
@@ -721,146 +732,154 @@ class _TeamFormPageState extends State<_TeamFormPage> {
                                   padding: EdgeInsets.all(16),
                                   child: CircularProgressIndicator(),
                                 ))
-                          else if (_allCoaches.isEmpty)
-                            Padding(
-                              padding: EdgeInsets.symmetric(vertical: 12.h),
-                              child: Text(
-                                "No coaches available",
-                                style: GoogleFonts.poppins(
-                                    fontSize: 13.sp, color: Colors.grey),
-                              ),
-                            )
                           else
-                            Container(
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                    color: Colors.grey.shade200),
-                                borderRadius: BorderRadius.circular(12.r),
-                              ),
-                              child: Column(
-                                children: List.generate(
-                                  _allCoaches.length,
-                                      (idx) {
-                                    final coach = _allCoaches[idx];
-                                    final id = coach.coachId ?? 0;
-                                    final isSelected =
-                                    _selectedCoachIds.contains(id);
-                                    final isLast =
-                                        idx == _allCoaches.length - 1;
-                                    return Column(
-                                      children: [
-                                        InkWell(
-                                          borderRadius: BorderRadius.vertical(
-                                            top: idx == 0
-                                                ? const Radius.circular(12)
-                                                : Radius.zero,
-                                            bottom: isLast
-                                                ? const Radius.circular(12)
-                                                : Radius.zero,
-                                          ),
-                                          onTap: () {
-                                            setState(() {
-                                              if (isSelected) {
-                                                _selectedCoachIds.remove(id);
-                                              } else {
-                                                _selectedCoachIds.add(id);
-                                              }
-                                            });
-                                          },
-                                          child: Padding(
-                                            padding: EdgeInsets.symmetric(
-                                                horizontal: 12.w,
-                                                vertical: 10.h),
-                                            child: Row(
-                                              children: [
-                                                // Avatar
-                                                CircleAvatar(
-                                                  radius: 18.r,
-                                                  backgroundColor: Colors.blue
-                                                      .withOpacity(0.1),
-                                                  child: Text(
-                                                    coach.username.isNotEmpty
-                                                        ? coach.username
-                                                        .substring(0, 1)
-                                                        .toUpperCase()
-                                                        : 'C',
-                                                    style: GoogleFonts.montserrat(
-                                                      fontSize: 13.sp,
-                                                      fontWeight:
-                                                      FontWeight.w700,
-                                                      color: Colors.blue,
+                            if (_allCoaches.isEmpty)
+                              Padding(
+                                padding: EdgeInsets.symmetric(vertical: 12.h),
+                                child: Text(
+                                  "No coaches available",
+                                  style: GoogleFonts.poppins(
+                                      fontSize: 13.sp, color: Colors.grey),
+                                ),
+                              )
+                            else
+                              Container(
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                      color: Colors.grey.shade200),
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                                child: Column(
+                                  children: List.generate(
+                                    _allCoaches.length,
+                                        (idx) {
+                                      final coach = _allCoaches[idx];
+                                      final id = coach.coachId ?? 0;
+                                      final isSelected =
+                                      _selectedCoachIds.contains(id);
+                                      final isLast =
+                                          idx == _allCoaches.length - 1;
+                                      return Column(
+                                        children: [
+                                          InkWell(
+                                            borderRadius: BorderRadius.vertical(
+                                              top: idx == 0
+                                                  ? const Radius.circular(12)
+                                                  : Radius.zero,
+                                              bottom: isLast
+                                                  ? const Radius.circular(12)
+                                                  : Radius.zero,
+                                            ),
+                                            onTap: () {
+                                              setState(() {
+                                                if (isSelected) {
+                                                  _selectedCoachIds.remove(id);
+                                                } else {
+                                                  _selectedCoachIds.add(id);
+                                                }
+                                              });
+                                            },
+                                            child: Padding(
+                                              padding: EdgeInsets.symmetric(
+                                                  horizontal: 12.w,
+                                                  vertical: 10.h),
+                                              child: Row(
+                                                children: [
+                                                  // Avatar
+                                                  CircleAvatar(
+                                                    radius: 18.r,
+                                                    backgroundColor: Colors.blue
+                                                        .withOpacity(0.1),
+                                                    child: Text(
+                                                      coach.username.isNotEmpty
+                                                          ? coach.username
+                                                          .substring(0, 1)
+                                                          .toUpperCase()
+                                                          : 'C',
+                                                      style: GoogleFonts
+                                                          .montserrat(
+                                                        fontSize: 13.sp,
+                                                        fontWeight:
+                                                        FontWeight.w700,
+                                                        color: Colors.blue,
+                                                      ),
                                                     ),
                                                   ),
-                                                ),
-                                                12.width,
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                    CrossAxisAlignment
-                                                        .start,
-                                                    children: [
-                                                      Text(
-                                                        coach.username,
-                                                        style: GoogleFonts.poppins(
-                                                          fontSize: 13.sp,
-                                                          fontWeight:
-                                                          FontWeight.w600,
-                                                          color: Colors.black87,
-                                                        ),
-                                                      ),
-                                                      if (coach.specialization.isNotEmpty)
+                                                  12.width,
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                      CrossAxisAlignment
+                                                          .start,
+                                                      children: [
                                                         Text(
-                                                          coach.specialization,
-                                                          style: GoogleFonts.poppins(
-                                                            fontSize: 11.sp,
+                                                          coach.username,
+                                                          style: GoogleFonts
+                                                              .poppins(
+                                                            fontSize: 13.sp,
+                                                            fontWeight:
+                                                            FontWeight.w600,
                                                             color: Colors
-                                                                .grey.shade500,
+                                                                .black87,
                                                           ),
                                                         ),
-                                                    ],
+                                                        if (coach.specialization
+                                                            .isNotEmpty)
+                                                          Text(
+                                                            coach
+                                                                .specialization,
+                                                            style: GoogleFonts
+                                                                .poppins(
+                                                              fontSize: 11.sp,
+                                                              color: Colors
+                                                                  .grey
+                                                                  .shade500,
+                                                            ),
+                                                          ),
+                                                      ],
+                                                    ),
                                                   ),
-                                                ),
-                                                // Checkbox
-                                                AnimatedContainer(
-                                                  duration: const Duration(
-                                                      milliseconds: 150),
-                                                  width: 22.w,
-                                                  height: 22.w,
-                                                  decoration: BoxDecoration(
-                                                    color: isSelected
-                                                        ? Colors.blue
-                                                        : Colors.transparent,
-                                                    border: Border.all(
+                                                  // Checkbox
+                                                  AnimatedContainer(
+                                                    duration: const Duration(
+                                                        milliseconds: 150),
+                                                    width: 22.w,
+                                                    height: 22.w,
+                                                    decoration: BoxDecoration(
                                                       color: isSelected
                                                           ? Colors.blue
-                                                          : Colors
-                                                          .grey.shade400,
-                                                      width: 2,
+                                                          : Colors.transparent,
+                                                      border: Border.all(
+                                                        color: isSelected
+                                                            ? Colors.blue
+                                                            : Colors
+                                                            .grey.shade400,
+                                                        width: 2,
+                                                      ),
+                                                      borderRadius:
+                                                      BorderRadius.circular(
+                                                          6.r),
                                                     ),
-                                                    borderRadius:
-                                                    BorderRadius.circular(
-                                                        6.r),
+                                                    child: isSelected
+                                                        ? Icon(Icons.check,
+                                                        color: Colors.white,
+                                                        size: 14.sp)
+                                                        : null,
                                                   ),
-                                                  child: isSelected
-                                                      ? Icon(Icons.check,
-                                                      color: Colors.white,
-                                                      size: 14.sp)
-                                                      : null,
-                                                ),
-                                              ],
+                                                ],
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                        if (!isLast)
-                                          Divider(
-                                              height: 1,
-                                              color: Colors.grey.shade100),
-                                      ],
-                                    );
-                                  },
+                                          if (!isLast)
+                                            Divider(
+                                                height: 1,
+                                                color: Colors.grey.shade100),
+                                        ],
+                                      );
+                                    },
+                                  ),
                                 ),
                               ),
-                            ),
                         ],
                       ),
                     ),

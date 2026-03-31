@@ -11,6 +11,7 @@ import '../../model/member/get_member_dashboard.dart';
 import '../../routes/app_routes.dart';
 import '../../utills/api_service.dart';
 import '../../utills/shared_preference.dart';
+import '../notification_screen.dart';
 
 class MemberDashboard extends StatefulWidget {
   const MemberDashboard({super.key});
@@ -51,7 +52,7 @@ class _MemberDashboardState extends State<MemberDashboard> {
     final success = await _api.updateMemberEventStatus(eventId, status);
     if (mounted) {
       if (success) {
-        toast(status == 'ACCEPTED' ? 'Event accepted!' : 'Event declined');
+        toast(status == 'ACCEPT' ? 'Event accepted!' : 'Event declined');
         _refresh();
       } else {
         toast('Failed to update status');
@@ -97,54 +98,23 @@ class _MemberDashboardState extends State<MemberDashboard> {
                     children: [
                       Text(
                         "Hello, $_username",
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineMedium
+                        style: Theme.of(context).textTheme.headlineMedium
                             ?.copyWith(
-                          color: Colors.white,
-                          fontSize: 20.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
+                              color: Colors.white,
+                              fontSize: 20.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                       const Spacer(),
-                      GestureDetector(
-                        onTap: () => Navigator.pushNamed(
+                      NotificationBellIcon(
+                        onTap: () => Navigator.push(
                           context,
-                          AppRoutes.guardianNotifications,
-                        ),
-                        child: Stack(
-                          children: [
-                            Icon(
-                              Icons.notifications_none_rounded,
-                              color: Colors.white,
-                              size: 26.sp,
-                            ),
-                            Positioned(
-                              right: 0,
-                              top: 0,
-                              child: FutureBuilder<GetMemberEvents>(
-                                future: _pendingFuture,
-                                builder: (_, snap) {
-                                  final count = snap.data?.data.length ?? 0;
-                                  if (count == 0) return const SizedBox();
-                                  return Container(
-                                    width: 10.r,
-                                    height: 10.r,
-                                    decoration: BoxDecoration(
-                                      color: accentOrange,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.black,
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
+                          MaterialPageRoute(
+                            builder: (_) => const NotificationScreen(),
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 6),
                     ],
                   ),
                 ),
@@ -158,8 +128,7 @@ class _MemberDashboardState extends State<MemberDashboard> {
                 builder: (context, dashSnap) {
                   final isLoading =
                       dashSnap.connectionState == ConnectionState.waiting;
-                  final club =
-                  dashSnap.data?.data?.clubs.isNotEmpty == true
+                  final club = dashSnap.data?.data?.clubs.isNotEmpty == true
                       ? dashSnap.data!.data!.clubs.first
                       : null;
                   final dashEvents = club?.events ?? [];
@@ -205,7 +174,7 @@ class _MemberDashboardState extends State<MemberDashboard> {
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           club.clubName,
@@ -234,8 +203,7 @@ class _MemberDashboardState extends State<MemberDashboard> {
                                     ),
                                     decoration: BoxDecoration(
                                       color: accentGreen.withOpacity(0.15),
-                                      borderRadius:
-                                      BorderRadius.circular(12.r),
+                                      borderRadius: BorderRadius.circular(12.r),
                                       border: Border.all(
                                         color: accentGreen.withOpacity(0.4),
                                       ),
@@ -286,29 +254,29 @@ class _MemberDashboardState extends State<MemberDashboard> {
                               children: club.activities
                                   .map(
                                     (a) => Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 12.w,
-                                    vertical: 6.h,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: cardDark,
-                                    borderRadius:
-                                    BorderRadius.circular(20.r),
-                                    border: Border.all(
-                                      color:
-                                      accentGreen.withOpacity(0.35),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 12.w,
+                                        vertical: 6.h,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: cardDark,
+                                        borderRadius: BorderRadius.circular(
+                                          20.r,
+                                        ),
+                                        border: Border.all(
+                                          color: accentGreen.withOpacity(0.35),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        a.activityName,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 11.sp,
+                                          color: Colors.black87,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                  child: Text(
-                                    a.activityName,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 11.sp,
-                                      color: Colors.black87,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              )
+                                  )
                                   .toList(),
                             ),
                             16.height,
@@ -329,7 +297,7 @@ class _MemberDashboardState extends State<MemberDashboard> {
                                   icon: Icons.pending_actions_rounded,
                                   label: "Sessions",
                                   value:
-                                  '${club.attendanceStats.totalSessions}',
+                                      '${club.attendanceStats.totalSessions}',
                                   color: accentOrange,
                                   subtitle: "Attended",
                                 ),
@@ -369,10 +337,10 @@ class _MemberDashboardState extends State<MemberDashboard> {
                                           vertical: 2.h,
                                         ),
                                         decoration: BoxDecoration(
-                                          color:
-                                          accentOrange.withOpacity(0.15),
-                                          borderRadius:
-                                          BorderRadius.circular(20.r),
+                                          color: accentOrange.withOpacity(0.15),
+                                          borderRadius: BorderRadius.circular(
+                                            20.r,
+                                          ),
                                         ),
                                         child: Text(
                                           '${pending.length}',
@@ -387,12 +355,12 @@ class _MemberDashboardState extends State<MemberDashboard> {
                                   ),
                                   12.height,
                                   ...pending.map(
-                                        (e) => _PendingEventCard(
+                                    (e) => _PendingEventCard(
                                       event: e,
-                                      onAccept: () => _updateStatus(
-                                          e.eventId, 'ACCEPTED'),
-                                      onDecline: () => _updateStatus(
-                                          e.eventId, 'REJECTED'),
+                                      onAccept: () =>
+                                          _updateStatus(e.eventId, 'ACCEPT'),
+                                      onDecline: () =>
+                                          _updateStatus(e.eventId, 'REJECT'),
                                     ),
                                   ),
                                   16.height,
@@ -422,14 +390,14 @@ class _MemberDashboardState extends State<MemberDashboard> {
                               decoration: BoxDecoration(
                                 color: cardDark,
                                 borderRadius: BorderRadius.circular(16.r),
-                                border:
-                                Border.all(color: Colors.grey.shade300),
+                                border: Border.all(color: Colors.grey.shade300),
                               ),
                               child: Center(
                                 child: Text(
                                   "No events yet",
                                   style: GoogleFonts.poppins(
-                                      color: textSecondary),
+                                    color: textSecondary,
+                                  ),
                                 ),
                               ),
                             )
@@ -490,8 +458,7 @@ class _MemberDashboardState extends State<MemberDashboard> {
             8.height,
             Text(
               label,
-              style:
-              GoogleFonts.poppins(fontSize: 13.sp, color: textSecondary),
+              style: GoogleFonts.poppins(fontSize: 13.sp, color: textSecondary),
             ),
             2.height,
             Text(
@@ -544,11 +511,7 @@ class _DashboardEventCard extends StatelessWidget {
               color: accentGreen.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10.r),
             ),
-            child: Icon(
-              Icons.event_rounded,
-              color: accentGreen,
-              size: 20.sp,
-            ),
+            child: Icon(Icons.event_rounded, color: accentGreen, size: 20.sp),
           ),
           12.width,
           Expanded(
@@ -643,8 +606,7 @@ class _PendingEventCard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding:
-                EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                 decoration: BoxDecoration(
                   color: accentOrange.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(20.r),

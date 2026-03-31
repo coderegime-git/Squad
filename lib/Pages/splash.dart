@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:sports/routes/app_routes.dart';
 
 import '../config/colors.dart';
 import '../utills/shared_preference.dart';
+import 'notification_provider.dart';
 
 class Splash extends StatefulWidget {
   const Splash({super.key});
@@ -28,7 +30,8 @@ class _SplashState extends State<Splash> {
       if (!mounted) return;
 
       if (token != null && token.isNotEmpty) {
-        // Token exists → navigate based on saved role
+        context.read<NotificationProvider>().loadUnreadCount();
+
         switch (role) {
           case 'CLUB_ADMIN':
             Navigator.pushReplacementNamed(context, AppRoutes.clubAdmin);
@@ -43,7 +46,7 @@ class _SplashState extends State<Splash> {
             Navigator.pushReplacementNamed(context, AppRoutes.memberBar);
             break;
           default:
-          // Role not saved or unknown → go to login
+            // Role not saved or unknown → go to login
             Navigator.pushReplacementNamed(context, AppRoutes.login);
         }
       } else {
@@ -63,10 +66,7 @@ class _SplashState extends State<Splash> {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(20),
-                child: Image.asset(
-                  "assets/images/squad.png",
-                  height: 250,
-                ),
+                child: Image.asset("assets/images/squad.png", height: 250),
               ),
               const SizedBox(height: 40),
               Text(

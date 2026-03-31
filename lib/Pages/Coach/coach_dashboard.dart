@@ -14,6 +14,7 @@ import '../../model/coach/coach_dashboard_data.dart';
 import '../../routes/app_routes.dart';
 import '../../utills/api_service.dart';
 import '../../utills/helper.dart';
+import '../notification_screen.dart';
 import 'club_members_list_screen.dart';
 import 'coach_event_groups_screen.dart';
 
@@ -25,14 +26,14 @@ class CoachDashboard extends StatefulWidget {
 }
 
 class _CoachDashboardState extends State<CoachDashboard> {
-
   bool _isNavigating = false;
 
-  late Future<List<Club>>        _clubsFuture;
-  late Future<List<CoachEvent>>  _upcomingEventsFuture;
+  late Future<List<Club>> _clubsFuture;
+  late Future<List<CoachEvent>> _upcomingEventsFuture;
   late Future<CoachDashboardData> _dashboardFuture;
 
   void _showLoader() => setState(() => _isNavigating = true);
+
   void _hideLoader() => setState(() => _isNavigating = false);
 
   final CoachApiService _coachApiService = CoachApiService();
@@ -40,9 +41,9 @@ class _CoachDashboardState extends State<CoachDashboard> {
   @override
   void initState() {
     super.initState();
-    _clubsFuture           = _fetchClubs();
-    _upcomingEventsFuture  = _fetchUpcomingEvents();
-    _dashboardFuture       = _fetchDashboard();
+    _clubsFuture = _fetchClubs();
+    _upcomingEventsFuture = _fetchUpcomingEvents();
+    _dashboardFuture = _fetchDashboard();
   }
 
   Future<List<Club>> _fetchClubs() async {
@@ -71,23 +72,28 @@ class _CoachDashboardState extends State<CoachDashboard> {
       if (clubs.isEmpty) return [];
       final events = await _coachApiService.getClubEvents(clubs.first.clubId);
       return events
-          .where((e) => e.eventDate.isAfter(
-          DateTime.now().subtract(const Duration(days: 1))))
+          .where(
+            (e) => e.eventDate.isAfter(
+              DateTime.now().subtract(const Duration(days: 1)),
+            ),
+          )
           .take(3)
-          .map((e) => CoachEvent(
-        eventId:           e.eventId,
-        title:             e.eventName,
-        date:              e.eventDate,
-        location:          e.location,
-        type:              e.eventType,
-        clubId:            e.clubId,
-        startTime:         e.startTime,
-        endTime:           e.endTime,
-        status:            e.status,
-        createdByUserId:   e.createdByUserId,
-        createdByUsername: e.createdByUsername,
-        coachIds:          e.coachIds,
-      ))
+          .map(
+            (e) => CoachEvent(
+              eventId: e.eventId,
+              title: e.eventName,
+              date: e.eventDate,
+              location: e.location,
+              type: e.eventType,
+              clubId: e.clubId,
+              startTime: e.startTime,
+              endTime: e.endTime,
+              status: e.status,
+              createdByUserId: e.createdByUserId,
+              createdByUsername: e.createdByUsername,
+              coachIds: e.coachIds,
+            ),
+          )
           .toList();
     } catch (e) {
       print("Error fetching upcoming events: $e");
@@ -97,38 +103,50 @@ class _CoachDashboardState extends State<CoachDashboard> {
 
   void _refreshAll() {
     setState(() {
-      _clubsFuture          = _fetchClubs();
+      _clubsFuture = _fetchClubs();
       _upcomingEventsFuture = _fetchUpcomingEvents();
-      _dashboardFuture      = _fetchDashboard();
+      _dashboardFuture = _fetchDashboard();
     });
   }
 
   // ── Navigation helpers ─────────────────────────────────────────────────────
   void _navigateToMembersList() async {
     final clubs = await _coachApiService.getCoachClubs();
-    if (clubs.isEmpty) { toast("No clubs available"); return; }
+    if (clubs.isEmpty) {
+      toast("No clubs available");
+      return;
+    }
     if (clubs.length == 1) {
-      Navigator.push(context, MaterialPageRoute(
-        builder: (_) => ClubMembersListScreen(
-          clubId:   clubs.first.clubId,
-          clubName: clubs.first.clubName,
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ClubMembersListScreen(
+            clubId: clubs.first.clubId,
+            clubName: clubs.first.clubName,
+          ),
         ),
-      ));
+      );
     } else {
       _showClubPickerSheet(clubs, (club) {
-        Navigator.push(context, MaterialPageRoute(
-          builder: (_) => ClubMembersListScreen(
-            clubId:   club.clubId,
-            clubName: club.clubName,
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ClubMembersListScreen(
+              clubId: club.clubId,
+              clubName: club.clubName,
+            ),
           ),
-        ));
+        );
       });
     }
   }
 
   void _navigateToGroupsList() async {
     final clubs = await _coachApiService.getCoachClubs();
-    if (clubs.isEmpty) { toast("No clubs available"); return; }
+    if (clubs.isEmpty) {
+      toast("No clubs available");
+      return;
+    }
     if (clubs.length == 1) {
       toast("Navigate to groups for ${clubs.first.clubName}");
     } else {
@@ -140,22 +158,35 @@ class _CoachDashboardState extends State<CoachDashboard> {
 
   void _navigateToAllEvents() async {
     final clubs = await _coachApiService.getCoachClubs();
-    if (clubs.isEmpty) { toast("No clubs available"); return; }
+    if (clubs.isEmpty) {
+      toast("No clubs available");
+      return;
+    }
     if (clubs.length == 1) {
-      Navigator.push(context, MaterialPageRoute(
-        builder: (_) => ClubEventsListScreen(
-          clubId:   clubs.first.clubId,
-          clubName: clubs.first.clubName,
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ClubEventsListScreen(
+            clubId: clubs.first.clubId,
+            clubName: clubs.first.clubName,
+          ),
         ),
-      )).then((_) => setState(() => _upcomingEventsFuture = _fetchUpcomingEvents()));
+      ).then(
+        (_) => setState(() => _upcomingEventsFuture = _fetchUpcomingEvents()),
+      );
     } else {
       _showClubPickerSheet(clubs, (club) {
-        Navigator.push(context, MaterialPageRoute(
-          builder: (_) => ClubEventsListScreen(
-            clubId:   club.clubId,
-            clubName: club.clubName,
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ClubEventsListScreen(
+              clubId: club.clubId,
+              clubName: club.clubName,
+            ),
           ),
-        )).then((_) => setState(() => _upcomingEventsFuture = _fetchUpcomingEvents()));
+        ).then(
+          (_) => setState(() => _upcomingEventsFuture = _fetchUpcomingEvents()),
+        );
       });
     }
   }
@@ -165,7 +196,10 @@ class _CoachDashboardState extends State<CoachDashboard> {
     try {
       final clubs = await _coachApiService.getCoachClubs();
       _hideLoader();
-      if (clubs.isEmpty) { toast("No clubs available"); return; }
+      if (clubs.isEmpty) {
+        toast("No clubs available");
+        return;
+      }
       if (clubs.length == 1) {
         _openCreateSheet(clubs.first);
       } else {
@@ -183,7 +217,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => CoachCreateEditEventSheet(
-        clubId:   club.clubId,
+        clubId: club.clubId,
         clubName: club.clubName,
         onSuccess: () {
           setState(() => _upcomingEventsFuture = _fetchUpcomingEvents());
@@ -200,21 +234,28 @@ class _CoachDashboardState extends State<CoachDashboard> {
     }
     _showLoader();
     final clubs = await _coachApiService.getCoachClubs();
-    final club  = clubs.firstWhere(
-          (c) => c.clubId == event.clubId,
-      orElse: () => Club(clubId: event.clubId!, clubName: "Club", description: ""),
+    final club = clubs.firstWhere(
+      (c) => c.clubId == event.clubId,
+      orElse: () =>
+          Club(clubId: event.clubId!, clubName: "Club", description: ""),
     );
     try {
-      final fullEvent = await _coachApiService.getEventDetails(event.clubId!, event.eventId!);
+      final fullEvent = await _coachApiService.getEventDetails(
+        event.clubId!,
+        event.eventId!,
+      );
       _hideLoader();
 
-      if (fullEvent == null) { toast("Could not load event details"); return; }
+      if (fullEvent == null) {
+        toast("Could not load event details");
+        return;
+      }
 
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => CoachEventGroupsScreen(
-            eventId:   fullEvent.eventId!,
+            eventId: fullEvent.eventId!,
             eventName: fullEvent.eventName,
           ),
         ),
@@ -234,29 +275,36 @@ class _CoachDashboardState extends State<CoachDashboard> {
     _showLoader();
     try {
       final clubs = await _coachApiService.getCoachClubs();
-      final club  = clubs.firstWhere(
-            (c) => c.clubId == event.clubId,
-        orElse: () => Club(clubId: event.clubId!, clubName: "Club", description: ""),
+      final club = clubs.firstWhere(
+        (c) => c.clubId == event.clubId,
+        orElse: () =>
+            Club(clubId: event.clubId!, clubName: "Club", description: ""),
       );
-      final fullEvent = await _coachApiService.getEventDetails(event.clubId!, event.eventId!);
+      final fullEvent = await _coachApiService.getEventDetails(
+        event.clubId!,
+        event.eventId!,
+      );
       _hideLoader();
 
-      if (fullEvent == null) { toast("Could not load event details"); return; }
+      if (fullEvent == null) {
+        toast("Could not load event details");
+        return;
+      }
 
       final eventModel = CoachEventModel(
-        eventId:           fullEvent.eventId,
-        eventName:         fullEvent.eventName,
-        eventDate:         fullEvent.eventDate,
-        startTime:         fullEvent.startTime,
-        endTime:           fullEvent.endTime,
-        location:          fullEvent.location,
-        eventType:         fullEvent.eventType,
-        status:            fullEvent.status,
-        clubId:            fullEvent.clubId,
-        createdByUserId:   fullEvent.createdByUserId,
+        eventId: fullEvent.eventId,
+        eventName: fullEvent.eventName,
+        eventDate: fullEvent.eventDate,
+        startTime: fullEvent.startTime,
+        endTime: fullEvent.endTime,
+        location: fullEvent.location,
+        eventType: fullEvent.eventType,
+        status: fullEvent.status,
+        clubId: fullEvent.clubId,
+        createdByUserId: fullEvent.createdByUserId,
         createdByUsername: fullEvent.createdByUsername,
-        coachIds:          fullEvent.coachIds,
-        createdAt:         fullEvent.createdAt,
+        coachIds: fullEvent.coachIds,
+        createdAt: fullEvent.createdAt,
       );
 
       showModalBottomSheet(
@@ -264,10 +312,11 @@ class _CoachDashboardState extends State<CoachDashboard> {
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
         builder: (_) => CoachCreateEditEventSheet(
-          clubId:   event.clubId!,
+          clubId: event.clubId!,
           clubName: club.clubName,
-          event:    eventModel,
-          onSuccess: () => setState(() => _upcomingEventsFuture = _fetchUpcomingEvents()),
+          event: eventModel,
+          onSuccess: () =>
+              setState(() => _upcomingEventsFuture = _fetchUpcomingEvents()),
         ),
       );
     } catch (e) {
@@ -278,7 +327,11 @@ class _CoachDashboardState extends State<CoachDashboard> {
   }
 
   // ── Reusable club-picker bottom sheet ─────────────────────────────────────
-  void _showClubPickerSheet(List<Club> clubs, void Function(Club) onSelect, {String title = "Select Club"}) {
+  void _showClubPickerSheet(
+    List<Club> clubs,
+    void Function(Club) onSelect, {
+    String title = "Select Club",
+  }) {
     showModalBottomSheet(
       context: context,
       shape: RoundedRectangleBorder(
@@ -290,26 +343,39 @@ class _CoachDashboardState extends State<CoachDashboard> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 40.w, height: 4.h,
+              width: 40.w,
+              height: 4.h,
               decoration: BoxDecoration(
                 color: Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(2.r),
               ),
             ),
             16.height,
-            Text(title,
-                style: GoogleFonts.montserrat(fontSize: 18.sp, fontWeight: FontWeight.w700)),
-            16.height,
-            ...clubs.map((club) => ListTile(
-              leading: CircleAvatar(
-                backgroundColor: accentGreen.withOpacity(0.1),
-                child: Text(club.clubName[0].toUpperCase(),
-                    style: TextStyle(color: accentGreen)),
+            Text(
+              title,
+              style: GoogleFonts.montserrat(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w700,
               ),
-              title:    Text(club.clubName),
-              subtitle: Text(club.description),
-              onTap: () { Navigator.pop(context); onSelect(club); },
-            )),
+            ),
+            16.height,
+            ...clubs.map(
+              (club) => ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: accentGreen.withOpacity(0.1),
+                  child: Text(
+                    club.clubName[0].toUpperCase(),
+                    style: TextStyle(color: accentGreen),
+                  ),
+                ),
+                title: Text(club.clubName),
+                subtitle: Text(club.description),
+                onTap: () {
+                  Navigator.pop(context);
+                  onSelect(club);
+                },
+              ),
+            ),
           ],
         ),
       ),
@@ -321,9 +387,9 @@ class _CoachDashboardState extends State<CoachDashboard> {
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
-        statusBarColor:          Colors.white,
+        statusBarColor: Colors.white,
         statusBarIconBrightness: Brightness.light,
-        statusBarBrightness:     Brightness.dark,
+        statusBarBrightness: Brightness.dark,
       ),
       child: Scaffold(
         backgroundColor: Colors.grey.shade100,
@@ -386,7 +452,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
       decoration: BoxDecoration(
         color: Colors.black,
         borderRadius: const BorderRadius.only(
-          bottomLeft:  Radius.circular(16),
+          bottomLeft: Radius.circular(16),
           bottomRight: Radius.circular(16),
         ),
         boxShadow: [
@@ -404,31 +470,21 @@ class _CoachDashboardState extends State<CoachDashboard> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
-                "Hello, Coach Ram",
+                "Hello, Coach",
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: Colors.white, fontSize: 20.sp, fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
               const Spacer(),
-              GestureDetector(
-                onTap: () => Navigator.pushNamed(context, AppRoutes.guardianNotifications),
-                child: Stack(
-                  children: [
-                    Icon(Icons.notifications_none_rounded, color: Colors.white, size: 26.sp),
-                    Positioned(
-                      right: 0, top: 0,
-                      child: Container(
-                        width: 10.r, height: 10.r,
-                        decoration: BoxDecoration(
-                          color: accentOrange,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.black, width: 1.5),
-                        ),
-                      ),
-                    ),
-                  ],
+              NotificationBellIcon(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NotificationScreen()),
                 ),
               ),
+              const SizedBox(width: 6),
             ],
           ),
         ),
@@ -521,7 +577,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
       future: _dashboardFuture,
       builder: (context, snapshot) {
         final isLoading = snapshot.connectionState == ConnectionState.waiting;
-        final data      = snapshot.data ?? CoachDashboardData.empty();
+        final data = snapshot.data ?? CoachDashboardData.empty();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -543,7 +599,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
                   child: StatCard(
                     title: "Today's Sessions",
                     value: isLoading ? '...' : '${data.todaySessions.length}',
-                    icon:  Icons.sports_soccer,
+                    icon: Icons.sports_soccer,
                     color: AppColors.info,
                   ),
                 ),
@@ -552,7 +608,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
                   child: StatCard(
                     title: 'Upcoming Events',
                     value: isLoading ? '...' : '${data.events.upcoming}',
-                    icon:  Icons.event_rounded,
+                    icon: Icons.event_rounded,
                     color: Colors.deepPurple,
                   ),
                 ),
@@ -567,7 +623,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
                   child: StatCard(
                     title: 'Pending',
                     value: isLoading ? '...' : '${data.attendance.pending}',
-                    icon:  Icons.pending_actions_rounded,
+                    icon: Icons.pending_actions_rounded,
                     color: AppColors.warning,
                   ),
                 ),
@@ -575,8 +631,10 @@ class _CoachDashboardState extends State<CoachDashboard> {
                 Expanded(
                   child: StatCard(
                     title: 'Completed Today',
-                    value: isLoading ? '...' : '${data.attendance.completedToday}',
-                    icon:  Icons.check_circle_outline_rounded,
+                    value: isLoading
+                        ? '...'
+                        : '${data.attendance.completedToday}',
+                    icon: Icons.check_circle_outline_rounded,
                     color: accentGreen,
                   ),
                 ),
@@ -593,7 +651,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
                     child: StatCard(
                       title: 'Total Members',
                       value: isLoading ? '...' : '${data.stats.totalMembers}',
-                      icon:  Icons.people_outline,
+                      icon: Icons.people_outline,
                       color: AppColors.green,
                     ),
                   ),
@@ -605,7 +663,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
                     child: StatCard(
                       title: 'Groups',
                       value: isLoading ? '...' : '${data.stats.totalGroups}',
-                      icon:  Icons.groups_outlined,
+                      icon: Icons.groups_outlined,
                       color: AppColors.orange,
                     ),
                   ),
@@ -624,7 +682,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
       future: _dashboardFuture,
       builder: (context, snapshot) {
         final isLoading = snapshot.connectionState == ConnectionState.waiting;
-        final sessions  = snapshot.data?.todaySessions ?? [];
+        final sessions = snapshot.data?.todaySessions ?? [];
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -632,10 +690,14 @@ class _CoachDashboardState extends State<CoachDashboard> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text("Today's Sessions",
-                    style: GoogleFonts.montserrat(
-                      fontSize: 14.sp, fontWeight: FontWeight.w700, color: Colors.grey.shade700,
-                    )),
+                Text(
+                  "Today's Sessions",
+                  style: GoogleFonts.montserrat(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
                 TextButton(onPressed: () {}, child: const Text('View All')),
               ],
             ),
@@ -654,10 +716,19 @@ class _CoachDashboardState extends State<CoachDashboard> {
                 child: Center(
                   child: Column(
                     children: [
-                      Icon(Icons.sports_soccer, size: 40.sp, color: Colors.grey.shade400),
+                      Icon(
+                        Icons.sports_soccer,
+                        size: 40.sp,
+                        color: Colors.grey.shade400,
+                      ),
                       12.height,
-                      Text("No sessions scheduled today",
-                          style: GoogleFonts.poppins(fontSize: 13.sp, color: Colors.grey.shade500)),
+                      Text(
+                        "No sessions scheduled today",
+                        style: GoogleFonts.poppins(
+                          fontSize: 13.sp,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -682,14 +753,23 @@ class _CoachDashboardState extends State<CoachDashboard> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text("Upcoming Events",
-                style: GoogleFonts.montserrat(
-                  fontSize: 14.sp, fontWeight: FontWeight.w700, color: Colors.grey.shade700,
-                )),
+            Text(
+              "Upcoming Events",
+              style: GoogleFonts.montserrat(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w700,
+                color: Colors.grey.shade700,
+              ),
+            ),
             TextButton(
               onPressed: _navigateToAllEvents,
-              child: Text("See All",
-                  style: GoogleFonts.montserrat(color: accentGreen, fontWeight: FontWeight.bold)),
+              child: Text(
+                "See All",
+                style: GoogleFonts.montserrat(
+                  color: accentGreen,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         ),
@@ -700,7 +780,9 @@ class _CoachDashboardState extends State<CoachDashboard> {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const _EventCardShimmer();
             }
-            if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+            if (snapshot.hasError ||
+                !snapshot.hasData ||
+                snapshot.data!.isEmpty) {
               return Container(
                 padding: EdgeInsets.all(20.w),
                 decoration: BoxDecoration(
@@ -710,16 +792,28 @@ class _CoachDashboardState extends State<CoachDashboard> {
                 child: Center(
                   child: Column(
                     children: [
-                      Icon(Icons.event_busy, size: 40.sp, color: Colors.grey.shade400),
+                      Icon(
+                        Icons.event_busy,
+                        size: 40.sp,
+                        color: Colors.grey.shade400,
+                      ),
                       12.height,
-                      Text("No upcoming events",
-                          style: GoogleFonts.poppins(fontSize: 14.sp, color: Colors.grey.shade600)),
+                      Text(
+                        "No upcoming events",
+                        style: GoogleFonts.poppins(
+                          fontSize: 14.sp,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
                       8.height,
                       ElevatedButton(
                         onPressed: _handleCreateEvent,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: accentGreen,
-                          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 20.w,
+                            vertical: 8.h,
+                          ),
                         ),
                         child: const Text("Create Event"),
                       ),
@@ -730,10 +824,13 @@ class _CoachDashboardState extends State<CoachDashboard> {
             }
             return Column(
               children: snapshot.data!
-                  .map((e) => _UpcomingEventCard(event: e,
-                  onTap: () => _handleEventTap(e),
-                  onEdit: () => _handleEventEdit(e),
-            ))
+                  .map(
+                    (e) => _UpcomingEventCard(
+                      event: e,
+                      onTap: () => _handleEventTap(e),
+                      onEdit: () => _handleEventEdit(e),
+                    ),
+                  )
                   .toList(),
             );
           },
@@ -747,26 +844,30 @@ class _CoachDashboardState extends State<CoachDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("Quick Actions",
-            style: GoogleFonts.montserrat(
-              fontSize: 14.sp, fontWeight: FontWeight.w700, color: Colors.grey.shade700,
-            )),
+        Text(
+          "Quick Actions",
+          style: GoogleFonts.montserrat(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w700,
+            color: Colors.grey.shade700,
+          ),
+        ),
         16.height,
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _QuickActionButton(
-              icon:  Icons.add_circle_outline_rounded,
+              icon: Icons.add_circle_outline_rounded,
               label: "Create Event",
               onTap: _handleCreateEvent,
             ),
             _QuickActionButton(
-              icon:  Icons.assignment_turned_in_rounded,
+              icon: Icons.assignment_turned_in_rounded,
               label: "Take Attendance",
               onTap: () => toast("Take attendance"),
             ),
             _QuickActionButton(
-              icon:  Icons.rate_review_rounded,
+              icon: Icons.rate_review_rounded,
               label: "Add Feedback",
               onTap: () => toast("Add feedback"),
             ),
@@ -781,10 +882,14 @@ class _CoachDashboardState extends State<CoachDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("My Clubs",
-            style: GoogleFonts.montserrat(
-              fontSize: 16.sp, fontWeight: FontWeight.w700, color: Colors.grey.shade800,
-            )),
+        Text(
+          "My Clubs",
+          style: GoogleFonts.montserrat(
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w700,
+            color: Colors.grey.shade800,
+          ),
+        ),
         12.height,
         FutureBuilder<List<Club>>(
           future: _clubsFuture,
@@ -835,8 +940,10 @@ class _CoachDashboardState extends State<CoachDashboard> {
           children: [
             Icon(Icons.error_outline, color: Colors.red, size: 32.sp),
             8.height,
-            Text("Failed to load clubs",
-                style: GoogleFonts.poppins(color: Colors.red, fontSize: 14.sp)),
+            Text(
+              "Failed to load clubs",
+              style: GoogleFonts.poppins(color: Colors.red, fontSize: 14.sp),
+            ),
             TextButton(
               onPressed: () => setState(() => _clubsFuture = _fetchClubs()),
               child: const Text("Retry"),
@@ -860,11 +967,22 @@ class _CoachDashboardState extends State<CoachDashboard> {
           children: [
             Icon(Icons.sports_soccer, size: 48.sp, color: Colors.grey.shade400),
             12.height,
-            Text("No clubs assigned yet",
-                style: GoogleFonts.poppins(fontSize: 14.sp, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+            Text(
+              "No clubs assigned yet",
+              style: GoogleFonts.poppins(
+                fontSize: 14.sp,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
             4.height,
-            Text("You'll be assigned to clubs soon",
-                style: GoogleFonts.poppins(fontSize: 12.sp, color: Colors.grey.shade500)),
+            Text(
+              "You'll be assigned to clubs soon",
+              style: GoogleFonts.poppins(
+                fontSize: 12.sp,
+                color: Colors.grey.shade500,
+              ),
+            ),
           ],
         ),
       ),
@@ -886,9 +1004,19 @@ class _CoachDashboardState extends State<CoachDashboard> {
       margin: EdgeInsets.only(right: 12.w, bottom: 8.h),
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: gradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: LinearGradient(
+          colors: gradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(20.r),
-        boxShadow: [BoxShadow(color: gradient[0].withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            color: gradient[0].withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -902,28 +1030,54 @@ class _CoachDashboardState extends State<CoachDashboard> {
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12.r),
                 ),
-                child: Icon(Icons.sports_soccer, color: Colors.white, size: 20.sp),
+                child: Icon(
+                  Icons.sports_soccer,
+                  color: Colors.white,
+                  size: 20.sp,
+                ),
               ),
             ],
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(club.clubName,
-                  style: GoogleFonts.montserrat(fontSize: 16.sp, fontWeight: FontWeight.w700, color: Colors.white),
-                  maxLines: 1, overflow: TextOverflow.ellipsis),
+              Text(
+                club.clubName,
+                style: GoogleFonts.montserrat(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
               4.height,
-              Text(club.description,
-                  style: GoogleFonts.poppins(fontSize: 11.sp, color: Colors.white.withOpacity(0.9)),
-                  maxLines: 2, overflow: TextOverflow.ellipsis),
+              Text(
+                club.description,
+                style: GoogleFonts.poppins(
+                  fontSize: 11.sp,
+                  color: Colors.white.withOpacity(0.9),
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
               if (club.createdAt != null) ...[
                 8.height,
                 Row(
                   children: [
-                    Icon(Icons.calendar_today_rounded, size: 10.sp, color: Colors.white.withOpacity(0.7)),
+                    Icon(
+                      Icons.calendar_today_rounded,
+                      size: 10.sp,
+                      color: Colors.white.withOpacity(0.7),
+                    ),
                     4.width,
-                    Text("Since ${_formatDate(club.createdAt!)}",
-                        style: GoogleFonts.poppins(fontSize: 9.sp, color: Colors.white.withOpacity(0.7))),
+                    Text(
+                      "Since ${_formatDate(club.createdAt!)}",
+                      style: GoogleFonts.poppins(
+                        fontSize: 9.sp,
+                        color: Colors.white.withOpacity(0.7),
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -953,22 +1107,52 @@ class _CoachDashboardState extends State<CoachDashboard> {
             children: [
               Row(
                 children: [
-                  Container(width: 36.w, height: 36.w,
-                      decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(12.r))),
+                  Container(
+                    width: 36.w,
+                    height: 36.w,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                  ),
                   const Spacer(),
-                  Container(width: 20.w, height: 20.w,
-                      decoration: BoxDecoration(color: Colors.grey.shade300, shape: BoxShape.circle)),
+                  Container(
+                    width: 20.w,
+                    height: 20.w,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                 ],
               ),
               12.height,
-              Container(width: 180.w, height: 16.h,
-                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(4.r))),
+              Container(
+                width: 180.w,
+                height: 16.h,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(4.r),
+                ),
+              ),
               8.height,
-              Container(width: double.infinity, height: 12.h,
-                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(4.r))),
+              Container(
+                width: double.infinity,
+                height: 12.h,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(4.r),
+                ),
+              ),
               8.height,
-              Container(width: 120.w, height: 10.h,
-                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(4.r))),
+              Container(
+                width: 120.w,
+                height: 10.h,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(4.r),
+                ),
+              ),
             ],
           ),
         ),
@@ -978,8 +1162,11 @@ class _CoachDashboardState extends State<CoachDashboard> {
 
   String _formatDate(DateTime date) {
     final diff = DateTime.now().difference(date).inDays;
-    if (diff < 30)  return '$diff days ago';
-    if (diff < 365) { final m = (diff / 30).floor(); return '$m ${m == 1 ? 'month' : 'months'} ago'; }
+    if (diff < 30) return '$diff days ago';
+    if (diff < 365) {
+      final m = (diff / 30).floor();
+      return '$m ${m == 1 ? 'month' : 'months'} ago';
+    }
     final y = (diff / 365).floor();
     return '$y ${y == 1 ? 'year' : 'years'} ago';
   }
@@ -992,6 +1179,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
 /// Session card driven by DashboardSession from the API
 class _DashboardSessionCard extends StatelessWidget {
   final DashboardSession session;
+
   const _DashboardSessionCard({required this.session});
 
   @override
@@ -1033,27 +1221,49 @@ class _DashboardSessionCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(session.groupName,
-                    style: GoogleFonts.montserrat(
-                      fontSize: 14.sp, fontWeight: FontWeight.w700, color: Colors.black87,
-                    )),
+                Text(
+                  session.groupName,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                  ),
+                ),
                 4.height,
                 if (session.formattedTime.isNotEmpty)
                   Row(
                     children: [
-                      Icon(Icons.access_time, size: 12.sp, color: Colors.grey.shade500),
+                      Icon(
+                        Icons.access_time,
+                        size: 12.sp,
+                        color: Colors.grey.shade500,
+                      ),
                       4.width,
-                      Text(session.formattedTime,
-                          style: GoogleFonts.poppins(fontSize: 12.sp, color: Colors.grey.shade600)),
+                      Text(
+                        session.formattedTime,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12.sp,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
                     ],
                   ),
                 4.height,
                 Row(
                   children: [
-                    Icon(Icons.location_on_outlined, size: 12.sp, color: Colors.grey.shade500),
+                    Icon(
+                      Icons.location_on_outlined,
+                      size: 12.sp,
+                      color: Colors.grey.shade500,
+                    ),
                     4.width,
-                    Text(session.location,
-                        style: GoogleFonts.poppins(fontSize: 11.sp, color: Colors.grey.shade600)),
+                    Text(
+                      session.location,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.sp,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -1062,14 +1272,23 @@ class _DashboardSessionCard extends StatelessWidget {
           // Take attendance button for unmarked sessions
           if (!session.attendanceMarked)
             ElevatedButton(
-              onPressed: () => toast("Take attendance for ${session.groupName}"),
+              onPressed: () =>
+                  toast("Take attendance for ${session.groupName}"),
               style: ElevatedButton.styleFrom(
                 backgroundColor: accentGreen,
                 padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
               ),
-              child: Text("Take",
-                  style: GoogleFonts.poppins(fontSize: 12.sp, fontWeight: FontWeight.w600, color: Colors.white)),
+              child: Text(
+                "Take",
+                style: GoogleFonts.poppins(
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
             ),
         ],
       ),
@@ -1081,12 +1300,21 @@ class _UpcomingEventCard extends StatelessWidget {
   final CoachEvent event;
   final VoidCallback onTap;
   final VoidCallback onEdit;
-  const _UpcomingEventCard({required this.event, required this.onTap, required this.onEdit});
+
+  const _UpcomingEventCard({
+    required this.event,
+    required this.onTap,
+    required this.onEdit,
+  });
 
   @override
   Widget build(BuildContext context) {
     final daysDiff = event.date.difference(DateTime.now()).inDays;
-    final daysText = daysDiff == 0 ? "Today" : daysDiff == 1 ? "Tomorrow" : "In $daysDiff days";
+    final daysText = daysDiff == 0
+        ? "Today"
+        : daysDiff == 1
+        ? "Tomorrow"
+        : "In $daysDiff days";
 
     return GestureDetector(
       onTap: onTap,
@@ -1104,43 +1332,83 @@ class _UpcomingEventCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(event.title,
-                      style: Theme.of(context).textTheme.displayMedium
-                          ?.copyWith(fontSize: 14.sp, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    event.title,
+                    style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 10.w,
+                    vertical: 5.h,
+                  ),
                   decoration: BoxDecoration(
                     color: _statusColor(event.status).withOpacity(0.12),
                     borderRadius: BorderRadius.circular(20.r),
                   ),
-                  child: Text(event.status,
-                      style: GoogleFonts.poppins(
-                          fontSize: 11.sp, color: _statusColor(event.status), fontWeight: FontWeight.w600)),
+                  child: Text(
+                    event.status,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11.sp,
+                      color: _statusColor(event.status),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ],
             ),
             8.height,
             Row(
               children: [
-                Icon(Icons.location_on_outlined, size: 13.sp, color: Colors.grey.shade500),
+                Icon(
+                  Icons.location_on_outlined,
+                  size: 13.sp,
+                  color: Colors.grey.shade500,
+                ),
                 4.width,
-                Text(event.location,
-                    style: GoogleFonts.poppins(fontSize: 12.sp, color: Colors.grey.shade600)),
+                Text(
+                  event.location,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12.sp,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
               ],
             ),
             6.height,
             Row(
               children: [
-                Icon(Icons.calendar_today_rounded, size: 13.sp, color: Colors.grey.shade500),
+                Icon(
+                  Icons.calendar_today_rounded,
+                  size: 13.sp,
+                  color: Colors.grey.shade500,
+                ),
                 4.width,
-                Text(daysText, style: GoogleFonts.poppins(fontSize: 11.sp, color: Colors.grey.shade600)),
+                Text(
+                  daysText,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11.sp,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
                 if (event.startTime.isNotEmpty) ...[
                   12.width,
-                  Icon(Icons.access_time, size: 13.sp, color: Colors.grey.shade500),
+                  Icon(
+                    Icons.access_time,
+                    size: 13.sp,
+                    color: Colors.grey.shade500,
+                  ),
                   4.width,
-                  Text(_formatTime(event.startTime),
-                      style: GoogleFonts.poppins(fontSize: 11.sp, color: Colors.grey.shade600)),
+                  Text(
+                    _formatTime(event.startTime),
+                    style: GoogleFonts.poppins(
+                      fontSize: 11.sp,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -1152,13 +1420,26 @@ class _UpcomingEventCard extends StatelessWidget {
                   onTap: onEdit, // → CoachCreateEditEventSheet
                   child: Row(
                     children: [
-                      Icon(Icons.edit_outlined, size: 12.sp, color: Colors.grey.shade500),
+                      Icon(
+                        Icons.edit_outlined,
+                        size: 12.sp,
+                        color: Colors.grey.shade500,
+                      ),
                       4.width,
-                      Text("Edit",
-                          style: GoogleFonts.poppins(
-                              fontSize: 10.sp, color: Colors.grey.shade500, fontWeight: FontWeight.w500)),
+                      Text(
+                        "Edit",
+                        style: GoogleFonts.poppins(
+                          fontSize: 10.sp,
+                          color: Colors.grey.shade500,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                       4.width,
-                      Icon(Icons.arrow_forward_ios_rounded, size: 10.sp, color: Colors.grey.shade500),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 10.sp,
+                        color: Colors.grey.shade500,
+                      ),
                     ],
                   ),
                 ),
@@ -1172,11 +1453,16 @@ class _UpcomingEventCard extends StatelessWidget {
 
   Color _statusColor(String s) {
     switch (s) {
-      case 'SCHEDULED': return Colors.blue;
-      case 'ONGOING':   return Colors.green;
-      case 'COMPLETED': return Colors.grey;
-      case 'CANCELLED': return Colors.red;
-      default:          return accentGreen;
+      case 'SCHEDULED':
+        return Colors.blue;
+      case 'ONGOING':
+        return Colors.green;
+      case 'COMPLETED':
+        return Colors.grey;
+      case 'CANCELLED':
+        return Colors.red;
+      default:
+        return accentGreen;
     }
   }
 
@@ -1187,7 +1473,11 @@ class _UpcomingEventCard extends StatelessWidget {
       final h = int.parse(parts[0]);
       final m = parts[1];
       final period = h >= 12 ? 'PM' : 'AM';
-      final dh = h > 12 ? h - 12 : h == 0 ? 12 : h;
+      final dh = h > 12
+          ? h - 12
+          : h == 0
+          ? 12
+          : h;
       return '$dh:$m $period';
     } catch (_) {
       return time.length >= 5 ? time.substring(0, 5) : time;
@@ -1199,7 +1489,12 @@ class _QuickActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _QuickActionButton({required this.icon, required this.label, required this.onTap});
+
+  const _QuickActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1216,9 +1511,11 @@ class _QuickActionButton extends StatelessWidget {
             child: Icon(icon, color: accentGreen, size: 28.sp),
           ),
           8.height,
-          Text(label,
-              style: GoogleFonts.poppins(fontSize: 11.sp, color: Colors.black),
-              textAlign: TextAlign.center),
+          Text(
+            label,
+            style: GoogleFonts.poppins(fontSize: 11.sp, color: Colors.black),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
@@ -1227,21 +1524,27 @@ class _QuickActionButton extends StatelessWidget {
 
 class _SessionCardShimmer extends StatelessWidget {
   const _SessionCardShimmer();
+
   @override
   Widget build(BuildContext context) => Container(
     height: 90.h,
     decoration: BoxDecoration(
-        color: Colors.grey[300], borderRadius: BorderRadius.circular(16.r)),
+      color: Colors.grey[300],
+      borderRadius: BorderRadius.circular(16.r),
+    ),
   );
 }
 
 class _EventCardShimmer extends StatelessWidget {
   const _EventCardShimmer();
+
   @override
   Widget build(BuildContext context) => Container(
     height: 80.h,
     decoration: BoxDecoration(
-        color: Colors.grey[300], borderRadius: BorderRadius.circular(16.r)),
+      color: Colors.grey[300],
+      borderRadius: BorderRadius.circular(16.r),
+    ),
   );
 }
 
@@ -1277,16 +1580,18 @@ class CoachEvent {
   });
 
   factory CoachEvent.fromJson(Map<String, dynamic> json) => CoachEvent(
-    eventId:           json['eventId'],
-    title:             json['eventName'] ?? '',
-    date: json['eventDate'] != null ? DateTime.parse(json['eventDate']) : DateTime.now(),
-    location:          json['location'] ?? '',
-    type:              json['eventType'] ?? '',
-    clubId:            json['clubId'],
-    startTime:         json['startTime'] ?? '',
-    endTime:           json['endTime'] ?? '',
-    status:            json['status'] ?? 'SCHEDULED',
-    createdByUserId:   json['createdByUserId'],
+    eventId: json['eventId'],
+    title: json['eventName'] ?? '',
+    date: json['eventDate'] != null
+        ? DateTime.parse(json['eventDate'])
+        : DateTime.now(),
+    location: json['location'] ?? '',
+    type: json['eventType'] ?? '',
+    clubId: json['clubId'],
+    startTime: json['startTime'] ?? '',
+    endTime: json['endTime'] ?? '',
+    status: json['status'] ?? 'SCHEDULED',
+    createdByUserId: json['createdByUserId'],
     createdByUsername: json['createdByUsername'],
     coachIds: json['coachIds'] != null ? List<int>.from(json['coachIds']) : [],
   );
@@ -1324,16 +1629,28 @@ class StatCard extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(8)),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(8),
+              ),
               child: Icon(icon, color: AppColors.white, size: 20),
             ),
             const SizedBox(height: 12),
-            Text(value,
-                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                    color: color, fontSize: 15.sp, fontWeight: FontWeight.bold)),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                color: color,
+                fontSize: 15.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text(title,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.darkGrey)),
+            Text(
+              title,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.darkGrey),
+            ),
           ],
         ),
       ),

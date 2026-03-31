@@ -12,6 +12,7 @@ import 'package:sports/utills/api_service.dart';
 
 import '../../config/colors.dart';
 import '../../utills/shared_preference.dart';
+import '../notification_screen.dart';
 import '../splash.dart';
 import 'activities_screen.dart';
 import 'add_coach_screen.dart';
@@ -160,6 +161,13 @@ class _ClubAdminDashboardState extends State<ClubAdminDashboard> {
                 ),
               ),
               const Spacer(),
+              NotificationBellIcon(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NotificationScreen()),
+                ),
+              ),
+              SizedBox(width: 6),
               GestureDetector(
                 onTap: () => _showProfileSheet(context),
                 child: Container(

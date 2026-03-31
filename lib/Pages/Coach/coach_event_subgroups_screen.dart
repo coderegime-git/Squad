@@ -58,154 +58,169 @@ class _CoachEventSubGroupsScreenState extends State<CoachEventSubGroupsScreen> {
         child: members.isEmpty
             ? Center(child: Text("No member assigned"))
             : Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Top bar
-            Row(
-              children: [
-                Text(
-                  "$presentCount present · $absentCount absent",
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                ),
-                Spacer(),
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      for (var m in members) {
-                        attendanceStatus[m.memberId!] = "PRESENT";
-                      }
-                    });
-                  },
-                  child: Text(
-                    "Mark all present",
-                    style: TextStyle(fontSize: 13),
-                  ),
-                ),
-                SizedBox(width: 6),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: Container(
-                    padding: EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white,
-                      boxShadow: [
-                        BoxShadow(color: Colors.grey.shade700, blurRadius: 2),
-                      ],
-                    ),
-                    child: Icon(Icons.close, color: Colors.black, size: 15),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 8),
-
-            // Member list
-            ...members.map((data) {
-              final status = attendanceStatus[data.memberId] ?? "PRESENT";
-              final isPresent = status == "PRESENT";
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade200),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top bar
+                  Row(
                     children: [
-                      // P / A toggle badge
-                      GestureDetector(
-                        onTap: () {
+                      Text(
+                        "$presentCount present · $absentCount absent",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      Spacer(),
+                      TextButton(
+                        onPressed: () {
                           setState(() {
-                            attendanceStatus[data.memberId!] = isPresent
-                                ? "ABSENT"
-                                : "PRESENT";
+                            for (var m in members) {
+                              attendanceStatus[m.memberId!] = "PRESENT";
+                            }
                           });
                         },
+                        child: Text(
+                          "Mark all present",
+                          style: TextStyle(fontSize: 13),
+                        ),
+                      ),
+                      SizedBox(width: 6),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).pop();
+                        },
                         child: Container(
-                          width: 36,
-                          height: 36,
+                          padding: EdgeInsets.all(3),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: isPresent
-                                ? Colors.green.shade50
-                                : Colors.red.shade50,
-                            border: Border.all(
-                              color: isPresent ? Colors.green : Colors.red,
-                              width: 1.5,
-                            ),
+                            color: Colors.white,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.shade700,
+                                blurRadius: 2,
+                              ),
+                            ],
                           ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            isPresent ? "P" : "A",
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                              color: isPresent
-                                  ? Colors.green.shade800
-                                  : Colors.red.shade800,
-                            ),
+                          child: Icon(
+                            Icons.close,
+                            color: Colors.black,
+                            size: 15,
                           ),
                         ),
                       ),
-                      SizedBox(width: 12),
+                    ],
+                  ),
+                  SizedBox(height: 8),
 
-                      // Member info
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                  // Member list
+                  ...members.map((data) {
+                    final status = attendanceStatus[data.memberId] ?? "PRESENT";
+                    final isPresent = status == "PRESENT";
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade200),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
                           children: [
-                            Text(
-                              data.username ?? "",
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
+                            // P / A toggle badge
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  attendanceStatus[data.memberId!] = isPresent
+                                      ? "ABSENT"
+                                      : "PRESENT";
+                                });
+                              },
+                              child: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isPresent
+                                      ? Colors.green.shade50
+                                      : Colors.red.shade50,
+                                  border: Border.all(
+                                    color: isPresent
+                                        ? Colors.green
+                                        : Colors.red,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  isPresent ? "P" : "A",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                    color: isPresent
+                                        ? Colors.green.shade800
+                                        : Colors.red.shade800,
+                                  ),
+                                ),
                               ),
                             ),
-                            SizedBox(height: 2),
-                            Text(
-                              data.teamName ?? "",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                            SizedBox(height: 2),
-                            Text(
-                              data.groupName ?? "",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade400,
+                            SizedBox(width: 12),
+
+                            // Member info
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    data.username ?? "",
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    data.teamName ?? "",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    data.groupName ?? "",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade400,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
+                    );
+                  }).toList(),
+
+                  SizedBox(height: 16),
+
+                  // Submit button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: submitAttendance,
+                      child: Text(
+                        "Submit Attendance",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
                   ),
-                ),
-              );
-            }).toList(),
-
-            SizedBox(height: 16),
-
-            // Submit button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: submitAttendance,
-                child: Text(
-                  "Submit Attendance",
-                  style: TextStyle(color: Colors.white),
-                ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -251,12 +266,11 @@ class _CoachEventSubGroupsScreenState extends State<CoachEventSubGroupsScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            _SubGroupFormPage(
-              groupId: widget.groupId,
-              groupName: widget.groupName,
-              eventName: widget.eventName,
-            ),
+        builder: (_) => _SubGroupFormPage(
+          groupId: widget.groupId,
+          groupName: widget.groupName,
+          eventName: widget.eventName,
+        ),
       ),
     ).then((created) {
       if (created == true) _refresh();
@@ -268,13 +282,12 @@ class _CoachEventSubGroupsScreenState extends State<CoachEventSubGroupsScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            _SubGroupFormPage(
-              groupId: widget.groupId,
-              groupName: widget.groupName,
-              eventName: widget.eventName,
-              existing: sg,
-            ),
+        builder: (_) => _SubGroupFormPage(
+          groupId: widget.groupId,
+          groupName: widget.groupName,
+          eventName: widget.eventName,
+          existing: sg,
+        ),
       ),
     ).then((updated) {
       if (updated == true) _refresh();
@@ -285,60 +298,58 @@ class _CoachEventSubGroupsScreenState extends State<CoachEventSubGroupsScreen> {
   void _confirmDelete(SubGroupData sg) {
     showDialog(
       context: context,
-      builder: (_) =>
-          AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16.r),
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.r),
+        ),
+        title: Text(
+          "Delete Sub-Group",
+          style: GoogleFonts.montserrat(fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          'Are you sure you want to delete "${sg.name}"?\nThis action cannot be undone.',
+          style: GoogleFonts.poppins(fontSize: 13.sp),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              "Cancel",
+              style: GoogleFonts.poppins(color: Colors.grey),
             ),
-            title: Text(
-              "Delete Sub-Group",
-              style: GoogleFonts.montserrat(fontWeight: FontWeight.w700),
-            ),
-            content: Text(
-              'Are you sure you want to delete "${sg
-                  .name}"?\nThis action cannot be undone.',
-              style: GoogleFonts.poppins(fontSize: 13.sp),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(
-                  "Cancel",
-                  style: GoogleFonts.poppins(color: Colors.grey),
-                ),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                onPressed: () async {
-                  Navigator.pop(context);
-                  final success = await _api.deleteSubGroup(
-                    widget.groupId,
-                    sg.subGroupId!,
-                  );
-                  if (success) {
-                    _refresh();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Sub-Group deleted"),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Delete failed. Please try again."),
-                        backgroundColor: Colors.orange,
-                      ),
-                    );
-                  }
-                },
-                child: Text(
-                  "Delete",
-                  style: GoogleFonts.poppins(color: Colors.white),
-                ),
-              ),
-            ],
           ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(context);
+              final success = await _api.deleteSubGroup(
+                widget.groupId,
+                sg.subGroupId!,
+              );
+              if (success) {
+                _refresh();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Sub-Group deleted"),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Delete failed. Please try again."),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              }
+            },
+            child: Text(
+              "Delete",
+              style: GoogleFonts.poppins(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -362,305 +373,304 @@ class _CoachEventSubGroupsScreenState extends State<CoachEventSubGroupsScreen> {
       body: isLoad
           ? Center(child: Loader())
           : Column(
-        children: [
-          // Header
-          Container(
-            //height: 85.h,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.black,
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(16),
-                bottomRight: Radius.circular(16),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.25),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: SafeArea(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  top: 5.h,
-                  left: 20.w,
-                  right: 20.w,
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: Colors.white,
-                      ),
+              children: [
+                // Header
+                Container(
+                  //height: 85.h,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(16),
+                      bottomRight: Radius.circular(16),
                     ),
-                    16.width,
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.25),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: SafeArea(
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        top: 5.h,
+                        left: 20.w,
+                        right: 20.w,
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Text(
-                            "Sub-Groups",
-                            style: Theme
-                                .of(context)
-                                .textTheme
-                                .headlineMedium
-                                ?.copyWith(
+                          GestureDetector(
+                            onTap: () => Navigator.pop(context),
+                            child: const Icon(
+                              Icons.arrow_back_ios_new_rounded,
                               color: Colors.white,
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                          Text(
-                            widget.groupName,
-                            style: GoogleFonts.poppins(
-                              fontSize: 11.sp,
-                              color: Colors.white60,
+                          16.width,
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Sub-Groups",
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineMedium
+                                      ?.copyWith(
+                                        color: Colors.white,
+                                        fontSize: 20.sp,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
+                                Text(
+                                  widget.groupName,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11.sp,
+                                    color: Colors.white60,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
-                            overflow: TextOverflow.ellipsis,
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              showModalBottomSheet(
+                                isScrollControlled: true,
+                                useSafeArea: true,
+                                context: context,
+                                builder: (context) {
+                                  return StatefulBuilder(
+                                    builder: (context, setState) {
+                                      return buildAttendance(setState);
+                                    },
+                                  );
+                                },
+                              );
+                            },
+                            child: Text(
+                              "Mark attendance",
+                              style: TextStyle(color: Colors.white),
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () {
-                        showModalBottomSheet(
-                          isScrollControlled: true,
-                          useSafeArea: true,
-                          context: context,
-                          builder: (context) {
-                            return StatefulBuilder(
-                              builder: (context, setState) {
-                                return buildAttendance(setState);
-                              },
-                            );
-                          },
-                        );
-                      },
-                      child: Text(
-                        "Mark attendance",
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          ),
 
-          // List
-          Expanded(
-            child: FutureBuilder<GetSubGroups>(
-              future: _subGroupsFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting ||
-                    isLoad) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          color: Colors.red,
-                          size: 40.sp,
-                        ),
-                        12.height,
-                        Text(
-                          "Failed to load sub-groups",
-                          style: GoogleFonts.poppins(color: Colors.grey),
-                        ),
-                        12.height,
-                        ElevatedButton(
-                          onPressed: _refresh,
-                          child: const Text("Retry"),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                final subGroups = snapshot.data?.data ?? [];
-                if (subGroups.isEmpty) {
-                  return Center(
-                    child: Text(
-                      "No sub-groups found",
-                      style: GoogleFonts.poppins(color: Colors.grey),
-                    ),
-                  );
-                }
-
-                return RefreshIndicator(
-                  onRefresh: () async => _refresh(),
-                  color: accentOrange,
-                  child: ListView.builder(
-                    padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 90.h),
-                    itemCount: subGroups.length,
-                    itemBuilder: (_, i) {
-                      final sg = subGroups[i];
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  CoachEventTeamsScreen(
-                                    subGroupId: sg.subGroupId!,
-                                    subGroupName: sg.name ?? 'Sub-Group',
-                                    eventName: widget.eventName,
-                                  ),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          margin: EdgeInsets.only(bottom: 12.h),
-                          padding: EdgeInsets.all(16.w),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16.r),
-                            border: Border.all(
-                              color: accentOrange.withOpacity(0.3),
-                              width: 1.2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.04),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
+                // List
+                Expanded(
+                  child: FutureBuilder<GetSubGroups>(
+                    future: _subGroupsFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting ||
+                          isLoad) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (snapshot.hasError) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                color: Colors.red,
+                                size: 40.sp,
+                              ),
+                              12.height,
+                              Text(
+                                "Failed to load sub-groups",
+                                style: GoogleFonts.poppins(color: Colors.grey),
+                              ),
+                              12.height,
+                              ElevatedButton(
+                                onPressed: _refresh,
+                                child: const Text("Retry"),
                               ),
                             ],
                           ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: EdgeInsets.all(10.w),
-                                decoration: BoxDecoration(
-                                  color: accentOrange.withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(
-                                    12.r,
+                        );
+                      }
+
+                      final subGroups = snapshot.data?.data ?? [];
+                      if (subGroups.isEmpty) {
+                        return Center(
+                          child: Text(
+                            "No sub-groups found",
+                            style: GoogleFonts.poppins(color: Colors.grey),
+                          ),
+                        );
+                      }
+
+                      return RefreshIndicator(
+                        onRefresh: () async => _refresh(),
+                        color: accentOrange,
+                        child: ListView.builder(
+                          padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 90.h),
+                          itemCount: subGroups.length,
+                          itemBuilder: (_, i) {
+                            final sg = subGroups[i];
+                            return GestureDetector(
+                              onTap: () {
+                                print("sds");
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => CoachEventTeamsScreen(
+                                      subGroupId: sg.subGroupId!,
+                                      subGroupName: sg.name ?? 'Sub-Group',
+                                      eventName: widget.eventName,
+                                    ),
                                   ),
+                                );
+                              },
+                              child: Container(
+                                margin: EdgeInsets.only(bottom: 12.h),
+                                padding: EdgeInsets.all(16.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16.r),
+                                  border: Border.all(
+                                    color: accentOrange.withOpacity(0.3),
+                                    width: 1.2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.04),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
-                                child: Icon(
-                                  Icons.groups_2_rounded,
-                                  color: accentOrange,
-                                  size: 24.sp,
-                                ),
-                              ),
-                              14.width,
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                                child: Row(
                                   children: [
-                                    Text(
-                                      sg.name ?? '',
-                                      style: GoogleFonts.montserrat(
-                                        fontSize: 14.sp,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.black,
+                                    Container(
+                                      padding: EdgeInsets.all(10.w),
+                                      decoration: BoxDecoration(
+                                        color: accentOrange.withOpacity(0.12),
+                                        borderRadius: BorderRadius.circular(
+                                          12.r,
+                                        ),
+                                      ),
+                                      child: Icon(
+                                        Icons.groups_2_rounded,
+                                        color: accentOrange,
+                                        size: 24.sp,
                                       ),
                                     ),
-                                    Text(
-                                      sg.description ?? "",
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12.sp,
-                                        color: Colors.grey.shade600,
+                                    14.width,
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            sg.name ?? '',
+                                            style: GoogleFonts.montserrat(
+                                              fontSize: 14.sp,
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                          Text(
+                                            sg.description ?? "",
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 12.sp,
+                                              color: Colors.grey.shade600,
+                                            ),
+                                          ),
+                                          if (sg.ageCategory != null &&
+                                              sg.ageCategory!.isNotEmpty)
+                                            Container(
+                                              margin: EdgeInsets.only(top: 4.h),
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: 8.w,
+                                                vertical: 2.h,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: accentOrange.withOpacity(
+                                                  0.12,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(6.r),
+                                              ),
+                                              child: Text(
+                                                sg.ageCategory!,
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 10.sp,
+                                                  color: accentOrange,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
                                       ),
                                     ),
-                                    if (sg.ageCategory != null &&
-                                        sg.ageCategory!.isNotEmpty)
-                                      Container(
-                                        margin: EdgeInsets.only(top: 4.h),
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 8.w,
-                                          vertical: 2.h,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: accentOrange.withOpacity(
-                                            0.12,
+                                    // Edit & Delete icons
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        GestureDetector(
+                                          onTap: () => _openEditPage(sg),
+                                          child: Container(
+                                            padding: EdgeInsets.all(6.w),
+                                            decoration: BoxDecoration(
+                                              color: Colors.blue.withOpacity(
+                                                0.08,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8.r),
+                                            ),
+                                            child: Icon(
+                                              Icons.edit_rounded,
+                                              color: Colors.blue.shade400,
+                                              size: 18.sp,
+                                            ),
                                           ),
-                                          borderRadius:
-                                          BorderRadius.circular(6.r),
                                         ),
-                                        child: Text(
-                                          sg.ageCategory!,
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 10.sp,
-                                            color: accentOrange,
-                                            fontWeight: FontWeight.w600,
+                                        8.width,
+                                        GestureDetector(
+                                          onTap: () => _confirmDelete(sg),
+                                          child: Container(
+                                            padding: EdgeInsets.all(6.w),
+                                            decoration: BoxDecoration(
+                                              color: Colors.red.withOpacity(
+                                                0.08,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8.r),
+                                            ),
+                                            child: Icon(
+                                              Icons.delete_rounded,
+                                              color: Colors.red.shade400,
+                                              size: 18.sp,
+                                            ),
                                           ),
                                         ),
-                                      ),
+                                        8.width,
+                                        Icon(
+                                          Icons.chevron_right_rounded,
+                                          color: Colors.grey.shade400,
+                                        ),
+                                      ],
+                                    ),
                                   ],
                                 ),
                               ),
-                              // Edit & Delete icons
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  GestureDetector(
-                                    onTap: () => _openEditPage(sg),
-                                    child: Container(
-                                      padding: EdgeInsets.all(6.w),
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue.withOpacity(
-                                          0.08,
-                                        ),
-                                        borderRadius:
-                                        BorderRadius.circular(8.r),
-                                      ),
-                                      child: Icon(
-                                        Icons.edit_rounded,
-                                        color: Colors.blue.shade400,
-                                        size: 18.sp,
-                                      ),
-                                    ),
-                                  ),
-                                  8.width,
-                                  GestureDetector(
-                                    onTap: () => _confirmDelete(sg),
-                                    child: Container(
-                                      padding: EdgeInsets.all(6.w),
-                                      decoration: BoxDecoration(
-                                        color: Colors.red.withOpacity(
-                                          0.08,
-                                        ),
-                                        borderRadius:
-                                        BorderRadius.circular(8.r),
-                                      ),
-                                      child: Icon(
-                                        Icons.delete_rounded,
-                                        color: Colors.red.shade400,
-                                        size: 18.sp,
-                                      ),
-                                    ),
-                                  ),
-                                  8.width,
-                                  Icon(
-                                    Icons.chevron_right_rounded,
-                                    color: Colors.grey.shade400,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                            );
+                          },
                         ),
                       );
                     },
                   ),
-                );
-              },
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -718,10 +728,10 @@ class _SubGroupFormPageState extends State<_SubGroupFormPage> {
     if (_isEdit) {
       success = await _api
           .updateSubGroup(widget.groupId, widget.existing!.subGroupId!, {
-        "name": _nameCtrl.text.trim(),
-        "ageCategory": _ageCatCtrl.text.trim(),
-        "status": "ACTIVE",
-      });
+            "name": _nameCtrl.text.trim(),
+            "ageCategory": _ageCatCtrl.text.trim(),
+            "status": "ACTIVE",
+          });
     } else {
       success = await _api.createSubGroup(widget.groupId, {
         "name": _nameCtrl.text.trim(),
@@ -798,15 +808,12 @@ class _SubGroupFormPageState extends State<_SubGroupFormPage> {
                         children: [
                           Text(
                             _isEdit ? "Edit Sub-Group" : "Create Sub-Group",
-                            style: Theme
-                                .of(context)
-                                .textTheme
-                                .headlineMedium
+                            style: Theme.of(context).textTheme.headlineMedium
                                 ?.copyWith(
-                              color: Colors.white,
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
+                                  color: Colors.white,
+                                  fontSize: 20.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
                           ),
                           Text(
                             widget.groupName,
@@ -898,10 +905,7 @@ class _SubGroupFormPageState extends State<_SubGroupFormPage> {
                               fillColor: Colors.grey.shade50,
                             ),
                             style: GoogleFonts.poppins(fontSize: 14.sp),
-                            validator: (v) =>
-                            (v == null || v
-                                .trim()
-                                .isEmpty)
+                            validator: (v) => (v == null || v.trim().isEmpty)
                                 ? "Sub-group name is required"
                                 : null,
                           ),
@@ -945,10 +949,7 @@ class _SubGroupFormPageState extends State<_SubGroupFormPage> {
                               fillColor: Colors.grey.shade50,
                             ),
                             style: GoogleFonts.poppins(fontSize: 14.sp),
-                            validator: (v) =>
-                            (v == null || v
-                                .trim()
-                                .isEmpty)
+                            validator: (v) => (v == null || v.trim().isEmpty)
                                 ? "Age category is required"
                                 : null,
                           ),
@@ -973,23 +974,23 @@ class _SubGroupFormPageState extends State<_SubGroupFormPage> {
                         onPressed: _loading ? null : _submit,
                         child: _loading
                             ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2.5,
-                          ),
-                        )
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
                             : Text(
-                          _isEdit
-                              ? "Update Sub-Group"
-                              : "Create Sub-Group",
-                          style: GoogleFonts.montserrat(
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
+                                _isEdit
+                                    ? "Update Sub-Group"
+                                    : "Create Sub-Group",
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 15.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
                       ),
                     ),
                   ],

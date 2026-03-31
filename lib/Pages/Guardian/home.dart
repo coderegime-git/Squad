@@ -13,6 +13,7 @@ import '../../utills/api_service.dart';
 import '../../utills/helper.dart';
 import '../../utills/shared_preference.dart';
 import '../../widgets/common.dart';
+import '../notification_screen.dart';
 import 'demo.dart';
 
 class GuardianDashboard extends StatefulWidget {
@@ -70,7 +71,11 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
   }
 
   Future<void> _updateStatus(int memberId, int eventId, String status) async {
-    final success = await _api.updateGuardianEventStatus(memberId, eventId, status);
+    final success = await _api.updateGuardianEventStatus(
+      memberId,
+      eventId,
+      status,
+    );
     if (mounted) {
       if (success) {
         toast(status == 'ACCEPT' ? 'Event accepted!' : 'Event declined');
@@ -119,36 +124,20 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
                     children: [
                       Text(
                         "Hello, $_username",
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: Colors.white,
-                          fontSize: 20.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
+                              color: Colors.white,
+                              fontSize: 20.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                       const Spacer(),
-                      GestureDetector(
-                        onTap: () => Navigator.pushNamed(
-                            context, AppRoutes.guardianNotifications),
-                        child: Stack(
-                          children: [
-                            Icon(Icons.notifications_none_rounded,
-                                color: Colors.white, size: 26.sp),
-                            if (_pendingEvents.isNotEmpty)
-                              Positioned(
-                                right: 0,
-                                top: 0,
-                                child: Container(
-                                  width: 10.r,
-                                  height: 10.r,
-                                  decoration: BoxDecoration(
-                                    color: accentOrange,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                        color: Colors.black, width: 1.5),
-                                  ),
-                                ),
-                              ),
-                          ],
+                      NotificationBellIcon(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const NotificationScreen(),
+                          ),
                         ),
                       ),
                     ],
@@ -218,7 +207,9 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
                             if (_pendingEvents.isNotEmpty)
                               Container(
                                 padding: EdgeInsets.symmetric(
-                                    horizontal: 8.w, vertical: 2.h),
+                                  horizontal: 8.w,
+                                  vertical: 2.h,
+                                ),
                                 decoration: BoxDecoration(
                                   color: accentOrange.withOpacity(0.15),
                                   borderRadius: BorderRadius.circular(20.r),
@@ -250,18 +241,27 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
                               child: Text(
                                 "No pending events for this child",
                                 style: GoogleFonts.poppins(
-                                    color: textSecondary),
+                                  color: textSecondary,
+                                ),
                               ),
                             ),
                           )
                         else
-                          ..._pendingEvents.map((e) => _PendingEventCard(
-                            event: e,
-                            onAccept: () => _updateStatus(
-                                _selectedMemberId!, e.eventId, 'ACCEPT'),
-                            onDecline: () => _updateStatus(
-                                _selectedMemberId!, e.eventId, 'REJECT'),
-                          )),
+                          ..._pendingEvents.map(
+                            (e) => _PendingEventCard(
+                              event: e,
+                              onAccept: () => _updateStatus(
+                                _selectedMemberId!,
+                                e.eventId,
+                                'ACCEPT',
+                              ),
+                              onDecline: () => _updateStatus(
+                                _selectedMemberId!,
+                                e.eventId,
+                                'REJECT',
+                              ),
+                            ),
+                          ),
                       ],
 
                       24.height,
@@ -364,7 +364,9 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
                       Text(
                         member.username,
                         style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.bold, fontSize: 13.sp),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13.sp,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                       5.height,
@@ -394,8 +396,11 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
       child: Center(
         child: Column(
           children: [
-            Icon(Icons.child_care_rounded,
-                size: 48.sp, color: Colors.grey.shade400),
+            Icon(
+              Icons.child_care_rounded,
+              size: 48.sp,
+              color: Colors.grey.shade400,
+            ),
             12.height,
             Text(
               "No children linked yet.",
@@ -444,22 +449,29 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
               children: [
                 Icon(icon, color: color, size: 28.sp),
                 8.width,
-                Text(value,
-                    style: GoogleFonts.montserrat(
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.w800,
-                        color: color)),
+                Text(
+                  value,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                  ),
+                ),
               ],
             ),
             8.height,
-            Text(label,
-                style:
-                GoogleFonts.poppins(fontSize: 13.sp, color: textSecondary)),
+            Text(
+              label,
+              style: GoogleFonts.poppins(fontSize: 13.sp, color: textSecondary),
+            ),
             2.height,
-            Text(subtitle,
-                style: GoogleFonts.poppins(
-                    fontSize: 11.sp,
-                    color: textSecondary.withOpacity(0.7))),
+            Text(
+              subtitle,
+              style: GoogleFonts.poppins(
+                fontSize: 11.sp,
+                color: textSecondary.withOpacity(0.7),
+              ),
+            ),
           ],
         ),
       ),
@@ -537,16 +549,27 @@ class _PendingEventCard extends StatelessWidget {
             children: [
               Icon(Icons.sports_rounded, size: 13.sp, color: textSecondary),
               5.width,
-              Text(event.teamName,
-                  style: GoogleFonts.poppins(
-                      fontSize: 12.sp, color: textSecondary)),
+              Text(
+                event.teamName,
+                style: GoogleFonts.poppins(
+                  fontSize: 12.sp,
+                  color: textSecondary,
+                ),
+              ),
               16.width,
-              Icon(Icons.calendar_today_rounded,
-                  size: 13.sp, color: textSecondary),
+              Icon(
+                Icons.calendar_today_rounded,
+                size: 13.sp,
+                color: textSecondary,
+              ),
               5.width,
-              Text(event.eventDate,
-                  style: GoogleFonts.poppins(
-                      fontSize: 12.sp, color: textSecondary)),
+              Text(
+                event.eventDate,
+                style: GoogleFonts.poppins(
+                  fontSize: 12.sp,
+                  color: textSecondary,
+                ),
+              ),
             ],
           ),
           12.height,
@@ -559,14 +582,18 @@ class _PendingEventCard extends StatelessWidget {
                     backgroundColor: accentGreen,
                     padding: EdgeInsets.symmetric(vertical: 10.h),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.r)),
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
                     elevation: 0,
                   ),
-                  child: Text('Accept',
-                      style: GoogleFonts.poppins(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white)),
+                  child: Text(
+                    'Accept',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
               12.width,
@@ -577,13 +604,17 @@ class _PendingEventCard extends StatelessWidget {
                     side: const BorderSide(color: Colors.red, width: 1.5),
                     padding: EdgeInsets.symmetric(vertical: 10.h),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.r)),
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
                   ),
-                  child: Text('Decline',
-                      style: GoogleFonts.poppins(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.red)),
+                  child: Text(
+                    'Decline',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.red,
+                    ),
+                  ),
                 ),
               ),
             ],

@@ -47,7 +47,12 @@ class _EventTeamsScreenState extends State<EventTeamsScreen> {
     return result.data;
   }
 
-  void _refresh() => setState(() => _teamsFuture = _fetchTeams());
+  void _refresh() {
+    final future = _fetchTeams();
+    setState(() {
+      _teamsFuture = future;
+    });
+  }
 
   // ── Create Team Sheet ──────────────────────────────────────────────────────
   void _showCreateSheet() {
@@ -63,170 +68,180 @@ class _EventTeamsScreenState extends State<EventTeamsScreen> {
       backgroundColor: cardDark,
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24.r))),
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setSheet) {
-          // Load coaches once
-          if (loadingCoaches) {
-            _apiService.getCoaches().then((result) {
-              setSheet(() {
-                coaches = result.data;
-                loadingCoaches = false;
-              });
-            }).catchError((_) {
-              setSheet(() => loadingCoaches = false);
-            });
-          }
+      builder: (_) =>
+          StatefulBuilder(
+            builder: (ctx, setSheet) {
+              // Load coaches once
+              if (loadingCoaches) {
+                _apiService.getCoaches().then((result) {
+                  setSheet(() {
+                    coaches = result.data;
+                    loadingCoaches = false;
+                  });
+                }).catchError((_) {
+                  setSheet(() => loadingCoaches = false);
+                });
+              }
 
-          return Padding(
-            padding: EdgeInsets.only(
-              left: 20.w,
-              right: 20.w,
-              top: 20.h,
-              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24.h,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40.w,
-                      height: 4.h,
-                      decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(2.r)),
-                    ),
-                  ),
-                  16.height,
-                  Text('Create Team',
-                      style: GoogleFonts.montserrat(
-                          fontSize: 18.sp, fontWeight: FontWeight.bold)),
-                  6.height,
-                  Text('Sub-group: ${widget.subGroup.name}',
-                      style: GoogleFonts.poppins(
-                          fontSize: 12.sp, color: textSecondary)),
-                  20.height,
-                  _sheetField(
-                      'Team Name *', nameCtrl, Icons.sports_soccer_rounded,
-                      hint: 'e.g., Team Alpha'),
-                  16.height,
-                  // Text('Assign Coaches (optional)',
-                  //     style: GoogleFonts.poppins(
-                  //         fontSize: 12.sp,
-                  //         color: textSecondary,
-                  //         fontWeight: FontWeight.w500)),
-                  Row(
+              return Padding(
+                padding: EdgeInsets.only(
+                  left: 20.w,
+                  right: 20.w,
+                  top: 20.h,
+                  bottom: MediaQuery
+                      .of(ctx)
+                      .viewInsets
+                      .bottom + 24.h,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Assign Coach *',),
-                      6.width,
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8.r),
+                      Center(
+                        child: Container(
+                          width: 40.w,
+                          height: 4.h,
+                          decoration: BoxDecoration(
+                              color: Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(2.r)),
                         ),
-                        child: Text('Required', style: GoogleFonts.poppins(
-                            fontSize: 10.sp, color: Colors.red, fontWeight: FontWeight.w600)),
+                      ),
+                      16.height,
+                      Text('Create Team',
+                          style: GoogleFonts.montserrat(
+                              fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                      6.height,
+                      Text('Sub-group: ${widget.subGroup.name}',
+                          style: GoogleFonts.poppins(
+                              fontSize: 12.sp, color: textSecondary)),
+                      20.height,
+                      _sheetField(
+                          'Team Name *', nameCtrl, Icons.sports_soccer_rounded,
+                          hint: 'e.g., Team Alpha'),
+                      16.height,
+                      // Text('Assign Coaches (optional)',
+                      //     style: GoogleFonts.poppins(
+                      //         fontSize: 12.sp,
+                      //         color: textSecondary,
+                      //         fontWeight: FontWeight.w500)),
+                      Row(
+                        children: [
+                          Text('Assign Coach *',),
+                          6.width,
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 8.w,
+                                vertical: 2.h),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8.r),
+                            ),
+                            child: Text('Required', style: GoogleFonts.poppins(
+                                fontSize: 10.sp,
+                                color: Colors.red,
+                                fontWeight: FontWeight.w600)),
+                          ),
+                        ],
+                      ),
+                      8.height,
+                      loadingCoaches
+                          ? const Center(child: CircularProgressIndicator())
+                          : coaches.isEmpty
+                          ? Text('No coaches available',
+                          style: GoogleFonts.poppins(
+                              fontSize: 12.sp, color: textSecondary))
+                          : Wrap(
+                        spacing: 8.w,
+                        runSpacing: 8.h,
+                        children: coaches.map((coach) {
+                          final selected =
+                          selectedCoachIds.contains(coach.coachId);
+                          return FilterChip(
+                            label: Text(coach.username,
+                                style: GoogleFonts.poppins(
+                                    fontSize: 12.sp,
+                                    color: Colors.grey.shade700)),
+                            selected: selected,
+                            onSelected: (sel) {
+                              setSheet(() {
+                                if (sel) {
+                                  selectedCoachIds.add(coach.coachId);
+                                } else {
+                                  selectedCoachIds
+                                      .remove(coach.coachId);
+                                }
+                              });
+                            },
+                            selectedColor: accentGreen.withOpacity(0.15),
+                            checkmarkColor: accentGreen,
+                            backgroundColor: Colors.white,
+                            shape: StadiumBorder(
+                                side: BorderSide(
+                                    color: Colors.grey.shade300)),
+                          );
+                        }).toList(),
+                      ),
+                      20.height,
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: isLoading
+                              ? null
+                              : () async {
+                            if (nameCtrl.text
+                                .trim()
+                                .isEmpty) {
+                              toast('Please enter team name');
+                              return;
+                            }
+// ADD THIS ↓
+                            if (selectedCoachIds.isEmpty) {
+                              toast('Please assign at least one coach',
+                                  bgColor: accentOrange);
+                              return;
+                            }
+                            setSheet(() => isLoading = true);
+                            final success = await _apiService.createTeam(
+                              widget.subGroup.subGroupId,
+                              {
+                                "subGroupId": widget.subGroup.subGroupId,
+                                "name": nameCtrl.text.trim(),
+                                "coachIds": selectedCoachIds,
+                              },
+                            );
+                            setSheet(() => isLoading = false);
+                            if (success) {
+                              Navigator.pop(ctx);
+                              AppUI.success(context,
+                                  'Team "${nameCtrl.text}" created!');
+                              _refresh();
+                            } else {
+                              AppUI.error(context,
+                                  'Failed to create team. Try again.');
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: accentGreen,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: EdgeInsets.symmetric(vertical: 14.h),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14.r)),
+                          ),
+                          child: isLoading
+                              ? AppUI.buttonSpinner()
+                              : Text('Create Team',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w700)),
+                        ),
                       ),
                     ],
                   ),
-                  8.height,
-                  loadingCoaches
-                      ? const Center(child: CircularProgressIndicator())
-                      : coaches.isEmpty
-                      ? Text('No coaches available',
-                      style: GoogleFonts.poppins(
-                          fontSize: 12.sp, color: textSecondary))
-                      : Wrap(
-                    spacing: 8.w,
-                    runSpacing: 8.h,
-                    children: coaches.map((coach) {
-                      final selected =
-                      selectedCoachIds.contains(coach.coachId);
-                      return FilterChip(
-                        label: Text(coach.username,
-                            style: GoogleFonts.poppins(
-                                fontSize: 12.sp,
-                                color: Colors.grey.shade700)),
-                        selected: selected,
-                        onSelected: (sel) {
-                          setSheet(() {
-                            if (sel) {
-                              selectedCoachIds.add(coach.coachId);
-                            } else {
-                              selectedCoachIds
-                                  .remove(coach.coachId);
-                            }
-                          });
-                        },
-                        selectedColor: accentGreen.withOpacity(0.15),
-                        checkmarkColor: accentGreen,
-                        backgroundColor: Colors.white,
-                        shape: StadiumBorder(
-                            side: BorderSide(
-                                color: Colors.grey.shade300)),
-                      );
-                    }).toList(),
-                  ),
-                  20.height,
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: isLoading
-                          ? null
-                          : () async {
-                        if (nameCtrl.text.trim().isEmpty) {
-                          toast('Please enter team name');
-                          return;
-                        }
-// ADD THIS ↓
-                        if (selectedCoachIds.isEmpty) {
-                          toast('Please assign at least one coach', bgColor: accentOrange);
-                          return;
-                        }
-                        setSheet(() => isLoading = true);
-                        final success = await _apiService.createTeam(
-                          widget.subGroup.subGroupId,
-                          {
-                            "subGroupId": widget.subGroup.subGroupId,
-                            "name": nameCtrl.text.trim(),
-                            "coachIds": selectedCoachIds,
-                          },
-                        );
-                        setSheet(() => isLoading = false);
-                        if (success) {
-                          Navigator.pop(ctx);
-                          AppUI.success(context,
-                              'Team "${nameCtrl.text}" created!');
-                          _refresh();
-                        } else {
-                          AppUI.error(context,
-                              'Failed to create team. Try again.');
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: accentGreen,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: EdgeInsets.symmetric(vertical: 14.h),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14.r)),
-                      ),
-                      child: isLoading
-                          ? AppUI.buttonSpinner()
-                          : Text('Create Team',
-                          style: GoogleFonts.poppins(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w700)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
+                ),
+              );
+            },
+          ),
     );
   }
 
@@ -234,32 +249,33 @@ class _EventTeamsScreenState extends State<EventTeamsScreen> {
   Future<void> _confirmDelete(TeamData team) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: Colors.grey.shade200,
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-        title: Text('Delete Team',
-            style: GoogleFonts.montserrat(
-                fontWeight: FontWeight.w700, fontSize: 16.sp)),
-        content: Text(
-          'Are you sure you want to delete "${team.name}"?',
-          style: GoogleFonts.poppins(fontSize: 13.sp, color: textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel',
-                style: GoogleFonts.poppins(
-                    color: textSecondary, fontWeight: FontWeight.w500)),
+      builder: (_) =>
+          AlertDialog(
+            backgroundColor: Colors.grey.shade200,
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+            title: Text('Delete Team',
+                style: GoogleFonts.montserrat(
+                    fontWeight: FontWeight.w700, fontSize: 16.sp)),
+            content: Text(
+              'Are you sure you want to delete "${team.name}"?',
+              style: GoogleFonts.poppins(fontSize: 13.sp, color: textSecondary),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text('Cancel',
+                    style: GoogleFonts.poppins(
+                        color: textSecondary, fontWeight: FontWeight.w500)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text('Delete',
+                    style: GoogleFonts.poppins(
+                        color: Colors.red, fontWeight: FontWeight.w700)),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('Delete',
-                style: GoogleFonts.poppins(
-                    color: Colors.red, fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
     );
 
     if (confirmed == true) {
@@ -381,8 +397,7 @@ class _EventTeamsScreenState extends State<EventTeamsScreen> {
     );
   }
 
-  Widget _sheetField(
-      String label,
+  Widget _sheetField(String label,
       TextEditingController ctrl,
       IconData icon, {
         String? hint,
@@ -474,7 +489,8 @@ class _EventTeamsScreenState extends State<EventTeamsScreen> {
                           children: [
                             Text(
                               'Teams',
-                              style: Theme.of(context)
+                              style: Theme
+                                  .of(context)
                                   .textTheme
                                   .headlineMedium
                                   ?.copyWith(
