@@ -18,6 +18,7 @@ class _SplashState extends State<Splash> {
   void initState() {
     super.initState();
     _navigate();
+    //SharedPreferenceHelper.clear();
   }
 
   void _navigate() {

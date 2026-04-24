@@ -38,13 +38,17 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
   String _selectedType = 'SINGLE_EVENT';
   String _selectedStatus = 'SCHEDULED';
   bool _loading = false;
+  final _descriptionController = TextEditingController();
+  final _mapsLinkController = TextEditingController();
+  bool _isRecurring = false;
 
-  final List<String> _eventTypes = [
-    'SINGLE_EVENT',
-    'TOURNAMENT',
-    'PRACTICE',
-    'MATCH',
-  ];
+  // final List<String> _eventTypes = [
+  //   'SINGLE_EVENT',
+  //   'TOURNAMENT',
+  //   'PRACTICE',
+  //   'MATCH',
+  // ];
+  final List<String> _eventTypes = ['SINGLE_EVENT', 'RECURRING'];
 
   final List<String> _statusOptions = [
     'SCHEDULED',
@@ -67,9 +71,11 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
     final event = widget.event!;
     _nameController.text = event.eventName;
     _locationController.text = event.location;
+    //_mapsLinkController.text = event.mapsLink ?? '';
+    //_descriptionController.text = event.description ?? '';
     _selectedDate = event.eventDate;
-    _selectedType = event.eventType;
-    _selectedStatus = event.status;
+    _selectedType = (event.eventType == 'RECURRING') ? 'RECURRING' : 'SINGLE_EVENT';
+    _isRecurring = _selectedType == 'RECURRING';
 
     // Parse time strings
     try {
@@ -142,8 +148,9 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
         "startTime": _formatTimeForApi(_startTime),
         "endTime": _formatTimeForApi(_endTime),
         "location": _locationController.text.trim(),
+        "mapsLink": _mapsLinkController.text.trim(),
+        "description": _descriptionController.text.trim(),
         "eventType": _selectedType,
-        "status": _selectedStatus,
       };
 
       print("Submitting event data: $data");
@@ -259,6 +266,7 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
                     padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
                     children: [
                       // Event Name
+// Event Name
                       _buildLabel("Event Name *"),
                       8.height,
                       TextFormField(
@@ -269,7 +277,18 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
                       ),
                       16.height,
 
-                      // Location
+// Description
+                      _buildLabel("Description"),
+                      8.height,
+                      TextFormField(
+                        controller: _descriptionController,
+                        maxLines: 3,
+                        decoration: _inputDecor("Describe the event..."),
+                        style: GoogleFonts.poppins(fontSize: 14.sp),
+                      ),
+                      16.height,
+
+// Location
                       _buildLabel("Location *"),
                       8.height,
                       TextFormField(
@@ -278,40 +297,94 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
                         decoration: _inputDecor("e.g., Ground A"),
                         style: GoogleFonts.poppins(fontSize: 14.sp),
                       ),
+                      8.height,
+
+// Google Maps Link
+                      _buildLabel("Google Maps Link (optional)"),
+                      8.height,
+                      TextFormField(
+                        controller: _mapsLinkController,
+                        keyboardType: TextInputType.url,
+                        decoration: _inputDecor("https://maps.google.com/...").copyWith(
+                          prefixIcon: Icon(Icons.map_outlined, color: Colors.green, size: 18.sp),
+                        ),
+                        style: GoogleFonts.poppins(fontSize: 13.sp),
+                      ),
                       16.height,
 
+// Event Type — Single or Recurring
                       _buildLabel("Event Type"),
                       8.height,
-                      DropdownButtonFormField<String>(
-                        value: _selectedType,
-                        items: _eventTypes
-                            .map((t) => DropdownMenuItem(
-                          value: t,
-                          child: Text(t,
-                              style: GoogleFonts.poppins(fontSize: 13.sp)),
-                        ))
-                            .toList(),
-                        onChanged: (v) => setState(() => _selectedType = v ?? _selectedType),
-                        decoration: _inputDecor(""),
-                      ),
-                      16.height,
-                      _buildLabel("Status"),
-                      8.height,
-                      DropdownButtonFormField<String>(
-                        value: _selectedStatus,
-                        items: _statusOptions
-                            .map((s) => DropdownMenuItem(
-                          value: s,
-                          child: Text(s,
-                              style: GoogleFonts.poppins(fontSize: 13.sp)),
-                        ))
-                            .toList(),
-                        onChanged: (v) => setState(() => _selectedStatus = v ?? _selectedStatus),
-                        decoration: _inputDecor(""),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() {
+                                _selectedType = 'SINGLE_EVENT';
+                                _isRecurring = false;
+                              }),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(vertical: 12.h),
+                                decoration: BoxDecoration(
+                                  color: !_isRecurring ? accentGreen.withOpacity(0.1) : Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(10.r),
+                                  border: Border.all(
+                                    color: !_isRecurring ? accentGreen : Colors.grey.shade300,
+                                    width: !_isRecurring ? 1.5 : 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Icon(Icons.event, color: !_isRecurring ? accentGreen : Colors.grey, size: 20.sp),
+                                    4.height,
+                                    Text("Single Event",
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12.sp,
+                                          color: !_isRecurring ? accentGreen : Colors.grey,
+                                          fontWeight: !_isRecurring ? FontWeight.w600 : FontWeight.normal,
+                                        )),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          12.width,
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() {
+                                _selectedType = 'RECURRING';
+                                _isRecurring = true;
+                              }),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(vertical: 12.h),
+                                decoration: BoxDecoration(
+                                  color: _isRecurring ? accentGreen.withOpacity(0.1) : Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(10.r),
+                                  border: Border.all(
+                                    color: _isRecurring ? accentGreen : Colors.grey.shade300,
+                                    width: _isRecurring ? 1.5 : 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Icon(Icons.repeat, color: _isRecurring ? accentGreen : Colors.grey, size: 20.sp),
+                                    4.height,
+                                    Text("Recurring",
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12.sp,
+                                          color: _isRecurring ? accentGreen : Colors.grey,
+                                          fontWeight: _isRecurring ? FontWeight.w600 : FontWeight.normal,
+                                        )),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       16.height,
 
-                      // Date
+// Date
                       _buildLabel("Event Date"),
                       8.height,
                       GestureDetector(
@@ -324,13 +397,11 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.calendar_today_rounded,
-                                  color: accentGreen, size: 18.sp),
+                              Icon(Icons.calendar_today_rounded, color: accentGreen, size: 18.sp),
                               10.width,
                               Text(
                                 "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
-                                style: GoogleFonts.poppins(
-                                    fontSize: 14.sp, color: Colors.black),
+                                style: GoogleFonts.poppins(fontSize: 14.sp, color: Colors.black),
                               ),
                             ],
                           ),
@@ -338,7 +409,7 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
                       ),
                       16.height,
 
-                      // Times
+// Times
                       Row(
                         children: [
                           Expanded(
@@ -352,20 +423,15 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
                                   child: Container(
                                     padding: EdgeInsets.all(14.w),
                                     decoration: BoxDecoration(
-                                      border: Border.all(
-                                          color: Colors.grey.shade400),
+                                      border: Border.all(color: Colors.grey.shade400),
                                       borderRadius: BorderRadius.circular(12.r),
                                     ),
                                     child: Row(
                                       children: [
-                                        Icon(Icons.access_time_rounded,
-                                            color: accentGreen, size: 16.sp),
+                                        Icon(Icons.access_time_rounded, color: accentGreen, size: 16.sp),
                                         8.width,
-                                        Text(
-                                          _startTime.format(context),
-                                          style: GoogleFonts.poppins(
-                                              fontSize: 13.sp),
-                                        ),
+                                        Text(_startTime.format(context),
+                                            style: GoogleFonts.poppins(fontSize: 13.sp)),
                                       ],
                                     ),
                                   ),
@@ -385,20 +451,15 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
                                   child: Container(
                                     padding: EdgeInsets.all(14.w),
                                     decoration: BoxDecoration(
-                                      border: Border.all(
-                                          color: Colors.grey.shade400),
+                                      border: Border.all(color: Colors.grey.shade400),
                                       borderRadius: BorderRadius.circular(12.r),
                                     ),
                                     child: Row(
                                       children: [
-                                        Icon(Icons.access_time_rounded,
-                                            color: accentOrange, size: 16.sp),
+                                        Icon(Icons.access_time_rounded, color: accentOrange, size: 16.sp),
                                         8.width,
-                                        Text(
-                                          _endTime.format(context),
-                                          style: GoogleFonts.poppins(
-                                              fontSize: 13.sp),
-                                        ),
+                                        Text(_endTime.format(context),
+                                            style: GoogleFonts.poppins(fontSize: 13.sp)),
                                       ],
                                     ),
                                   ),
@@ -408,10 +469,9 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
                           ),
                         ],
                       ),
-
                       16.height,
 
-                      // Club Info
+// Club Info banner
                       Container(
                         padding: EdgeInsets.all(12.w),
                         decoration: BoxDecoration(
@@ -427,19 +487,15 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
                                 _isEditing
                                     ? "Editing event for ${widget.clubName}"
                                     : "Event will be created for ${widget.clubName}",
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12.sp,
-                                  color: Colors.grey.shade700,
-                                ),
+                                style: GoogleFonts.poppins(fontSize: 12.sp, color: Colors.grey.shade700),
                               ),
                             ),
                           ],
                         ),
                       ),
-
                       32.height,
 
-                      // Submit
+// Submit
                       SizedBox(
                         width: double.infinity,
                         height: 52.h,
@@ -447,18 +503,14 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
                           onPressed: _loading ? null : _submit,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: accentGreen,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14.r),
-                            ),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14.r)),
                           ),
                           child: _loading
                               ? AppUI.buttonSpinner()
                               : Text(
                             _isEditing ? "Update Event" : "Create Event",
                             style: GoogleFonts.poppins(
-                              fontSize: 15.sp,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                              fontSize: 15.sp, fontWeight: FontWeight.w600, color: Colors.white,
                             ),
                           ),
                         ),

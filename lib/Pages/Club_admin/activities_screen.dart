@@ -54,7 +54,7 @@ class _ClubAdminActivitiesScreenState extends State<ClubAdminActivitiesScreen> {
           children: [
             // Header
             Container(
-              height: widget.fromMap == true ? 50.h : 75.h,
+              //height: widget.fromMap == true ? 50.h : 75.h,
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.black,

@@ -220,6 +220,7 @@ class _ClubAdminAddCoachScreenState extends State<ClubAdminAddCoachScreen> {
             Expanded(
               child: Form(
                 key: _formKey,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
                   padding: EdgeInsets.all(20.w),
@@ -292,7 +293,7 @@ class _ClubAdminAddCoachScreenState extends State<ClubAdminAddCoachScreen> {
   Future<void> _handleNext() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_currentStep < _stepTitles.length - 2) {
+    if (_currentStep < _stepTitles.length - 1) {
       setState(() => _currentStep++);
       return;
     }
@@ -664,15 +665,18 @@ class _ClubAdminAddCoachScreenState extends State<ClubAdminAddCoachScreen> {
   );
 
   Widget _formField(
-    String label,
-    TextEditingController ctrl,
-    IconData icon, {
-    String? hint,
-    bool required = true,
-    int maxLines = 1,
-    TextInputType? keyboardType,
-    bool obscureText = false, // added support for password
-  }) {
+      String label,
+      TextEditingController ctrl,
+      IconData icon, {
+        String? hint,
+        bool required = true,
+        int maxLines = 1,
+        TextInputType? keyboardType,
+        bool obscureText = false,
+        String? Function(String?)? customValidator,
+      }) {
+    String fieldName = label.replaceAll(RegExp(r'[\*\s]'), '');
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -687,16 +691,27 @@ class _ClubAdminAddCoachScreenState extends State<ClubAdminAddCoachScreen> {
         6.height,
         TextFormField(
           controller: ctrl,
-          obscureText: obscureText,
           maxLines: maxLines,
           keyboardType: keyboardType,
-          validator: required
-              ? (v) => (v == null || v.trim().isEmpty)
-                    ? label == "Email *"
-                          ? validateEmail(v!)
-                          : 'Required'
-                    : null
-              : null,
+          obscureText: obscureText,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          validator: customValidator ?? (v) {
+            if (!required) return null;
+
+            if (label.contains("Email")) {
+              return AppValidator.validateEmail(v);
+            }
+            if (label.contains("Phone") || label.contains("WhatsApp") || label.contains("Emergency")) {
+              return AppValidator.validatePhone(v);
+            }
+            if (label.contains("Password")) {
+              return AppValidator.validatePassword(v);
+            }
+            if (label.contains("Name") || label.contains("Full Name")) {
+              return AppValidator.validateName(v, fieldName: "Full Name");
+            }
+            return AppValidator.validateRequired(v, fieldName);
+          },
           style: GoogleFonts.poppins(fontSize: 13.sp, color: Colors.black),
           decoration: InputDecoration(
             hintText: hint,
@@ -707,10 +722,7 @@ class _ClubAdminAddCoachScreenState extends State<ClubAdminAddCoachScreen> {
             prefixIcon: Icon(icon, color: textSecondary, size: 18.sp),
             filled: true,
             fillColor: Colors.white,
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: 14.w,
-              vertical: 13.h,
-            ),
+            contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
               borderSide: BorderSide(color: Colors.grey.shade300),

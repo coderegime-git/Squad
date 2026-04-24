@@ -71,36 +71,32 @@ class _CoachDashboardState extends State<CoachDashboard> {
       final clubs = await _coachApiService.getCoachClubs();
       if (clubs.isEmpty) return [];
       final events = await _coachApiService.getClubEvents(clubs.first.clubId);
+      final oneMonthLater = DateTime.now().add(const Duration(days: 30));
       return events
-          .where(
-            (e) => e.eventDate.isAfter(
-              DateTime.now().subtract(const Duration(days: 1)),
-            ),
-          )
+          .where((e) =>
+      e.eventDate.isAfter(DateTime.now().subtract(const Duration(days: 1))) &&
+          e.eventDate.isBefore(oneMonthLater))
           .take(3)
-          .map(
-            (e) => CoachEvent(
-              eventId: e.eventId,
-              title: e.eventName,
-              date: e.eventDate,
-              location: e.location,
-              type: e.eventType,
-              clubId: e.clubId,
-              startTime: e.startTime,
-              endTime: e.endTime,
-              status: e.status,
-              createdByUserId: e.createdByUserId,
-              createdByUsername: e.createdByUsername,
-              coachIds: e.coachIds,
-            ),
-          )
+          .map((e) => CoachEvent(
+        eventId: e.eventId,
+        title: e.eventName,
+        date: e.eventDate,
+        location: e.location,
+        type: e.eventType,
+        clubId: e.clubId,
+        startTime: e.startTime,
+        endTime: e.endTime,
+        status: e.status,
+        createdByUserId: e.createdByUserId,
+        createdByUsername: e.createdByUsername,
+        coachIds: e.coachIds,
+      ))
           .toList();
     } catch (e) {
       print("Error fetching upcoming events: $e");
       return [];
     }
   }
-
   void _refreshAll() {
     setState(() {
       _clubsFuture = _fetchClubs();
@@ -172,7 +168,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
           ),
         ),
       ).then(
-        (_) => setState(() => _upcomingEventsFuture = _fetchUpcomingEvents()),
+            (_) => setState(() => _upcomingEventsFuture = _fetchUpcomingEvents()),
       );
     } else {
       _showClubPickerSheet(clubs, (club) {
@@ -185,7 +181,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
             ),
           ),
         ).then(
-          (_) => setState(() => _upcomingEventsFuture = _fetchUpcomingEvents()),
+              (_) => setState(() => _upcomingEventsFuture = _fetchUpcomingEvents()),
         );
       });
     }
@@ -235,7 +231,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
     _showLoader();
     final clubs = await _coachApiService.getCoachClubs();
     final club = clubs.firstWhere(
-      (c) => c.clubId == event.clubId,
+          (c) => c.clubId == event.clubId,
       orElse: () =>
           Club(clubId: event.clubId!, clubName: "Club", description: ""),
     );
@@ -276,7 +272,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
     try {
       final clubs = await _coachApiService.getCoachClubs();
       final club = clubs.firstWhere(
-        (c) => c.clubId == event.clubId,
+            (c) => c.clubId == event.clubId,
         orElse: () =>
             Club(clubId: event.clubId!, clubName: "Club", description: ""),
       );
@@ -328,10 +324,10 @@ class _CoachDashboardState extends State<CoachDashboard> {
 
   // ── Reusable club-picker bottom sheet ─────────────────────────────────────
   void _showClubPickerSheet(
-    List<Club> clubs,
-    void Function(Club) onSelect, {
-    String title = "Select Club",
-  }) {
+      List<Club> clubs,
+      void Function(Club) onSelect, {
+        String title = "Select Club",
+      }) {
     showModalBottomSheet(
       context: context,
       shape: RoundedRectangleBorder(
@@ -360,7 +356,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
             ),
             16.height,
             ...clubs.map(
-              (club) => ListTile(
+                  (club) => ListTile(
                 leading: CircleAvatar(
                   backgroundColor: accentGreen.withOpacity(0.1),
                   child: Text(
@@ -417,7 +413,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
                           24.height,
                           _buildUpcomingEventsSection(),
                           24.height,
-                          _buildQuickActions(),
+                          //_buildQuickActions(),
                           100.height,
                         ],
                       ),
@@ -427,7 +423,6 @@ class _CoachDashboardState extends State<CoachDashboard> {
               ],
             ),
 
-            // ── Full-screen loading overlay ──────────────────────────────
             if (_isNavigating)
               Container(
                 color: Colors.black.withOpacity(0.35),
@@ -591,8 +586,6 @@ class _CoachDashboardState extends State<CoachDashboard> {
               ),
             ),
             10.height,
-
-            // Row 1 — today's sessions + upcoming events
             Row(
               children: [
                 Expanded(
@@ -615,34 +608,6 @@ class _CoachDashboardState extends State<CoachDashboard> {
               ],
             ),
             16.height,
-
-            // Row 2 — pending attendance + completed today
-            Row(
-              children: [
-                Expanded(
-                  child: StatCard(
-                    title: 'Pending',
-                    value: isLoading ? '...' : '${data.attendance.pending}',
-                    icon: Icons.pending_actions_rounded,
-                    color: AppColors.warning,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: StatCard(
-                    title: 'Completed Today',
-                    value: isLoading
-                        ? '...'
-                        : '${data.attendance.completedToday}',
-                    icon: Icons.check_circle_outline_rounded,
-                    color: accentGreen,
-                  ),
-                ),
-              ],
-            ),
-            16.height,
-
-            // Row 3 — members + groups (tappable)
             Row(
               children: [
                 Expanded(
@@ -675,7 +640,6 @@ class _CoachDashboardState extends State<CoachDashboard> {
       },
     );
   }
-
   // ── Today's Sessions (from dashboard API) ─────────────────────────────────
   Widget _buildTodaySessionsSection() {
     return FutureBuilder<CoachDashboardData>(
@@ -826,11 +790,11 @@ class _CoachDashboardState extends State<CoachDashboard> {
               children: snapshot.data!
                   .map(
                     (e) => _UpcomingEventCard(
-                      event: e,
-                      onTap: () => _handleEventTap(e),
-                      onEdit: () => _handleEventEdit(e),
-                    ),
-                  )
+                  event: e,
+                  onTap: () => _handleEventTap(e),
+                  onEdit: () => _handleEventEdit(e),
+                ),
+              )
                   .toList(),
             );
           },
@@ -1649,7 +1613,7 @@ class StatCard extends StatelessWidget {
               title,
               style: Theme.of(
                 context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.darkGrey),
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.darkGrey,fontSize: 13.sp),
             ),
           ],
         ),

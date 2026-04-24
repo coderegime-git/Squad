@@ -217,83 +217,21 @@ class _GuardianProfileScreenState extends State<GuardianProfileScreen> {
                             ),
                             Positioned(
                               top: -40.h,
-                              child: Stack(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 50.r,
-                                    backgroundColor: Colors.grey.shade200,
-                                    child: Text(
-                                      memberProfileData
-                                                  .data
-                                                  ?.user
-                                                  ?.username
-                                                  ?.isNotEmpty ==
-                                              true
-                                          ? memberProfileData
-                                                .data!
-                                                .user!
-                                                .username![0]
-                                          : 'U',
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.headlineLarge,
-                                    ),
-                                  ),
-                                  Positioned(
-                                    top: 20.h,
-                                    left: 80,
-                                    right: 0,
-                                    child: GestureDetector(
-                                      onTap: () async {
-                                        await Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                EditProfilePage(
-                                                  memberProfileData:
-                                                      memberProfileData,
-                                                ),
-                                          ),
-                                        );
-                                        getProfileData(false);
-                                        if (!mounted) return;
-                                        setState(() {});
-                                      },
-                                      child: CircleAvatar(
-                                        radius: 12.r,
-                                        backgroundColor: Colors.grey.shade800,
-                                        child: Icon(Icons.edit, size: 14),
-                                      ),
-                                    ),
-                                  ),
-
-                                  Positioned(
-                                    bottom: 4.h,
-                                    right: 4.w,
-                                    child: GestureDetector(
-                                      child: Container(
-                                        padding: EdgeInsets.all(6.w),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Icon(
-                                          Icons.camera_alt_rounded,
-                                          size: 18.sp,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              child: CircleAvatar(
+                                radius: 50.r,
+                                backgroundColor: Colors.grey.shade200,
+                                child: Text(
+                                  memberProfileData.data?.user?.username?.isNotEmpty == true
+                                      ? memberProfileData.data!.user!.username![0]
+                                      : 'U',
+                                  style: Theme.of(context).textTheme.headlineLarge,
+                                ),
                               ),
                             ),
                           ],
                         ),
 
                         20.height,
-
-                        // Linked Children
                         _buildSectionTitle("My Children"),
                         12.height,
                         _ChildProfileTile(

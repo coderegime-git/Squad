@@ -91,7 +91,7 @@ class _MemberScheduleScreenState extends State<MemberScheduleScreen> {
         backgroundColor: Colors.grey.shade100,
         body: Column(
           children: [
-            // ── Header ──────────────────────────────────────────────────
+
             Container(
               height: 85.h,
               width: double.infinity,
@@ -132,8 +132,6 @@ class _MemberScheduleScreenState extends State<MemberScheduleScreen> {
                 ),
               ),
             ),
-
-            // ── Body ────────────────────────────────────────────────────
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
@@ -144,7 +142,6 @@ class _MemberScheduleScreenState extends State<MemberScheduleScreen> {
                   physics: const AlwaysScrollableScrollPhysics(),
                   child: Column(
                     children: [
-                      // ── Calendar ──────────────────────────────
                       Container(
                         margin: EdgeInsets.all(16.w),
                         padding: EdgeInsets.all(12.w),
@@ -198,7 +195,6 @@ class _MemberScheduleScreenState extends State<MemberScheduleScreen> {
                         ),
                       ),
 
-                      // ── Events for selected day ────────────────
                       Padding(
                         padding: EdgeInsets.symmetric(
                             horizontal: 16.w),
@@ -286,7 +282,6 @@ class _MemberScheduleScreenState extends State<MemberScheduleScreen> {
   }
 }
 
-// ── Schedule Event Card ─────────────────────────────────────────────────────
 class _ScheduleEventCard extends StatelessWidget {
   final MemberEventData event;
   final VoidCallback? onAccept;
@@ -300,14 +295,127 @@ class _ScheduleEventCard extends StatelessWidget {
 
   Color _statusColor(String status) {
     switch (status.toUpperCase()) {
-      case 'ACCEPTED':
-        return accentGreen;
-      case 'REJECTED':
-        return Colors.red;
-      case 'PENDING':
-        return accentOrange;
-      default:
-        return Colors.grey;
+      case 'ACCEPTED': return accentGreen;
+      case 'REJECTED': return Colors.red;
+      case 'PENDING': return accentOrange;
+      default: return Colors.grey;
+    }
+  }
+
+  void _openDetail(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _EventDetailSheet(event: event),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _statusColor(event.status);
+    return GestureDetector(
+      onTap: () => _openDetail(context),
+      child: Container(
+        margin: EdgeInsets.only(bottom: 12.h),
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          color: cardDark,
+          borderRadius: BorderRadius.circular(20.r),
+          border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    event.eventName,
+                    style: GoogleFonts.montserrat(
+                      fontSize: 15.sp, fontWeight: FontWeight.w700, color: Colors.black,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                  child: Text(
+                    event.status,
+                    style: GoogleFonts.poppins(fontSize: 11.sp, color: color, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            8.height,
+            Row(
+              children: [
+                Icon(Icons.sports_rounded, size: 14.sp, color: textSecondary),
+                6.width,
+                Text(event.teamName, style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary)),
+              ],
+            ),
+            4.height,
+            Row(
+              children: [
+                Icon(Icons.calendar_today_rounded, size: 14.sp, color: textSecondary),
+                6.width,
+                Text(event.eventDate, style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary)),
+              ],
+            ),
+            if (event.status == 'PENDING' && onAccept != null && onDecline != null) ...[
+              16.height,
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: onAccept,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accentGreen,
+                        padding: EdgeInsets.symmetric(vertical: 12.h),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                        elevation: 0,
+                      ),
+                      child: Text("Accept", style: GoogleFonts.poppins(fontSize: 13.sp, fontWeight: FontWeight.w600, color: Colors.white)),
+                    ),
+                  ),
+                  12.width,
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: onDecline,
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.red, width: 1.5),
+                        padding: EdgeInsets.symmetric(vertical: 12.h),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                      ),
+                      child: Text("Decline", style: GoogleFonts.poppins(fontSize: 13.sp, fontWeight: FontWeight.w600, color: Colors.red)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EventDetailSheet extends StatelessWidget {
+  final MemberEventData event;
+
+  const _EventDetailSheet({required this.event});
+
+  Color _statusColor(String status) {
+    switch (status.toUpperCase()) {
+      case 'ACCEPTED': return accentGreen;
+      case 'REJECTED': return Colors.red;
+      case 'PENDING': return accentOrange;
+      default: return Colors.grey;
     }
   }
 
@@ -315,121 +423,89 @@ class _ScheduleEventCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = _statusColor(event.status);
     return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(24.w),
       decoration: BoxDecoration(
-        color: cardDark,
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Center(
+            child: Container(
+              width: 40.w, height: 4.h,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2.r),
+              ),
+            ),
+          ),
+          16.height,
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: Text(
                   event.eventName,
                   style: GoogleFonts.montserrat(
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    fontSize: 18.sp, fontWeight: FontWeight.w800, color: Colors.black,
                   ),
                 ),
               ),
               Container(
-                padding:
-                EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(20.r),
                 ),
                 child: Text(
                   event.status,
-                  style: GoogleFonts.poppins(
-                    fontSize: 11.sp,
-                    color: color,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: GoogleFonts.poppins(fontSize: 12.sp, color: color, fontWeight: FontWeight.w700),
                 ),
               ),
             ],
           ),
-          8.height,
-          Row(
-            children: [
-              Icon(Icons.sports_rounded, size: 14.sp, color: textSecondary),
-              6.width,
-              Text(event.teamName,
-                  style: GoogleFonts.poppins(
-                      fontSize: 12.sp, color: textSecondary)),
-            ],
-          ),
-          4.height,
-          Row(
-            children: [
-              Icon(Icons.calendar_today_rounded,
-                  size: 14.sp, color: textSecondary),
-              6.width,
-              Text(event.eventDate,
-                  style: GoogleFonts.poppins(
-                      fontSize: 12.sp, color: textSecondary)),
-            ],
-          ),
-
-          // Accept / Decline buttons for pending events
-          if (event.status == 'PENDING' &&
-              onAccept != null &&
-              onDecline != null) ...[
-            16.height,
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: onAccept,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: accentGreen,
-                      padding: EdgeInsets.symmetric(vertical: 12.h),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.r)),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      "Accept",
-                      style: GoogleFonts.poppins(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-                12.width,
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: onDecline,
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.red, width: 1.5),
-                      padding: EdgeInsets.symmetric(vertical: 12.h),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.r)),
-                    ),
-                    child: Text(
-                      "Decline",
-                      style: GoogleFonts.poppins(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.red,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
+          20.height,
+          _DetailRow(icon: Icons.sports_rounded, label: 'Team', value: event.teamName),
+          12.height,
+          _DetailRow(icon: Icons.calendar_today_rounded, label: 'Date', value: event.eventDate),
+          12.height,
+          _DetailRow(icon: Icons.confirmation_number_rounded, label: 'Event ID', value: '#${event.eventId}'),
+          32.height,
         ],
       ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _DetailRow({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: EdgeInsets.all(8.r),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(10.r),
+          ),
+          child: Icon(icon, size: 18.sp, color: Colors.black87),
+        ),
+        12.width,
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: GoogleFonts.poppins(fontSize: 11.sp, color: Colors.grey.shade500)),
+            Text(value, style: GoogleFonts.montserrat(fontSize: 13.sp, fontWeight: FontWeight.w600, color: Colors.black)),
+          ],
+        ),
+      ],
     );
   }
 }

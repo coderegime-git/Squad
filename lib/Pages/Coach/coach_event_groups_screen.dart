@@ -237,7 +237,7 @@ class _CoachEventGroupsScreenState extends State<CoachEventGroupsScreen> {
                         12.height,
                         ElevatedButton(
                           onPressed: _refresh,
-                          child: const Text("Retry"),
+                          child:  Text("Retry",style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),),
                         ),
                       ],
                     ),

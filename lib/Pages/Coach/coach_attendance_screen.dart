@@ -54,7 +54,6 @@ class _CoachAttendanceScreenState extends State<CoachAttendanceScreen> {
     setState(() {
       isLoad = true;
     });
-
     groupMembersData = await apiService.getEventAttendance(widget.eventId);
     _members = groupMembersData.data ?? [];
     setState(() {

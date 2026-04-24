@@ -4,13 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:nb_utils/nb_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:sports/routes/app_routes.dart';
 
 import '../../config/colors.dart';
 import '../../model/guardian/getGuardianEvents.dart';
 import '../../model/guardian/get_your_member.dart';
 import '../../utills/api_service.dart';
-import '../../utills/helper.dart';
 import '../../utills/shared_preference.dart';
 import '../../widgets/common.dart';
 import '../notification_screen.dart';
@@ -126,10 +124,10 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
                         "Hello, $_username",
                         style: Theme.of(context).textTheme.headlineMedium
                             ?.copyWith(
-                              color: Colors.white,
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          color: Colors.white,
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const Spacer(),
                       NotificationBellIcon(
@@ -159,7 +157,7 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
                     children: [
                       20.height,
 
-                      // ── Children selector ────────────────────────────
+                      // ── Children Selector ────────────────────────────
                       if (_isLoadingChildren)
                         const ChildSelectorShimmer()
                       else if (_children.isEmpty)
@@ -168,25 +166,46 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
                         _buildChildrenList(),
 
                       24.height,
-
-                      // ── Quick Stats ──────────────────────────────────
                       Row(
+                        // mainAxisAlignment: MainAxisAlignment.center,
+                        // crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           _buildStatCard(
                             icon: Icons.check_circle_outline_rounded,
                             label: "Attendance",
                             value: "94%",
-                            color: accentGreen,
+                            color: accentOrange,
                             subtitle: "This season",
                           ),
-                          _buildStatCard(
-                            icon: Icons.trending_up_rounded,
-                            label: "Performance",
-                            value: "8.4",
-                            color: accentOrange,
-                            subtitle: "Avg rating",
-                          ),
+                          Expanded(child: SizedBox()),
                         ],
+                      ),
+
+                      24.height,
+
+                      // ── Performance Reports ──────────────────────────
+                      Text(
+                        "Performance Reports",
+                        style: GoogleFonts.montserrat(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                      12.height,
+                      _PerformanceReportCard(
+                        childName: "Abinesh",
+                        coachName: "Coach Michael",
+                        activity: "Football",
+                        date: "Feb 3, 2026",
+                        note: "Excellent progress in ball control. Keep practicing dribbling.",
+                      ),
+                      _PerformanceReportCard(
+                        childName: "Gopal",
+                        coachName: "Coach Sarah",
+                        activity: "Swimming",
+                        date: "Feb 1, 2026",
+                        note: "Good improvement in freestyle stroke. Work on breathing technique.",
                       ),
 
                       24.height,
@@ -248,7 +267,7 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
                           )
                         else
                           ..._pendingEvents.map(
-                            (e) => _PendingEventCard(
+                                (e) => _PendingEventCard(
                               event: e,
                               onAccept: () => _updateStatus(
                                 _selectedMemberId!,
@@ -265,6 +284,8 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
                       ],
 
                       24.height,
+
+                      // ── Recent Club Updates ──────────────────────────
                       Text(
                         "Recent Club Updates",
                         style: GoogleFonts.montserrat(
@@ -302,6 +323,7 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
     );
   }
 
+  // ── Children List ──────────────────────────────────────────────────────────
   Widget _buildChildrenList() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -390,6 +412,7 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
     );
   }
 
+  // ── No Children Widget ─────────────────────────────────────────────────────
   Widget _buildNoChildrenWidget() {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 24.h),
@@ -426,6 +449,7 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
     );
   }
 
+  // ── Stat Card ──────────────────────────────────────────────────────────────
   Widget _buildStatCard({
     required IconData icon,
     required String label,
@@ -462,7 +486,10 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
             8.height,
             Text(
               label,
-              style: GoogleFonts.poppins(fontSize: 13.sp, color: textSecondary),
+              style: GoogleFonts.poppins(
+                fontSize: 13.sp,
+                color: textSecondary,
+              ),
             ),
             2.height,
             Text(
@@ -478,6 +505,7 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
     );
   }
 
+  // ── Shimmer Box ────────────────────────────────────────────────────────────
   Widget _shimmerBox({required double height}) {
     return Container(
       height: height,
@@ -490,7 +518,109 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
   }
 }
 
-// ── Pending Event Card ──────────────────────────────────────────────────────
+// ── Performance Report Card ──────────────────────────────────────────────────
+class _PerformanceReportCard extends StatelessWidget {
+  final String childName;
+  final String coachName;
+  final String activity;
+  final String date;
+  final String note;
+
+  const _PerformanceReportCard({
+    required this.childName,
+    required this.coachName,
+    required this.activity,
+    required this.date,
+    required this.note,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: cardDark,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: accentGreen.withOpacity(0.3), width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 18.r,
+                backgroundColor: accentGreen.withOpacity(0.15),
+                child: Text(
+                  childName[0],
+                  style: GoogleFonts.montserrat(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14.sp,
+                    color: accentGreen,
+                  ),
+                ),
+              ),
+              10.width,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      childName,
+                      style: GoogleFonts.montserrat(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                      ),
+                    ),
+                    Text(
+                      '$activity • $coachName',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.sp,
+                        color: textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                decoration: BoxDecoration(
+                  color: accentGreen.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Icon(
+                  Icons.description_rounded,
+                  color: accentGreen,
+                  size: 16.sp,
+                ),
+              ),
+            ],
+          ),
+          10.height,
+          Text(
+            note,
+            style: GoogleFonts.poppins(
+              fontSize: 12.sp,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          8.height,
+          Text(
+            date,
+            style: GoogleFonts.poppins(
+              fontSize: 10.sp,
+              color: textSecondary.withOpacity(0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Pending Event Card ───────────────────────────────────────────────────────
 class _PendingEventCard extends StatelessWidget {
   final GuardianEventData event;
   final VoidCallback onAccept;

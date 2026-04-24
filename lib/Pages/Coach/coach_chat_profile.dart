@@ -11,6 +11,8 @@ import '../../model/member/profile_data.dart';
 import '../../utills/shared_preference.dart';
 import '../Member/edit_profile.dart';
 import '../splash.dart';
+import 'coach_group_chat_list_screen.dart';
+import 'coach_my_member_screen.dart';
 
 class CoachChatScreen extends StatelessWidget {
   const CoachChatScreen({super.key});
@@ -457,39 +459,39 @@ class _CoachProfileScreenState extends State<CoachProfileScreen> {
                           members: 15,
                         ),
 
-                        15.height,
-                        _buildSectionTitle("Statistics"),
-                        12.height,
-                        Container(
-                          padding: EdgeInsets.all(20.w),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20.r),
-                            border: Border.all(
-                              color: accentGreen.withOpacity(0.35),
-                            ),
-                            color: Colors.white,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              _StatColumn(label: "Total Groups", value: "3"),
-                              Container(
-                                width: 1,
-                                height: 40.h,
-                                color: Colors.grey.shade300,
-                              ),
-                              _StatColumn(label: "Total Members", value: "45"),
-                              Container(
-                                width: 1,
-                                height: 40.h,
-                                color: Colors.grey.shade300,
-                              ),
-                              _StatColumn(label: "Sessions", value: "120"),
-                            ],
-                          ),
-                        ),
+                       // 15.height,
+                        // _buildSectionTitle("Statistics"),
+                        // 12.height,
+                        // Container(
+                        //   padding: EdgeInsets.all(20.w),
+                        //   decoration: BoxDecoration(
+                        //     borderRadius: BorderRadius.circular(20.r),
+                        //     border: Border.all(
+                        //       color: accentGreen.withOpacity(0.35),
+                        //     ),
+                        //     color: Colors.white,
+                        //   ),
+                        //   child: Row(
+                        //     mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        //     children: [
+                        //       _StatColumn(label: "Total Groups", value: "3"),
+                        //       Container(
+                        //         width: 1,
+                        //         height: 40.h,
+                        //         color: Colors.grey.shade300,
+                        //       ),
+                        //       _StatColumn(label: "Total Members", value: "45"),
+                        //       Container(
+                        //         width: 1,
+                        //         height: 40.h,
+                        //         color: Colors.grey.shade300,
+                        //       ),
+                        //       _StatColumn(label: "Sessions", value: "120"),
+                        //     ],
+                        //   ),
+                        // ),
 
-                        20.height,
+                        12.height,
                         _buildSectionTitle("Settings"),
                         12.height,
                         _SettingsTile(
@@ -507,8 +509,29 @@ class _CoachProfileScreenState extends State<CoachProfileScreen> {
                           title: "Help & Support",
                           onTap: () => toast("Support"),
                         ),
-
                         30.height,
+                        _buildSectionTitle("My Groups & Members"),
+                        12.height,
+                        _SettingsTile(
+                          icon: Icons.people_outline_rounded,
+                          title: "View My Members",
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const CoachMyMembersScreen(),
+                            ),
+                          ),
+                        ),
+                        _SettingsTile(
+                          icon: Icons.chat_bubble_outline_rounded,
+                          title: "Group Chats",
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const CoachChatScreen()),
+                          ),
+                        ),
+                        20.height,
+                        _buildSectionTitle("Settings"),
                         Container(
                           width: double.infinity,
                           padding: EdgeInsets.symmetric(vertical: 10.h),

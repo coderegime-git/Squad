@@ -853,10 +853,10 @@ class _EventGroupsScreenState extends State<EventGroupsScreen> {
                           ElevatedButton(
                             onPressed: refreshData,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: accentGreen,
+                              backgroundColor: accentOrange,
                               foregroundColor: Colors.white,
                             ),
-                            child: Text('Retry', style: GoogleFonts.poppins()),
+                            child: Text('Retry'),
                           ),
                         ],
                       ),

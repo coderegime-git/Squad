@@ -21,7 +21,7 @@ class _CoachBottomNavState extends State<CoachBottomNav> {
 
   final List<Widget> _screens = [
     const CoachDashboard(),
-    const CoachGroupsScreen(),
+    // const CoachGroupsScreen(),
     const CoachEventsScreen(),
     const CoachChatScreen(),
     const CoachProfileScreen(),
@@ -56,10 +56,10 @@ class _CoachBottomNavState extends State<CoachBottomNav> {
             ),
             items: const [
               BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.group_rounded),
-                label: 'Groups',
-              ),
+              // BottomNavigationBarItem(
+              //   icon: Icon(Icons.group_rounded),
+              //   label: 'Groups',
+              // ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.event_rounded),
                 label: 'Events',

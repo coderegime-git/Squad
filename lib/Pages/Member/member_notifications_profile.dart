@@ -323,7 +323,71 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
       isLoad = false;
     });
   }
-
+  Widget _buildGuardianSection(MemberProfileData profileData) {
+    return Container();
+    // guardians come from memberships or user data depending on your API shape
+    // Adjust field names to match your actual MemberProfileData model
+    // final guardians = profileData.data?.guardians ?? [];
+    //
+    // if (guardians.isEmpty) {
+    //   return Container(
+    //     padding: EdgeInsets.all(16.w),
+    //     decoration: BoxDecoration(
+    //       color: cardDark,
+    //       borderRadius: BorderRadius.circular(16.r),
+    //       border: Border.all(color: Colors.grey.shade300),
+    //     ),
+    //     child: Text(
+    //       'No guardian assigned',
+    //       style: GoogleFonts.poppins(fontSize: 13.sp, color: textSecondary),
+    //     ),
+    //   );
+    // }
+    //
+    // return Column(
+    //   children: guardians.map<Widget>((g) {
+    //     return Container(
+    //       margin: EdgeInsets.only(bottom: 10.h),
+    //       padding: EdgeInsets.all(14.w),
+    //       decoration: BoxDecoration(
+    //         color: cardDark,
+    //         borderRadius: BorderRadius.circular(16.r),
+    //         border: Border.all(color: accentGreen.withOpacity(0.3)),
+    //       ),
+    //       child: Row(
+    //         children: [
+    //           CircleAvatar(
+    //             radius: 22.r,
+    //             backgroundColor: accentGreen.withOpacity(0.15),
+    //             child: Icon(Icons.person_rounded, color: accentGreen, size: 22.sp),
+    //           ),
+    //           12.width,
+    //           Expanded(
+    //             child: Column(
+    //               crossAxisAlignment: CrossAxisAlignment.start,
+    //               children: [
+    //                 Text(
+    //                   g.name ?? 'Guardian',
+    //                   style: GoogleFonts.montserrat(
+    //                     fontSize: 13.sp, fontWeight: FontWeight.w700, color: Colors.black,
+    //                   ),
+    //                 ),
+    //                 if (g.mobile != null && g.mobile!.isNotEmpty) ...[
+    //                   4.height,
+    //                   Text(
+    //                     g.mobile!,
+    //                     style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary),
+    //                   ),
+    //                 ],
+    //               ],
+    //             ),
+    //           ),
+    //         ],
+    //       ),
+    //     );
+    //   }).toList(),
+    // );
+  }
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -524,36 +588,41 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                                   ),
                                 ),
                               ),
-                              Positioned(
-                                top: 20.h,
-                                left: 80,
-                                right: 0,
-                                child: GestureDetector(
-                                  onTap: () async {
-                                    await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => EditProfilePage(
-                                          memberProfileData: memberProfileData,
-                                        ),
-                                      ),
-                                    );
-                                    memberProfileData = await memberApiService
-                                        .getMemberProfile();
-                                    if (!mounted) return;
-                                    setState(() {});
-                                  },
-                                  child: CircleAvatar(
-                                    radius: 12.r,
-                                    backgroundColor: Colors.grey.shade800,
-                                    child: Icon(Icons.edit, size: 14),
-                                  ),
-                                ),
-                              ),
+                              // Positioned(
+                              //   top: 20.h,
+                              //   left: 80,
+                              //   right: 0,
+                              //   child: GestureDetector(
+                              //     onTap: () async {
+                              //       await Navigator.push(
+                              //         context,
+                              //         MaterialPageRoute(
+                              //           builder: (context) => EditProfilePage(
+                              //             memberProfileData: memberProfileData,
+                              //           ),
+                              //         ),
+                              //       );
+                              //       memberProfileData = await memberApiService
+                              //           .getMemberProfile();
+                              //       if (!mounted) return;
+                              //       setState(() {});
+                              //     },
+                              //     child: CircleAvatar(
+                              //       radius: 12.r,
+                              //       backgroundColor: Colors.grey.shade800,
+                              //       child: Icon(Icons.edit, size: 14),
+                              //     ),
+                              //   ),
+                              // ),
                             ],
                           ),
                           20.height,
-
+                          if (memberProfileData.data != null) ...[
+                            _buildSectionTitle("Guardian"),
+                            12.height,
+                            _buildGuardianSection(memberProfileData),
+                            20.height,
+                          ],
                           _buildSectionTitle("My Activities"),
                           12.height,
                           _ActivityTile(

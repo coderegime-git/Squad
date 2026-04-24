@@ -4,6 +4,12 @@ import 'package:nb_utils/nb_utils.dart';
 import '../../config/app_theme.dart';
 import '../../config/colors.dart';
 
+import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:nb_utils/nb_utils.dart';
+import '../../config/app_theme.dart';
+import '../../config/colors.dart';
+
 class MemberMetricsScreen extends StatefulWidget {
   const MemberMetricsScreen({Key? key}) : super(key: key);
 
@@ -62,9 +68,18 @@ class _MemberMetricsScreenState extends State<MemberMetricsScreen> {
             child: ListView(
               padding: EdgeInsets.all(AppConstants.paddingMedium),
               children: [
+                // ── Overall Performance ──────────────────────────────
                 Text(
                   'Overall Performance',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 14.sp),
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  'Jan 2026 – Apr 2026',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 11.sp,
+                    color: AppColors.mediumGrey,
+                  ),
                 ),
                 SizedBox(height: 12.h),
                 Row(
@@ -107,9 +122,19 @@ class _MemberMetricsScreenState extends State<MemberMetricsScreen> {
                   ],
                 ),
                 SizedBox(height: 24.h),
+
+                // ── Activity Breakdown ───────────────────────────────
                 Text(
                   'Activity Breakdown',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 14.sp),
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  'Jan 2026 – Apr 2026',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 11.sp,
+                    color: AppColors.mediumGrey,
+                  ),
                 ),
                 SizedBox(height: 12.h),
                 _buildActivityCard(
@@ -126,6 +151,8 @@ class _MemberMetricsScreenState extends State<MemberMetricsScreen> {
                   sessions: 6,
                 ),
                 SizedBox(height: 24.h),
+
+                // ── Attendance History ───────────────────────────────
                 Text(
                   'Attendance History',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 14.sp),
@@ -182,6 +209,8 @@ class _MemberMetricsScreenState extends State<MemberMetricsScreen> {
                   ),
                 ),
                 SizedBox(height: 15.h),
+
+                // ── Coach Feedback ───────────────────────────────────
                 Text(
                   'Coach Feedback',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 14.sp),
@@ -210,6 +239,7 @@ class _MemberMetricsScreenState extends State<MemberMetricsScreen> {
                   date: 'Jan 28, 2026',
                   feedback: 'Strong defensive skills. Focus on positioning during corner kicks.',
                 ),
+                SizedBox(height: 100.h),
               ],
             ),
           ),
@@ -440,7 +470,10 @@ class _MemberMetricsScreenState extends State<MemberMetricsScreen> {
             const SizedBox(height: 12),
             Text(
               feedback,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade800, fontSize: 12.sp),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.grey.shade800,
+                fontSize: 12.sp,
+              ),
             ),
             const SizedBox(height: 8),
             Text(

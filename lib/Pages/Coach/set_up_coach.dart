@@ -19,7 +19,6 @@ class _CoachOnboardingScreenState extends State<CoachOnboardingScreen> {
   final _specializationController = TextEditingController();
   List<String> _selectedGroups = [];
 
-  // Mock data – replace with real API
   final List<String> _availableGroups = [
     'Under-8 A - Football',
     'Under-10 B - Cricket',

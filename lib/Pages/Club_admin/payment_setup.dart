@@ -51,7 +51,7 @@ class _ClubAdminPaymentQRSetupScreenState extends State<ClubAdminPaymentQRSetupS
           children: [
             // Header
             Container(
-              height: 85.h,
+              //height: 85.h,
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.black,

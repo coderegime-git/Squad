@@ -21,6 +21,7 @@ import '../model/clubAdmin/get_event_details.dart';
 import '../model/clubAdmin/get_event_details_by_id.dart';
 import '../model/clubAdmin/get_guardians.dart';
 import '../model/clubAdmin/get_members.dart';
+import '../model/clubAdmin/get_subgroups_member.dart';
 import '../model/clubAdmin/get_teams.dart';
 import '../model/coach/club.dart';
 import '../model/coach/club_member.dart';
@@ -77,6 +78,10 @@ class ApiBaseHelper {
         ScaffoldMessenger.of(_navigatorKey.currentContext!).showSnackBar(
           SnackBar(content: response.data['message'] ?? "Failed to load"),
         );
+        print('❌ 400 from _returnResponse: ${response.data}');
+        final msg = response.data is Map
+            ? response.data['message']?.toString() ?? 'Bad request'
+            : 'Bad request';
       // throw BadRequestException(response.data.toString());
       case 401:
         throw UnAuthorisedException(response.data.toString());
@@ -143,6 +148,21 @@ class ApiBaseHelper {
 
         throw Exception('user_inactive');
       } else if (e.toString().contains("400")) {
+        if (e is DioException) {
+          final responseData = e.response?.data;
+          print('❌ 400 Bad Request');
+          print('   Status : ${e.response?.statusCode}');
+          print('   URL    : ${e.requestOptions.uri}');
+          print('   Body   : $responseData');
+
+          // Extract the message if it's a Map
+          final message = responseData is Map
+              ? responseData['message']?.toString() ?? 'Bad request'
+              : responseData?.toString() ?? 'Bad request';
+
+          throw Exception(message); // ← throws the actual server message
+        }
+        throw Exception('Bad request');
         /* _showToast(
           _navigatorKey.currentContext!,
           "your_account_is_disabled_Please_contact_admin".tr(),
@@ -210,6 +230,21 @@ class ApiBaseHelper {
         ).showSnackBar(SnackBar(content: Text("Server error")));
         throw Exception('user_inactive');
       } else if (e.toString().contains("400")) {
+        if (e is DioException) {
+          final responseData = e.response?.data;
+          print('❌ 400 Bad Request');
+          print('   Status : ${e.response?.statusCode}');
+          print('   URL    : ${e.requestOptions.uri}');
+          print('   Body   : $responseData');
+
+          // Extract the message if it's a Map
+          final message = responseData is Map
+              ? responseData['message']?.toString() ?? 'Bad request'
+              : responseData?.toString() ?? 'Bad request';
+
+          throw Exception(message); // ← throws the actual server message
+        }
+        throw Exception('Bad request');
         /* _showToast(
           _navigatorKey.currentContext!,
           "your_account_is_disabled_Please_contact_admin".tr(),
@@ -302,10 +337,40 @@ class ApiBaseHelper {
         ).showSnackBar(SnackBar(content: Text("Server error")));
         throw Exception('user_inactive');
       } else if (e.toString().contains("400")) {
+        if (e is DioException) {
+          final responseData = e.response?.data;
+          print('❌ 400 Bad Request');
+          print('   Status : ${e.response?.statusCode}');
+          print('   URL    : ${e.requestOptions.uri}');
+          print('   Body   : $responseData');
+
+          // Extract the message if it's a Map
+          final message = responseData is Map
+              ? responseData['message']?.toString() ?? 'Bad request'
+              : responseData?.toString() ?? 'Bad request';
+
+          throw Exception(message); // ← throws the actual server message
+        }
+        throw Exception('Bad request');
         /* _showToast(
           _navigatorKey.currentContext!,
           "your_account_is_disabled_Please_contact_admin".tr(),
         );*/
+        if (e is DioException) {
+          final responseData = e.response?.data;
+          print('❌ 400 Bad Request');
+          print('   Status : ${e.response?.statusCode}');
+          print('   URL    : ${e.requestOptions.uri}');
+          print('   Body   : $responseData');
+
+          // Extract the message if it's a Map
+          final message = responseData is Map
+              ? responseData['message']?.toString() ?? 'Bad request'
+              : responseData?.toString() ?? 'Bad request';
+
+          throw Exception(message); // ← throws the actual server message
+        }
+        throw Exception('Bad request');
         print(e.toString().contains("500"));
         print("50000");
         ScaffoldMessenger.of(
@@ -813,8 +878,6 @@ class ClubApiService {
       rethrow;
     }
   }
-
-  /// DELETE /api/events/{eventId}/groups/{groupId}
   Future<bool> deleteGroup(int eventId, int groupId) async {
     print("Delete group");
     print("Delete group");
@@ -837,15 +900,6 @@ class ClubApiService {
       return false;
     }
   }
-
-  // NEW METHODS TO ADD TO ClubApiService in utills/api_service.dart
-  // Add these methods inside the ClubApiService class
-
-  // ══════════════════════════════════════════════════════════════
-  // SUB-GROUP APIs
-  // ══════════════════════════════════════════════════════════════
-
-  /// POST /api/groups/{groupId}/sub-groups
   Future<bool> createSubGroup(int groupId, Map<String, dynamic> data) async {
     try {
       print("Create sub-group data: $data for groupId: $groupId");
@@ -868,7 +922,6 @@ class ClubApiService {
     }
   }
 
-  /// GET /api/groups/{groupId}/sub-groups
   Future<GetSubGroups> getSubGroups(int groupId) async {
     try {
       print("Get sub-groups for groupId: $groupId");
@@ -881,7 +934,6 @@ class ClubApiService {
     }
   }
 
-  /// PUT /api/groups/{groupId}/sub-groups/{subGroupId}
   Future<bool> updateSubGroup(
     int groupId,
     int subGroupId,
@@ -910,7 +962,6 @@ class ClubApiService {
     }
   }
 
-  /// DELETE /api/groups/{groupId}/sub-groups/{subGroupId}
   Future<bool> deleteSubGroup(int groupId, int subGroupId) async {
     print("Delete sub group");
     print("Delete sub group");
@@ -933,12 +984,6 @@ class ClubApiService {
       return false;
     }
   }
-
-  // ══════════════════════════════════════════════════════════════
-  // TEAM APIs
-  // ══════════════════════════════════════════════════════════════
-
-  /// POST /api/sub-groups/{subGroupId}/teams
   Future<bool> createTeam(int subGroupId, Map<String, dynamic> data) async {
     try {
       print("Create team data: $data for subGroupId: $subGroupId");
@@ -960,8 +1005,6 @@ class ClubApiService {
       return false;
     }
   }
-
-  /// GET /api/sub-groups/{subGroupId}/teams
   Future<GetTeams> getTeams(int subGroupId) async {
     try {
       print("Get teams for subGroupId: $subGroupId");
@@ -975,8 +1018,6 @@ class ClubApiService {
       rethrow;
     }
   }
-
-  /// DELETE /api/sub-groups/{subGroupId}/teams/{teamId}
   Future<bool> deleteTeam(int subGroupId, int teamId) async {
     print("delete Team");
     print("delete Team");
@@ -1085,8 +1126,6 @@ class ClubApiService {
       return false;
     }
   }
-
-  /// POST /api/events — returns eventId on success, -1 on failure
   Future<int> addEvent(Map<String, dynamic> data) async {
     try {
       print("Add Event data : $data");
@@ -1161,8 +1200,6 @@ class ClubApiService {
     }
   }
 
-  /// Mark all notifications as read
-  /// PUT/PATCH api/notification/read-all
   Future<dynamic> markAllNotificationsRead() async {
     try {
       final fullResponse = await _helper.put("api/notifications/read-all", {});
@@ -1174,8 +1211,6 @@ class ClubApiService {
     }
   }
 
-  /// Get unread notification count
-  /// GET api/notification/unread-count
   Future<dynamic> getUnreadCount() async {
     try {
       final fullResponse = await _helper.get("api/notifications/unread-count");
@@ -1187,7 +1222,6 @@ class ClubApiService {
     }
   }
 
-  /// Fetch all notifications (optional, if you have a list endpoint)
   Future<NotificationData> getNotifications() async {
     try {
       final fullResponse = await _helper.get("api/notifications");
@@ -1196,6 +1230,120 @@ class ClubApiService {
     } catch (e) {
       print("Get notifications failed: $e");
       return NotificationData.fromJson({});
+    }
+  }
+
+  Future<List<GroupData>> getAllGroups() async {
+    try {
+      final fullResponse = await _helper.get("api/groups");
+      final jsonResponse = jsonEncode(fullResponse);
+      // Parse list from data array
+      final List<dynamic> data = fullResponse['data'] ?? [];
+      return data.map((json) => GroupData.fromJson(json)).toList();
+    } catch (e) {
+      print("getAllGroups failed: $e");
+      rethrow;
+    }
+  }
+
+  Future<bool> createStandaloneGroup(Map<String, dynamic> data) async {
+    try {
+      final fullResponse = await _helper.post("api/groups", data);
+      return fullResponse['success'] == true;
+    } catch (e) {
+      print("createStandaloneGroup failed: $e");
+      return false;
+    }
+  }
+
+  Future<bool> updateStandaloneGroup(int groupId, Map<String, dynamic> data) async {
+    try {
+      final fullResponse = await _helper.put("api/groups/$groupId", data);
+      return fullResponse['success'] == true;
+    } catch (e) {
+      print("updateStandaloneGroup failed: $e");
+      return false;
+    }
+  }
+
+  Future<bool> deleteStandaloneGroup(int groupId) async {
+    try {
+      final fullResponse = await _helper.delete("api/groups/$groupId");
+      return fullResponse['success'] == true;
+    } catch (e) {
+      print("deleteStandaloneGroup failed: $e");
+      return false;
+    }
+  }
+  Future<SubGroupMembers> getSubGroupMembers(int subGroupId) async {
+    try {
+      final fullResponse = await _helper.get("api/subgroups/$subGroupId/members");
+      final jsonResponse = jsonEncode(fullResponse);
+      return SubGroupMembersFromJson(jsonResponse);
+    } catch (e) {
+      print("getSubGroupMembers failed: $e");
+      rethrow;
+    }
+  }
+
+  Future<bool> addMembersToSubGroup(int subGroupId, List<int> memberIds) async {
+    try {
+      final fullResponse = await _helper.post("api/subgroups/$subGroupId/members", {
+        "memberIds": memberIds,
+      });
+      return fullResponse['success'] == true;
+    } catch (e) {
+      print("addMembersToSubGroup failed: $e");
+      return false;
+    }
+  }
+
+  Future<bool> removeMemberFromSubGroup(int subGroupId, int memberId) async {
+    try {
+      final fullResponse = await _helper.delete("api/subgroups/$subGroupId/members/$memberId");
+      return fullResponse['success'] == true;
+    } catch (e) {
+      print("removeMemberFromSubGroup failed: $e");
+      return false;
+    }
+  }
+
+  Future<bool> addMembersToGroup(int groupId, List<int> memberIds) async {
+    try {
+      final fullResponse = await _helper.post("api/groups/$groupId/members", {
+        "memberIds": memberIds,
+      });
+      return fullResponse['success'] == true;
+    } catch (e) {
+      print("addMembersToGroup failed: $e");
+      return false;
+    }
+  }
+
+  Future<bool> addMembersToEvent(int eventId, List<int> memberIds) async {
+    try {
+      print("Adding members $memberIds to event $eventId");
+      final fullResponse = await _helper.post("api/events/$eventId/members", {
+        "memberIds": memberIds,
+      });
+      final jsonResponse = jsonEncode(fullResponse);
+      print("addMembersToEvent response: $jsonResponse");
+      return fullResponse['success'] == true;
+    } catch (e) {
+      print("addMembersToEvent failed: $e");
+      return false;
+    }
+  }
+  Future<bool> updateMemberMembership(int memberId, Map<String, dynamic> data) async {
+    try {
+      print("updateMemberMembership memberId: $memberId data: $data");
+      final fullResponse = await _helper.put("api/members/$memberId", data);
+      final jsonResponse = jsonEncode(fullResponse);
+      print("updateMemberMembership response: $jsonResponse");
+      return fullResponse['success'] == true;
+    } catch (e) {
+      print("updateMemberMembership failed: $e");
+      return false;
     }
   }
 }

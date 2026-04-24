@@ -143,8 +143,6 @@ class _MemberDashboardState extends State<MemberDashboard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           24.height,
-
-                          // ── Club Banner ─────────────────────────
                           if (isLoading)
                             _shimmerBox(height: 80.h)
                           else if (club != null)
@@ -185,13 +183,13 @@ class _MemberDashboardState extends State<MemberDashboard> {
                                           ),
                                         ),
                                         4.height,
-                                        Text(
-                                          '${club.activities.length} Activit${club.activities.length == 1 ? 'y' : 'ies'}  •  ${club.events.length} Event${club.events.length == 1 ? '' : 's'}',
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 11.sp,
-                                            color: Colors.white60,
-                                          ),
-                                        ),
+                                        // Text(
+                                        //   '${club.activities.length} Activit${club.activities.length == 1 ? 'y' : 'ies'}  •  ${club.events.length} Event${club.events.length == 1 ? '' : 's'}',
+                                        //   style: GoogleFonts.poppins(
+                                        //     fontSize: 11.sp,
+                                        //     color: Colors.white60,
+                                        //   ),
+                                        // ),
                                       ],
                                     ),
                                   ),

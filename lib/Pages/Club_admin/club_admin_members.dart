@@ -12,6 +12,8 @@ import '../../model/clubAdmin/get_members.dart';
 import '../../model/clubAdmin/get_guardians.dart';
 import '../../utills/api_service.dart';
 import '../../utills/helper.dart';
+import 'add_coach_screen.dart';
+import 'add_guardian.dart';
 import 'add_member_screen.dart';
 
 class ClubAdminMembersScreen extends StatefulWidget {
@@ -647,32 +649,54 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
       context: context,
       backgroundColor: cardDark,
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r))),
+          borderRadius:
+          BorderRadius.vertical(top: Radius.circular(24.r))),
       builder: (_) => Padding(
         padding: EdgeInsets.all(20.w),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-                width: 40.w,
-                height: 4.h,
-                decoration: BoxDecoration(
-                    color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2.r))),
+              width: 40.w,
+              height: 4.h,
+              decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2.r)),
+            ),
             16.height,
             Text('Add New',
-                style: GoogleFonts.montserrat(fontSize: 17.sp, fontWeight: FontWeight.w700)),
+                style: GoogleFonts.montserrat(
+                    fontSize: 17.sp, fontWeight: FontWeight.w700)),
             16.height,
-            _menuTile(Icons.person_add_rounded, 'Add Member', accentGreen, () {
-              Navigator.pop(context);
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const ClubAdminAddMemberScreen()));
-            }),
-            _menuTile(Icons.people_rounded, 'Add Coach', accentOrange,
-                    () { Navigator.pop(context); toast('Navigate to Add Coach Form'); }),
-            _menuTile(Icons.group_add_rounded, 'Add Guardian', Colors.blue,
-                    () { Navigator.pop(context); toast('Navigate to Add Guardian Form'); }),
-            _menuTile(Icons.link_rounded, 'Link Child to Guardian', Colors.purple,
-                    () { Navigator.pop(context); toast('Navigate to Link Form'); }),
+            _menuTile(Icons.person_add_rounded, 'Add Member',
+                accentGreen, () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                          const ClubAdminAddMemberScreen()));
+                }),
+            _menuTile(
+                Icons.people_rounded, 'Add Coach', accentOrange,
+                    () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                          const ClubAdminAddCoachScreen()));
+                }),
+            _menuTile(
+                Icons.group_add_rounded, 'Add Guardian', Colors.blue,
+                    () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                          const ClubAdminAddGuardianScreen()));
+                }),
             20.height,
           ],
         ),

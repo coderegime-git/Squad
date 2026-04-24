@@ -1,18 +1,18 @@
 // screens/clubadmin/clubadmin_bottom_nav.dart
+// Changes:
+// - Groups tab now shows standalone ClubAdminGroupsScreen (no events connection)
+// - Removed Link Child to Guardian from nav
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../config/colors.dart';
 import 'club_admin_dashboard.dart';
-import 'club_admin_groups_notifications.dart';
 import 'club_admin_members.dart';
+import 'club_admin_notifications.dart';
 import 'club_admin_schedule.dart';
-// import 'clubadmin_dashboard.dart';
-// import 'clubadmin_schedule.dart';
-// import 'clubadmin_members.dart';
-// import 'clubadmin_groups.dart';
-// import 'clubadmin_notifications.dart';
+import 'club_admin_groups_and_subgroups.dart'; // for notifications
 
 class ClubAdminBottomNav extends StatefulWidget {
   const ClubAdminBottomNav({super.key});
@@ -35,15 +35,14 @@ class _ClubAdminBottomNavState extends State<ClubAdminBottomNav> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-          boxShadow: [
-            BoxShadow(
-              offset: const Offset(0, -4),
-            ),
-          ],
+          boxShadow: [BoxShadow(offset: const Offset(0, -4), color: Colors.black.withOpacity(0.1), blurRadius: 8)],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
@@ -55,14 +54,8 @@ class _ClubAdminBottomNavState extends State<ClubAdminBottomNav> {
             selectedItemColor: accentGreen,
             unselectedItemColor: Colors.grey.shade500,
             showUnselectedLabels: true,
-            selectedLabelStyle: GoogleFonts.poppins(
-              fontSize: 10.sp,
-              fontWeight: FontWeight.w600,
-            ),
-            unselectedLabelStyle: GoogleFonts.poppins(
-              fontSize: 9.sp,
-              fontWeight: FontWeight.w500,
-            ),
+            selectedLabelStyle: GoogleFonts.poppins(fontSize: 10.sp, fontWeight: FontWeight.w600),
+            unselectedLabelStyle: GoogleFonts.poppins(fontSize: 9.sp, fontWeight: FontWeight.w500),
             items: const [
               BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
               BottomNavigationBarItem(icon: Icon(Icons.calendar_month_rounded), label: 'Schedule'),

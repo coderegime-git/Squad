@@ -217,6 +217,7 @@ class _ClubAdminAddGuardianScreenState
             Expanded(
               child: Form(
                 key: _formKey,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
                   padding: EdgeInsets.all(20.w),
@@ -659,16 +660,20 @@ class _ClubAdminAddGuardianScreenState
     ),
   );
 
+
   Widget _formField(
-    String label,
-    TextEditingController ctrl,
-    IconData icon, {
-    String? hint,
-    bool required = true,
-    int maxLines = 1,
-    TextInputType? keyboardType,
-    bool obscureText = false,
-  }) {
+      String label,
+      TextEditingController ctrl,
+      IconData icon, {
+        String? hint,
+        bool required = true,
+        int maxLines = 1,
+        TextInputType? keyboardType,
+        bool obscureText = false,
+        String? Function(String?)? customValidator,
+      }) {
+    String fieldName = label.replaceAll(RegExp(r'[\*\s]'), '');
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -686,13 +691,24 @@ class _ClubAdminAddGuardianScreenState
           maxLines: maxLines,
           keyboardType: keyboardType,
           obscureText: obscureText,
-          validator: required
-              ? (v) => (v == null || v.trim().isEmpty)
-                    ? label == "Email *"
-                          ? validateEmail(v!)
-                          : 'Required'
-                    : null
-              : null,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          validator: customValidator ?? (v) {
+            if (!required) return null;
+
+            if (label.contains("Email")) {
+              return AppValidator.validateEmail(v);
+            }
+            if (label.contains("Phone") || label.contains("WhatsApp") || label.contains("Emergency")) {
+              return AppValidator.validatePhone(v);
+            }
+            if (label.contains("Password")) {
+              return AppValidator.validatePassword(v);
+            }
+            if (label.contains("Name") || label.contains("Full Name")) {
+              return AppValidator.validateName(v, fieldName: "Full Name");
+            }
+            return AppValidator.validateRequired(v, fieldName);
+          },
           style: GoogleFonts.poppins(fontSize: 13.sp, color: Colors.black),
           decoration: InputDecoration(
             hintText: hint,
@@ -703,10 +719,7 @@ class _ClubAdminAddGuardianScreenState
             prefixIcon: Icon(icon, color: textSecondary, size: 18.sp),
             filled: true,
             fillColor: Colors.white,
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: 14.w,
-              vertical: 13.h,
-            ),
+            contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
               borderSide: BorderSide(color: Colors.grey.shade300),

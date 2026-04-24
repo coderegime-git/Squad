@@ -22,8 +22,10 @@ class CoachEventsScreen extends StatefulWidget {
 class _CoachEventsScreenState extends State<CoachEventsScreen> {
   final ClubApiService _api = ClubApiService();
   late Future<GetEventDetails> _eventsFuture;
-  String _selectedFilter = 'All';
-  final List<String> _filters = ['All', 'SCHEDULED', 'ONGOING', 'COMPLETED'];
+
+  // Only SCHEDULED and COMPLETED; default to SCHEDULED
+  String _selectedFilter = 'SCHEDULED';
+  final List<String> _filters = ['SCHEDULED', 'COMPLETED'];
 
   @override
   void initState() {
@@ -42,8 +44,11 @@ class _CoachEventsScreenState extends State<CoachEventsScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) =>
-          CoachCreateEventSheet(onSuccess: _refresh, clubId: 0, clubName: ''),
+      builder: (_) => CoachCreateEventSheet(
+        onSuccess: _refresh,
+        clubId: 0,
+        clubName: '',
+      ),
     );
   }
 
@@ -65,9 +70,8 @@ class _CoachEventsScreenState extends State<CoachEventsScreen> {
       ),
       body: Column(
         children: [
-          // Header
+          // ── Header ──────────────────────────────────────────────────
           Container(
-            //height: 85.h,
             width: double.infinity,
             decoration: BoxDecoration(
               color: Colors.black,
@@ -85,92 +89,106 @@ class _CoachEventsScreenState extends State<CoachEventsScreen> {
             ),
             child: SafeArea(
               child: Padding(
-                padding: EdgeInsets.only(top: 5.h, left: 20.w, right: 20.w),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Events",
-                      style: Theme.of(context).textTheme.headlineMedium
-                          ?.copyWith(
-                            color: Colors.white,
-                            fontSize: 20.sp,
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                  ],
+                padding: EdgeInsets.only(
+                  top: 5.h,
+                  left: 20.w,
+                  right: 20.w,
+                  bottom: 14.h,
+                ),
+                child: Text(
+                  "Events",
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineMedium
+                      ?.copyWith(
+                    color: Colors.white,
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
           ),
 
-          // Filter Chips
-          SizedBox(
-            height: 50.h,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-              itemCount: _filters.length,
-              itemBuilder: (_, i) {
-                final f = _filters[i];
+          // ── Filter chips: Scheduled | Completed ─────────────────────
+          Container(
+            color: Colors.white,
+            padding:
+            EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+            child: Row(
+              children: _filters.map((f) {
                 final selected = _selectedFilter == f;
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedFilter = f),
-                  child: Container(
-                    margin: EdgeInsets.only(right: 8.w),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 16.w,
-                      vertical: 6.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: selected ? accentGreen : Colors.white,
-                      borderRadius: BorderRadius.circular(20.r),
-                      border: Border.all(
-                        color: selected ? accentGreen : Colors.grey.shade300,
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () =>
+                        setState(() => _selectedFilter = f),
+                    child: Container(
+                      margin: EdgeInsets.only(
+                          right: f == 'SCHEDULED' ? 8.w : 0),
+                      padding:
+                      EdgeInsets.symmetric(vertical: 10.h),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? accentGreen
+                            : Colors.grey.shade100,
+                        borderRadius:
+                        BorderRadius.circular(10.r),
+                        border: Border.all(
+                          color: selected
+                              ? accentGreen
+                              : Colors.grey.shade300,
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      f,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12.sp,
-                        color: selected ? Colors.white : Colors.black,
-                        fontWeight: selected
-                            ? FontWeight.w600
-                            : FontWeight.normal,
+                      child: Text(
+                        f == 'SCHEDULED'
+                            ? 'Scheduled'
+                            : 'Completed',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13.sp,
+                          color: selected
+                              ? Colors.white
+                              : Colors.black87,
+                          fontWeight: selected
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
                       ),
                     ),
                   ),
                 );
-              },
+              }).toList(),
             ),
           ),
 
-          // Events List
+          // ── Events list ─────────────────────────────────────────────
           Expanded(
             child: FutureBuilder<GetEventDetails>(
               future: _eventsFuture,
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                if (snapshot.connectionState ==
+                    ConnectionState.waiting) {
+                  return const Center(
+                      child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.error_outline,
-                          color: Colors.red,
-                          size: 40.sp,
-                        ),
+                        Icon(Icons.error_outline,
+                            color: Colors.red, size: 40.sp),
                         12.height,
-                        Text(
-                          "Failed to load events",
-                          style: GoogleFonts.poppins(color: Colors.grey),
-                        ),
+                        Text("Failed to load events",
+                            style: GoogleFonts.poppins(
+                                color: Colors.grey)),
                         12.height,
                         ElevatedButton(
                           onPressed: _refresh,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: accentOrange,
+                            foregroundColor: Colors.white,
+                          ),
                           child: const Text("Retry"),
                         ),
                       ],
@@ -178,22 +196,93 @@ class _CoachEventsScreenState extends State<CoachEventsScreen> {
                   );
                 }
 
-                final allEvents = snapshot.data?.data ?? [];
-                final filtered = _selectedFilter == 'All'
-                    ? allEvents
-                    : allEvents
-                          .where(
-                            (e) =>
-                                (e.status ?? '').toUpperCase() ==
-                                _selectedFilter,
-                          )
-                          .toList();
+                final allEvents =
+                    snapshot.data?.data ?? [];
+                final now = DateTime.now();
+                final sixMonthsAgo = now
+                    .subtract(const Duration(days: 180));
+
+                // Filter: SCHEDULED = future/today events
+                // COMPLETED = past events within 6 months
+                final filtered = allEvents.where((e) {
+                  final status =
+                  (e.status ?? '').toUpperCase();
+
+                  if (_selectedFilter == 'SCHEDULED') {
+                    // Show events whose date is today or in the future
+                    // regardless of API status (handles cases where
+                    // status hasn't been updated yet)
+                    try {
+                      final eventDate =
+                      DateTime.parse(e.eventDate ?? '');
+                      final isUpcoming = !eventDate.isBefore(
+                          DateTime(
+                              now.year, now.month, now.day));
+                      return isUpcoming ||
+                          status == 'SCHEDULED' ||
+                          status == 'ONGOING';
+                    } catch (_) {
+                      return status == 'SCHEDULED' ||
+                          status == 'ONGOING';
+                    }
+                  } else {
+                    // COMPLETED tab: status is COMPLETED
+                    // and event date is within last 6 months
+                    if (status != 'COMPLETED') return false;
+                    try {
+                      final eventDate =
+                      DateTime.parse(e.eventDate ?? '');
+                      return eventDate.isAfter(sixMonthsAgo);
+                    } catch (_) {
+                      return true;
+                    }
+                  }
+                }).toList();
 
                 if (filtered.isEmpty) {
                   return Center(
-                    child: Text(
-                      "No events found",
-                      style: GoogleFonts.poppins(color: Colors.grey),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _selectedFilter == 'SCHEDULED'
+                              ? Icons.event_available
+                              : Icons.event_busy,
+                          size: 52.sp,
+                          color: Colors.grey.shade400,
+                        ),
+                        16.height,
+                        Text(
+                          _selectedFilter == 'SCHEDULED'
+                              ? "No upcoming events"
+                              : "No completed events in last 6 months",
+                          style: GoogleFonts.poppins(
+                              color: Colors.grey.shade500,
+                              fontSize: 14.sp),
+                          textAlign: TextAlign.center,
+                        ),
+                        if (_selectedFilter ==
+                            'SCHEDULED') ...[
+                          16.height,
+                          ElevatedButton.icon(
+                            onPressed: _showCreateEventSheet,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: accentGreen,
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                BorderRadius.circular(10.r),
+                              ),
+                            ),
+                            icon: const Icon(Icons.add,
+                                color: Colors.white, size: 16),
+                            label: Text("Create Event",
+                                style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontWeight:
+                                    FontWeight.w600)),
+                          ),
+                        ],
+                      ],
                     ),
                   );
                 }
@@ -202,19 +291,24 @@ class _CoachEventsScreenState extends State<CoachEventsScreen> {
                   onRefresh: () async => _refresh(),
                   color: accentGreen,
                   child: ListView.builder(
-                    padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 100.h),
+                    padding: EdgeInsets.fromLTRB(
+                        16.w, 12.h, 16.w, 100.h),
                     itemCount: filtered.length,
                     itemBuilder: (_, i) => _CoachEventCard(
                       event: filtered[i],
+                      isCompleted:
+                      _selectedFilter == 'COMPLETED',
                       onTap: () {
-                        print("evnt id ${filtered[i].eventId}");
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => CoachEventGroupsScreen(
-                              eventId: filtered[i].eventId!,
-                              eventName: filtered[i].eventName ?? 'Event',
-                            ),
+                            builder: (_) =>
+                                CoachEventGroupsScreen(
+                                  eventId: filtered[i].eventId!,
+                                  eventName: filtered[i]
+                                      .eventName ??
+                                      'Event',
+                                ),
                           ),
                         );
                       },
@@ -230,11 +324,19 @@ class _CoachEventsScreenState extends State<CoachEventsScreen> {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Event Card
+// ─────────────────────────────────────────────────────────────────────────────
 class _CoachEventCard extends StatelessWidget {
   final Data event;
   final VoidCallback onTap;
+  final bool isCompleted;
 
-  const _CoachEventCard({required this.event, required this.onTap});
+  const _CoachEventCard({
+    required this.event,
+    required this.onTap,
+    this.isCompleted = false,
+  });
 
   Color _statusColor(String? status) {
     switch ((status ?? '').toUpperCase()) {
@@ -252,6 +354,7 @@ class _CoachEventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusColor = _statusColor(event.status);
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -260,7 +363,8 @@ class _CoachEventCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: statusColor.withOpacity(0.35), width: 1.5),
+          border: Border.all(
+              color: statusColor.withOpacity(0.35), width: 1.5),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.04),
@@ -272,6 +376,7 @@ class _CoachEventCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Title + Status badge ───────────────────────────
             Row(
               children: [
                 Expanded(
@@ -286,9 +391,7 @@ class _CoachEventCard extends StatelessWidget {
                 ),
                 Container(
                   padding: EdgeInsets.symmetric(
-                    horizontal: 10.w,
-                    vertical: 4.h,
-                  ),
+                      horizontal: 10.w, vertical: 4.h),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(20.r),
@@ -305,76 +408,106 @@ class _CoachEventCard extends StatelessWidget {
               ],
             ),
             10.height,
+
+            // ── Date + Location ────────────────────────────────
             Row(
               children: [
-                GestureDetector(
-                  onTap: () {},
-                  child: Icon(
-                    Icons.calendar_today_rounded,
-                    size: 14.sp,
-                    color: Colors.grey,
-                  ),
-                ),
+                Icon(Icons.calendar_today_rounded,
+                    size: 13.sp, color: Colors.grey),
                 6.width,
                 Text(
                   event.eventDate ?? '',
                   style: GoogleFonts.poppins(
-                    fontSize: 12.sp,
-                    color: Colors.grey.shade600,
-                  ),
+                      fontSize: 12.sp,
+                      color: Colors.grey.shade600),
                 ),
                 16.width,
-                Icon(
-                  Icons.location_on_outlined,
-                  size: 14.sp,
-                  color: Colors.grey,
-                ),
+                Icon(Icons.location_on_outlined,
+                    size: 13.sp, color: Colors.grey),
                 6.width,
                 Flexible(
                   child: Text(
                     event.location ?? '',
                     style: GoogleFonts.poppins(
-                      fontSize: 12.sp,
-                      color: Colors.grey.shade600,
-                    ),
+                        fontSize: 12.sp,
+                        color: Colors.grey.shade600),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
             10.height,
+
+            // ── Action row ─────────────────────────────────────
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (content) => CoachAttendanceScreen(
-                          groupName: event.eventName,
-                          eventName: event.eventName,
-                          eventId: event.eventId.toString(),
+                // Show Attendance link only for non-completed events
+                if (!isCompleted) ...[
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CoachAttendanceScreen(
+                            groupName: event.eventName ?? '',
+                            eventName: event.eventName ?? '',
+                            eventId:
+                            event.eventId.toString(),
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 10.w, vertical: 5.h),
+                      decoration: BoxDecoration(
+                        color: accentGreen.withOpacity(0.1),
+                        borderRadius:
+                        BorderRadius.circular(8.r),
+                        border: Border.all(
+                            color:
+                            accentGreen.withOpacity(0.4)),
+                      ),
+                      child: Text(
+                        "Attendance",
+                        style: GoogleFonts.poppins(
+                          fontSize: 11.sp,
+                          color: accentGreen,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    );
-                  },
-                  child: Text(
-                    "Attendance",
-                    style: GoogleFonts.poppins(
-                      fontSize: 11.sp,
-                      color: accentGreen,
-                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ),
-                SizedBox(width: 10),
-                Text(
-                  "Tap to manage →",
-                  style: GoogleFonts.poppins(
-                    fontSize: 11.sp,
-                    color: accentGreen,
-                    fontWeight: FontWeight.w600,
+                  10.width,
+                ],
+                GestureDetector(
+                  onTap: onTap,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 10.w, vertical: 5.h),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.05),
+                      borderRadius:
+                      BorderRadius.circular(8.r),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          isCompleted
+                              ? "View Details"
+                              : "Manage",
+                          style: GoogleFonts.poppins(
+                            fontSize: 11.sp,
+                            color: Colors.black87,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        4.width,
+                        Icon(Icons.arrow_forward_ios_rounded,
+                            size: 10.sp, color: Colors.black54),
+                      ],
+                    ),
                   ),
                 ),
               ],

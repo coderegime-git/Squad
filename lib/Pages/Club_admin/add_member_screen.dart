@@ -25,8 +25,7 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
   bool _isLoading = false;
   List<GuardianData> _guardians = [];
   GuardianData? _selectedGuardian;
-
-  // Step 1 – Personal Info
+  GuardianData? _selectedGuardian2;
   final _nameCtrl = TextEditingController();
   final _dobCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
@@ -263,6 +262,7 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
             Expanded(
               child: Form(
                 key: _formKey,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
                   padding: EdgeInsets.all(20.w),
@@ -443,6 +443,7 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
         12.height,
         _dropdownField(
           'Gender *',
+          'Select Gender',
           _genders,
           _selectedGender,
           (v) => setState(() => _selectedGender = v),
@@ -489,7 +490,15 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
           required: true,
         ),
         12.height,
-        8.height,
+        Text(
+          'Choose Guardian',
+          style: GoogleFonts.poppins(
+            fontSize: 12.sp,
+            color: textSecondary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        6.height,
         (_loadingGuardians)
             ? const Center(child: CircularProgressIndicator())
             : _guardians.isEmpty
@@ -537,6 +546,59 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
                   ),
                 ),
               ),
+        12.height,
+        Text(
+          'Second Guardian (optional)',
+          style: GoogleFonts.poppins(
+            fontSize: 12.sp,
+            color: textSecondary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        6.height,
+        (_loadingGuardians)
+            ? const SizedBox.shrink()
+            : _guardians.isEmpty
+            ? const SizedBox.shrink()
+            : DropdownButtonFormField<GuardianData>(
+          value: _selectedGuardian2,
+          hint: Text(
+            'Choose second guardian (optional)',
+            style: GoogleFonts.poppins(
+              fontSize: 12.sp,
+              color: textSecondary.withOpacity(0.5),),
+          ),
+          isExpanded: true,
+          items: _guardians
+              .map((g) => DropdownMenuItem(
+            value: g,
+            child: Text(g.username,
+                style:
+                GoogleFonts.poppins(fontSize: 13.sp)),
+          ))
+              .toList(),
+          onChanged: (v) =>
+              setState(() => _selectedGuardian2 = v),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: EdgeInsets.symmetric(
+                horizontal: 14.w, vertical: 12.h),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide:
+              BorderSide(color: accentGreen, width: 1.5),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -553,26 +615,26 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
           Colors.blue,
         ),
         16.height,
-        _dropdownField(
-          'Activity / Sport *',
-          _activities,
-          _selectedActivity,
-          (v) => setState(() => _selectedActivity = v),
-        ),
-        12.height,
-        _dropdownField(
-          'Group *',
-          _groups,
-          _selectedGroup,
-          (v) => setState(() => _selectedGroup = v),
-        ),
-        12.height,
-        _dropdownField(
-          'Sub-group *',
-          _subGroups,
-          _selectedSubGroup,
-          (v) => setState(() => _selectedSubGroup = v),
-        ),
+        // _dropdownField(
+        //   'Activity / Sport *',
+        //   _activities,
+        //   _selectedActivity,
+        //   (v) => setState(() => _selectedActivity = v),
+        // ),
+        // 12.height,
+        // _dropdownField(
+        //   'Group *',
+        //   _groups,
+        //   _selectedGroup,
+        //   (v) => setState(() => _selectedGroup = v),
+        // ),
+        // 12.height,
+        // _dropdownField(
+        //   'Sub-group *',
+        //   _subGroups,
+        //   _selectedSubGroup,
+        //   (v) => setState(() => _selectedSubGroup = v),
+        // ),
         12.height,
         _formField(
           'Jersey / ID Number (optional)',
@@ -736,15 +798,18 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
   );
 
   Widget _formField(
-    String label,
-    TextEditingController ctrl,
-    IconData icon, {
-    String? hint,
-    bool required = true,
-    int maxLines = 1,
-    TextInputType? keyboardType,
-    bool obscureText = false,
-  }) {
+      String label,
+      TextEditingController ctrl,
+      IconData icon, {
+        String? hint,
+        bool required = true,
+        int maxLines = 1,
+        TextInputType? keyboardType,
+        bool obscureText = false,
+        String? Function(String?)? customValidator,
+      }) {
+    String fieldName = label.replaceAll(RegExp(r'[\*\s]'), '');
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -762,13 +827,24 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
           maxLines: maxLines,
           keyboardType: keyboardType,
           obscureText: obscureText,
-          validator: required
-              ? (v) => (v == null || v.trim().isEmpty)
-                    ? label == "Email *"
-                          ? validateEmail(v!)
-                          : 'Required'
-                    : null
-              : null,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          validator: customValidator ?? (v) {
+            if (!required) return null;
+
+            if (label.contains("Email")) {
+              return AppValidator.validateEmail(v);
+            }
+            if (label.contains("Phone") || label.contains("WhatsApp") || label.contains("Emergency")) {
+              return AppValidator.validatePhone(v);
+            }
+            if (label.contains("Password")) {
+              return AppValidator.validatePassword(v);
+            }
+            if (label.contains("Name") || label.contains("Full Name")) {
+              return AppValidator.validateName(v, fieldName: "Full Name");
+            }
+            return AppValidator.validateRequired(v, fieldName);
+          },
           style: GoogleFonts.poppins(fontSize: 13.sp, color: Colors.black),
           decoration: InputDecoration(
             hintText: hint,
@@ -779,10 +855,7 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
             prefixIcon: Icon(icon, color: textSecondary, size: 18.sp),
             filled: true,
             fillColor: Colors.white,
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: 14.w,
-              vertical: 13.h,
-            ),
+            contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
               borderSide: BorderSide(color: Colors.grey.shade300),
@@ -808,8 +881,6 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
   static String emailPattern =
       r"^((([a-z]|\d|[!#\$%&'\*\+\-\/=\?\^_`{\|}~]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])+(\.([a-z]|\d|[!#\$%&'\*\+\-\/=\?\^_`{\|}~]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])+)*)|((\x22)((((\x20|\x09)*(\x0d\x0a))?(\x20|\x09)+)?(([\x01-\x08\x0b\x0c\x0e-\x1f\x7f]|\x21|[\x23-\x5b]|[\x5d-\x7e]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(\\([\x01-\x09\x0b\x0c\x0d-\x7f]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]))))*(((\x20|\x09)*(\x0d\x0a))?(\x20|\x09)+)?(\x22)))@((([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.)+(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))$";
   static RegExp emailRegEx = RegExp(emailPattern);
-
-  // Validates an email address.
   static bool isEmail(String value) {
     if (emailRegEx.hasMatch(value.trim())) {
       return true;
@@ -901,6 +972,7 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
 
   Widget _dropdownField(
     String label,
+    String text,
     List<String> items,
     String? value,
     void Function(String?) onChange,
@@ -920,6 +992,14 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
         DropdownButtonFormField<String>(
           value: value,
           onChanged: onChange,
+          hint:  Text(
+                 text,
+                 style: GoogleFonts.poppins(
+                   fontSize: 12.sp,
+                   color: textSecondary.withOpacity(0.5),
+                //fontWeight: FontWeight.w500,
+    ),
+    ),
           validator: (v) => v == null ? 'Required' : null,
           style: GoogleFonts.poppins(fontSize: 13.sp, color: Colors.black),
           decoration: InputDecoration(

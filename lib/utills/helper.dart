@@ -288,3 +288,79 @@ class EventDateTimeValidator {
     return '${h}h ${m}m';
   }
 }
+// utills/helper.dart
+
+
+class AppValidator {
+  // Email Validation
+  static String? validateEmail(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Email is required';
+    }
+    final emailRegExp = RegExp(
+      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+    );
+    if (!emailRegExp.hasMatch(value.trim())) {
+      return 'Please enter a valid email address';
+    }
+    return null;
+  }
+
+  // Phone Validation (10 digits)
+  static String? validatePhone(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Phone number is required';
+    }
+    final phoneRegExp = RegExp(r'^\d{10}$');
+    final cleaned = value.trim().replaceAll(RegExp(r'[^0-9]'), '');
+    if (cleaned.length != 10) {
+      return 'Phone number must be 10 digits';
+    }
+    if (!phoneRegExp.hasMatch(cleaned)) {
+      return 'Please enter a valid 10-digit phone number';
+    }
+    return null;
+  }
+
+  // Password Validation
+  static String? validatePassword(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Password is required';
+    }
+    if (value.trim().length < 6) {
+      return 'Password must be at least 6 characters';
+    }
+    return null;
+  }
+
+  // Name Validation
+  static String? validateName(String? value, {String fieldName = "Name"}) {
+    if (value == null || value.trim().isEmpty) {
+      return '$fieldName is required';
+    }
+    if (value.trim().length < 2) {
+      return '$fieldName must be at least 2 characters';
+    }
+    // Allow letters and spaces only
+    if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value.trim())) {
+      return '$fieldName should contain only letters and spaces';
+    }
+    return null;
+  }
+
+  // Required Field
+  static String? validateRequired(String? value, String fieldName) {
+    if (value == null || value.trim().isEmpty) {
+      return '$fieldName is required';
+    }
+    return null;
+  }
+
+  // Date Validation
+  static String? validateDate(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Date is required';
+    }
+    return null;
+  }
+}
