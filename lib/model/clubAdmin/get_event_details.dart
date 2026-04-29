@@ -48,6 +48,7 @@ class Data {
     required this.eventType,
     required this.status,
     required this.clubId,
+    required this.activityId,
     required this.createdByUserId,
     required this.createdByUsername,
     required this.coachIds,
@@ -62,6 +63,7 @@ class Data {
   late final String eventType;
   late final String status;
   late final int clubId;
+  late final int activityId;
   late final int createdByUserId;
   late final String createdByUsername;
   late final List<int> coachIds;
@@ -77,6 +79,7 @@ class Data {
     eventType = json['eventType']??"";
     status = json['status']??"";
     clubId = json['clubId']??0;
+    activityId = json['activityId']??0;
     createdByUserId = json['createdByUserId']??0;
     createdByUsername = json['createdByUsername']??"";
     coachIds = List.castFrom<dynamic, int>(json['coachIds']);
@@ -94,6 +97,7 @@ class Data {
     _data['eventType'] = eventType;
     _data['status'] = status;
     _data['clubId'] = clubId;
+    _data['activityId']= activityId;
     _data['createdByUserId'] = createdByUserId;
     _data['createdByUsername'] = createdByUsername;
     _data['coachIds'] = coachIds;

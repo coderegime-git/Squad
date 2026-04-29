@@ -8,9 +8,11 @@ class CoachEventModel {
   final String eventType;
   final String status;
   final int clubId;
+  final int activityId;
   final int createdByUserId;
   final String createdByUsername;
   final List<int> coachIds;
+
   final DateTime? createdAt;
 
   CoachEventModel({
@@ -23,6 +25,7 @@ class CoachEventModel {
     required this.eventType,
     required this.status,
     required this.clubId,
+    required this.activityId,
     required this.createdByUserId,
     required this.createdByUsername,
     required this.coachIds,
@@ -40,6 +43,7 @@ class CoachEventModel {
       eventType: json['eventType'] as String,
       status: json['status'] as String,
       clubId: json['clubId'] as int,
+      activityId: json['activityId']??0,
       createdByUserId: json['createdByUserId'] as int,
       createdByUsername: json['createdByUsername'] as String,
       coachIds: List<int>.from(json['coachIds']),
@@ -58,6 +62,7 @@ class CoachEventModel {
       'eventType': eventType,
       'status': status,
       'clubId': clubId,
+      'activityId':activityId,
       'createdByUserId': createdByUserId,
       'createdByUsername': createdByUsername,
       'coachIds': coachIds,

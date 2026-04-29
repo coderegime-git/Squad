@@ -16,7 +16,10 @@ import '../../utills/api_service.dart';
 import '../../utills/helper.dart';
 import '../notification_screen.dart';
 import 'club_members_list_screen.dart';
+import 'coach_event_detail.dart';
 import 'coach_event_groups_screen.dart';
+import 'coach_event_detail.dart'; // adjust path
+import '../../model/clubAdmin/get_event_details.dart'; // adjust path
 
 class CoachDashboard extends StatefulWidget {
   const CoachDashboard({super.key});
@@ -247,15 +250,29 @@ class _CoachDashboardState extends State<CoachDashboard> {
         return;
       }
 
+      // Replace the Navigator.push inside _handleEventTap():
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => CoachEventGroupsScreen(
-            eventId: fullEvent.eventId!,
-            eventName: fullEvent.eventName,
+          builder: (_) => CoachEventDetailScreen(
+            event: Data(
+              eventId: fullEvent.eventId ?? 0,
+              eventName: fullEvent.eventName,
+              eventDate: fullEvent.eventDate.toIso8601String(),
+              startTime: fullEvent.startTime,
+              endTime: fullEvent.endTime,
+              location: fullEvent.location,
+              eventType: fullEvent.eventType,
+              status: fullEvent.status,
+              clubId: fullEvent.clubId,
+              activityId: fullEvent.activityId,
+              coachIds: fullEvent.coachIds ?? [],
+              createdByUsername: fullEvent.createdByUsername ?? '',
+              createdByUserId: fullEvent.createdByUserId, createdAt: '',
+            ),
           ),
         ),
-      );
+      ).then((_) => _refreshAll());
     } catch (e) {
       print("Error loading event details: $e");
       toast("Error loading event details");
@@ -300,7 +317,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
         createdByUserId: fullEvent.createdByUserId,
         createdByUsername: fullEvent.createdByUsername,
         coachIds: fullEvent.coachIds,
-        createdAt: fullEvent.createdAt,
+        createdAt: fullEvent.createdAt, activityId: fullEvent.activityId,
       );
 
       showModalBottomSheet(
@@ -662,7 +679,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
                     color: Colors.grey.shade700,
                   ),
                 ),
-                TextButton(onPressed: () {}, child: const Text('View All')),
+                // TextButton(onPressed: () {}, child: const Text('View All')),
               ],
             ),
             8.height,
@@ -1333,11 +1350,13 @@ class _UpcomingEventCard extends StatelessWidget {
                   color: Colors.grey.shade500,
                 ),
                 4.width,
-                Text(
-                  event.location,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12.sp,
-                    color: Colors.grey.shade600,
+                Expanded(
+                  child: Text(
+                    event.location,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12.sp,
+                      color: Colors.grey.shade600,
+                    ),
                   ),
                 ),
               ],

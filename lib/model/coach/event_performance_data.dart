@@ -91,4 +91,6 @@ class Data {
     data['createdAt'] = this.createdAt;
     return data;
   }
+
+  void operator [](String other) {}
 }

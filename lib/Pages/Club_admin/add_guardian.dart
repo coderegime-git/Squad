@@ -459,7 +459,7 @@ class _ClubAdminAddGuardianScreenState
         //     hint: 'e.g., Software Engineer', required: false),
         12.height,
         _dropdownField(
-          'Relation to Child(ren) *',
+          'Relation to Children*',
           _relations,
           _selectedRelation,
           (v) => setState(() => _selectedRelation = v),
@@ -468,7 +468,6 @@ class _ClubAdminAddGuardianScreenState
     );
   }
 
-  // ── Step 2: Link Children ───────────────────────────────────────────
   Widget _step2() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

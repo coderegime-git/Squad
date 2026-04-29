@@ -1,16 +1,22 @@
-// lib/screens/coach/coach_events_screen.dart
+// screens/coach/coach_events_screen.dart
+// Coach: Events list — Scheduled & Completed tabs
+// - Scheduled: today + future events
+// - Completed: past events within last 6 months (hard-coded)
+// - FAB: Create Event → CoachCreateEventSheet
+// - Tap card → CoachEventDetailScreen (Details | Attendees | Performance)
+// - Attendance button (scheduled only) → CoachAttendanceScreen
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nb_utils/nb_utils.dart';
-import 'package:sports/Pages/Coach/coach_attendance_screen.dart';
 
 import '../../config/colors.dart';
 import '../../model/clubAdmin/get_event_details.dart';
 import '../../utills/api_service.dart';
-import '../../utills/helper.dart';
-import 'coach_event_groups_screen.dart';
+import 'coach_attendance_screen.dart';
 import 'coach_create_event_sheet.dart';
+import 'coach_event_detail.dart';
 
 class CoachEventsScreen extends StatefulWidget {
   const CoachEventsScreen({super.key});
@@ -19,27 +25,28 @@ class CoachEventsScreen extends StatefulWidget {
   State<CoachEventsScreen> createState() => _CoachEventsScreenState();
 }
 
-class _CoachEventsScreenState extends State<CoachEventsScreen> {
+class _CoachEventsScreenState extends State<CoachEventsScreen>
+    with SingleTickerProviderStateMixin {
   final ClubApiService _api = ClubApiService();
+  late TabController _tabController;
   late Future<GetEventDetails> _eventsFuture;
-
-  // Only SCHEDULED and COMPLETED; default to SCHEDULED
-  String _selectedFilter = 'SCHEDULED';
-  final List<String> _filters = ['SCHEDULED', 'COMPLETED'];
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _eventsFuture = _api.getEvents();
   }
 
-  void _refresh() {
-    setState(() {
-      _eventsFuture = _api.getEvents();
-    });
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
-  void _showCreateEventSheet() {
+  void _refresh() => setState(() => _eventsFuture = _api.getEvents());
+
+  void _showCreateSheet() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -52,308 +59,246 @@ class _CoachEventsScreenState extends State<CoachEventsScreen> {
     );
   }
 
+  List<Data> _scheduled(List<Data> all) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return all.where((e) {
+      try {
+        final d = DateTime.parse(e.eventDate);
+        return !d.isBefore(today);
+      } catch (_) {
+        return (e.status ?? '').toUpperCase() == 'SCHEDULED';
+      }
+    }).toList()
+      ..sort((a, b) => a.eventDate.compareTo(b.eventDate));
+  }
+
+  List<Data> _completed(List<Data> all) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final sixMonthsAgo = now.subtract(const Duration(days: 180));
+    return all.where((e) {
+      try {
+        final d = DateTime.parse(e.eventDate);
+        return d.isBefore(today) && d.isAfter(sixMonthsAgo);
+      } catch (_) {
+        return (e.status ?? '').toUpperCase() == 'COMPLETED';
+      }
+    }).toList()
+      ..sort((a, b) => b.eventDate.compareTo(a.eventDate));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showCreateEventSheet,
-        backgroundColor: accentGreen,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: Text(
-          "Create Event",
-          style: GoogleFonts.poppins(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
+      body: Column(children: [
+        // ── Header ──────────────────────────────────────────────
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(16),
+                bottomRight: Radius.circular(16)),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.25),
+                  blurRadius: 10, offset: const Offset(0, 5)),
+            ],
+          ),
+          child: SafeArea(
+            child: Column(children: [
+              Padding(
+                padding: EdgeInsets.only(
+                    top: 5.h, left: 20.w, right: 20.w, bottom: 0),
+                child: Row(children: [
+                  Text('Events',
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineMedium
+                          ?.copyWith(
+                          color: Colors.white,
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.bold)),
+                  const Spacer(),
+                  // Refresh button
+                  GestureDetector(
+                    onTap: _refresh,
+                    child: Container(
+                      padding: EdgeInsets.all(8.w),
+                      decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          shape: BoxShape.circle),
+                      child: Icon(Icons.refresh_rounded,
+                          color: Colors.white, size: 18.sp),
+                    ),
+                  ),
+                ]),
+              ),
+              8.height,
+              TabBar(
+                controller: _tabController,
+                indicatorColor: accentGreen,
+                labelColor: accentGreen,
+                unselectedLabelColor: Colors.grey.shade400,
+                labelStyle: GoogleFonts.poppins(
+                    fontSize: 13.sp, fontWeight: FontWeight.w600),
+                tabs: const [
+                  Tab(text: 'Scheduled'),
+                  Tab(text: 'Completed'),
+                ],
+              ),
+            ]),
           ),
         ),
+
+        // ── Content ──────────────────────────────────────────────
+        Expanded(
+          child: FutureBuilder<GetEventDetails>(
+            future: _eventsFuture,
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(
+                    child: CircularProgressIndicator(color: accentGreen));
+              }
+              if (snap.hasError) {
+                return Center(child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, color: Colors.red, size: 40.sp),
+                    12.height,
+                    Text('Failed to load events',
+                        style: GoogleFonts.poppins(color: Colors.grey)),
+                    12.height,
+                    ElevatedButton(
+                      onPressed: _refresh,
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: accentOrange,
+                          foregroundColor: Colors.white),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ));
+              }
+
+              final all = snap.data?.data ?? [];
+              final scheduled = _scheduled(all);
+              final completed = _completed(all);
+
+              return TabBarView(
+                controller: _tabController,
+                children: [
+                  _eventList(scheduled, isCompleted: false),
+                  _eventList(completed, isCompleted: true),
+                ],
+              );
+            },
+          ),
+        ),
+      ]),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showCreateSheet,
+        backgroundColor: accentGreen,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: Text('Create Event',
+            style: GoogleFonts.poppins(
+                color: Colors.white, fontWeight: FontWeight.w600)),
       ),
-      body: Column(
+    );
+  }
+
+  Widget _eventList(List<Data> events, {required bool isCompleted}) {
+    if (events.isEmpty) {
+      return Center(child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // ── Header ──────────────────────────────────────────────────
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.black,
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(16),
-                bottomRight: Radius.circular(16),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.25),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: SafeArea(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  top: 5.h,
-                  left: 20.w,
-                  right: 20.w,
-                  bottom: 14.h,
-                ),
-                child: Text(
-                  "Events",
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineMedium
-                      ?.copyWith(
-                    color: Colors.white,
-                    fontSize: 20.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
+          Icon(
+            isCompleted ? Icons.event_busy : Icons.event_available,
+            size: 52.sp, color: Colors.grey.shade300,
           ),
-
-          // ── Filter chips: Scheduled | Completed ─────────────────────
-          Container(
-            color: Colors.white,
-            padding:
-            EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-            child: Row(
-              children: _filters.map((f) {
-                final selected = _selectedFilter == f;
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: () =>
-                        setState(() => _selectedFilter = f),
-                    child: Container(
-                      margin: EdgeInsets.only(
-                          right: f == 'SCHEDULED' ? 8.w : 0),
-                      padding:
-                      EdgeInsets.symmetric(vertical: 10.h),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? accentGreen
-                            : Colors.grey.shade100,
-                        borderRadius:
-                        BorderRadius.circular(10.r),
-                        border: Border.all(
-                          color: selected
-                              ? accentGreen
-                              : Colors.grey.shade300,
-                        ),
-                      ),
-                      child: Text(
-                        f == 'SCHEDULED'
-                            ? 'Scheduled'
-                            : 'Completed',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(
-                          fontSize: 13.sp,
-                          color: selected
-                              ? Colors.white
-                              : Colors.black87,
-                          fontWeight: selected
-                              ? FontWeight.w600
-                              : FontWeight.normal,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
+          16.height,
+          Text(
+            isCompleted
+                ? 'No completed events in last 6 months'
+                : 'No upcoming events',
+            style: GoogleFonts.poppins(
+                color: Colors.grey.shade500, fontSize: 14.sp),
+            textAlign: TextAlign.center,
           ),
-
-          // ── Events list ─────────────────────────────────────────────
-          Expanded(
-            child: FutureBuilder<GetEventDetails>(
-              future: _eventsFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState ==
-                    ConnectionState.waiting) {
-                  return const Center(
-                      child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.error_outline,
-                            color: Colors.red, size: 40.sp),
-                        12.height,
-                        Text("Failed to load events",
-                            style: GoogleFonts.poppins(
-                                color: Colors.grey)),
-                        12.height,
-                        ElevatedButton(
-                          onPressed: _refresh,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: accentOrange,
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Text("Retry"),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                final allEvents =
-                    snapshot.data?.data ?? [];
-                final now = DateTime.now();
-                final sixMonthsAgo = now
-                    .subtract(const Duration(days: 180));
-
-                // Filter: SCHEDULED = future/today events
-                // COMPLETED = past events within 6 months
-                final filtered = allEvents.where((e) {
-                  final status =
-                  (e.status ?? '').toUpperCase();
-
-                  if (_selectedFilter == 'SCHEDULED') {
-                    // Show events whose date is today or in the future
-                    // regardless of API status (handles cases where
-                    // status hasn't been updated yet)
-                    try {
-                      final eventDate =
-                      DateTime.parse(e.eventDate ?? '');
-                      final isUpcoming = !eventDate.isBefore(
-                          DateTime(
-                              now.year, now.month, now.day));
-                      return isUpcoming ||
-                          status == 'SCHEDULED' ||
-                          status == 'ONGOING';
-                    } catch (_) {
-                      return status == 'SCHEDULED' ||
-                          status == 'ONGOING';
-                    }
-                  } else {
-                    // COMPLETED tab: status is COMPLETED
-                    // and event date is within last 6 months
-                    if (status != 'COMPLETED') return false;
-                    try {
-                      final eventDate =
-                      DateTime.parse(e.eventDate ?? '');
-                      return eventDate.isAfter(sixMonthsAgo);
-                    } catch (_) {
-                      return true;
-                    }
-                  }
-                }).toList();
-
-                if (filtered.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          _selectedFilter == 'SCHEDULED'
-                              ? Icons.event_available
-                              : Icons.event_busy,
-                          size: 52.sp,
-                          color: Colors.grey.shade400,
-                        ),
-                        16.height,
-                        Text(
-                          _selectedFilter == 'SCHEDULED'
-                              ? "No upcoming events"
-                              : "No completed events in last 6 months",
-                          style: GoogleFonts.poppins(
-                              color: Colors.grey.shade500,
-                              fontSize: 14.sp),
-                          textAlign: TextAlign.center,
-                        ),
-                        if (_selectedFilter ==
-                            'SCHEDULED') ...[
-                          16.height,
-                          ElevatedButton.icon(
-                            onPressed: _showCreateEventSheet,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: accentGreen,
-                              shape: RoundedRectangleBorder(
-                                borderRadius:
-                                BorderRadius.circular(10.r),
-                              ),
-                            ),
-                            icon: const Icon(Icons.add,
-                                color: Colors.white, size: 16),
-                            label: Text("Create Event",
-                                style: GoogleFonts.poppins(
-                                    color: Colors.white,
-                                    fontWeight:
-                                    FontWeight.w600)),
-                          ),
-                        ],
-                      ],
-                    ),
-                  );
-                }
-
-                return RefreshIndicator(
-                  onRefresh: () async => _refresh(),
-                  color: accentGreen,
-                  child: ListView.builder(
-                    padding: EdgeInsets.fromLTRB(
-                        16.w, 12.h, 16.w, 100.h),
-                    itemCount: filtered.length,
-                    itemBuilder: (_, i) => _CoachEventCard(
-                      event: filtered[i],
-                      isCompleted:
-                      _selectedFilter == 'COMPLETED',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                CoachEventGroupsScreen(
-                                  eventId: filtered[i].eventId!,
-                                  eventName: filtered[i]
-                                      .eventName ??
-                                      'Event',
-                                ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                );
-              },
+          if (!isCompleted) ...[
+            16.height,
+            ElevatedButton.icon(
+              onPressed: _showCreateSheet,
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: accentGreen,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.r))),
+              icon: const Icon(Icons.add, color: Colors.white, size: 16),
+              label: Text('Create Event',
+                  style: GoogleFonts.poppins(
+                      color: Colors.white, fontWeight: FontWeight.w600)),
             ),
-          ),
+          ],
         ],
+      ));
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async => _refresh(),
+      color: accentGreen,
+      child: ListView.builder(
+        padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 100.h),
+        itemCount: events.length,
+        itemBuilder: (_, i) => _CoachEventCard(
+          event: events[i],
+          isCompleted: isCompleted,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CoachEventDetailScreen(event: events[i]),
+            ),
+          ).then((_) => _refresh()),
+          onAttendance: isCompleted ? null : () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CoachAttendanceScreen(
+                groupName: events[i].eventName,
+                eventName: events[i].eventName,
+                eventId: events[i].eventId.toString(),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Event Card
-// ─────────────────────────────────────────────────────────────────────────────
 class _CoachEventCard extends StatelessWidget {
   final Data event;
   final VoidCallback onTap;
+  final VoidCallback? onAttendance;
   final bool isCompleted;
 
   const _CoachEventCard({
     required this.event,
     required this.onTap,
+    this.onAttendance,
     this.isCompleted = false,
   });
 
-  Color _statusColor(String? status) {
-    switch ((status ?? '').toUpperCase()) {
-      case 'SCHEDULED':
-        return Colors.blue;
-      case 'ONGOING':
-        return accentGreen;
-      case 'COMPLETED':
-        return Colors.grey;
-      default:
-        return accentOrange;
+  Color _statusColor(String? s) {
+    switch ((s ?? '').toUpperCase()) {
+      case 'SCHEDULED': return Colors.blue;
+      case 'ONGOING': return accentGreen;
+      case 'COMPLETED': return Colors.grey;
+      default: return accentOrange;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = _statusColor(event.status);
+    final statusColor = isCompleted ? Colors.grey : _statusColor(event.status);
 
     return GestureDetector(
       onTap: onTap,
@@ -366,154 +311,101 @@ class _CoachEventCard extends StatelessWidget {
           border: Border.all(
               color: statusColor.withOpacity(0.35), width: 1.5),
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
+            BoxShadow(color: Colors.black.withOpacity(0.04),
+                blurRadius: 8, offset: const Offset(0, 2)),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Title + Status badge ───────────────────────────
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    event.eventName ?? '',
-                    style: GoogleFonts.montserrat(
-                      fontSize: 15.sp,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: 10.w, vertical: 4.h),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(20.r),
-                  ),
-                  child: Text(
-                    event.status ?? '',
-                    style: GoogleFonts.poppins(
-                      fontSize: 11.sp,
-                      color: statusColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // Title + Status
+          Row(children: [
+            Expanded(
+              child: Text(event.eventName,
+                  style: GoogleFonts.montserrat(
+                      fontSize: 15.sp, fontWeight: FontWeight.w700)),
             ),
-            10.height,
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+              decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20.r)),
+              child: Text(
+                isCompleted ? 'COMPLETED' : (event.status ?? ''),
+                style: GoogleFonts.poppins(
+                    fontSize: 11.sp, color: statusColor,
+                    fontWeight: FontWeight.w600),
+              ),
+            ),
+          ]),
+          10.height,
 
-            // ── Date + Location ────────────────────────────────
-            Row(
-              children: [
-                Icon(Icons.calendar_today_rounded,
-                    size: 13.sp, color: Colors.grey),
-                6.width,
-                Text(
-                  event.eventDate ?? '',
+          // Date & Location
+          Row(children: [
+            Icon(Icons.calendar_today_rounded, size: 13.sp, color: Colors.grey),
+            6.width,
+            Text(event.eventDate,
+                style: GoogleFonts.poppins(
+                    fontSize: 12.sp, color: Colors.grey.shade600)),
+            16.width,
+            Icon(Icons.access_time_rounded, size: 13.sp, color: Colors.grey),
+            6.width,
+            Text('${event.startTime} – ${event.endTime}',
+                style: GoogleFonts.poppins(
+                    fontSize: 12.sp, color: Colors.grey.shade600)),
+          ]),
+          6.height,
+          Row(children: [
+            Icon(Icons.location_on_outlined, size: 13.sp, color: Colors.grey),
+            6.width,
+            Expanded(
+              child: Text(event.location,
                   style: GoogleFonts.poppins(
-                      fontSize: 12.sp,
-                      color: Colors.grey.shade600),
-                ),
-                16.width,
-                Icon(Icons.location_on_outlined,
-                    size: 13.sp, color: Colors.grey),
-                6.width,
-                Flexible(
-                  child: Text(
-                    event.location ?? '',
-                    style: GoogleFonts.poppins(
-                        fontSize: 12.sp,
-                        color: Colors.grey.shade600),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+                      fontSize: 12.sp, color: Colors.grey.shade600),
+                  overflow: TextOverflow.ellipsis),
             ),
-            10.height,
+          ]),
+          12.height,
 
-            // ── Action row ─────────────────────────────────────
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                // Show Attendance link only for non-completed events
-                if (!isCompleted) ...[
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => CoachAttendanceScreen(
-                            groupName: event.eventName ?? '',
-                            eventName: event.eventName ?? '',
-                            eventId:
-                            event.eventId.toString(),
-                          ),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 10.w, vertical: 5.h),
-                      decoration: BoxDecoration(
-                        color: accentGreen.withOpacity(0.1),
-                        borderRadius:
-                        BorderRadius.circular(8.r),
-                        border: Border.all(
-                            color:
-                            accentGreen.withOpacity(0.4)),
-                      ),
-                      child: Text(
-                        "Attendance",
-                        style: GoogleFonts.poppins(
-                          fontSize: 11.sp,
-                          color: accentGreen,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                  10.width,
-                ],
-                GestureDetector(
-                  onTap: onTap,
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                        horizontal: 10.w, vertical: 5.h),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.05),
-                      borderRadius:
-                      BorderRadius.circular(8.r),
-                    ),
-                    child: Row(
-                      children: [
-                        Text(
-                          isCompleted
-                              ? "View Details"
-                              : "Manage",
-                          style: GoogleFonts.poppins(
-                            fontSize: 11.sp,
-                            color: Colors.black87,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        4.width,
-                        Icon(Icons.arrow_forward_ios_rounded,
-                            size: 10.sp, color: Colors.black54),
-                      ],
-                    ),
-                  ),
+          // Actions row
+          Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+            if (onAttendance != null) ...[
+              GestureDetector(
+                onTap: onAttendance,
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                  decoration: BoxDecoration(
+                      color: accentGreen.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8.r),
+                      border: Border.all(color: accentGreen.withOpacity(0.4))),
+                  child: Text('Attendance',
+                      style: GoogleFonts.poppins(
+                          fontSize: 11.sp, color: accentGreen,
+                          fontWeight: FontWeight.w600)),
                 ),
-              ],
+              ),
+              10.width,
+            ],
+            GestureDetector(
+              onTap: onTap,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(8.r)),
+                child: Row(children: [
+                  Text(
+                    isCompleted ? 'View Details' : 'Manage',
+                    style: GoogleFonts.poppins(
+                        fontSize: 11.sp, color: Colors.black87,
+                        fontWeight: FontWeight.w600),
+                  ),
+                  4.width,
+                  Icon(Icons.arrow_forward_ios_rounded,
+                      size: 10.sp, color: Colors.black54),
+                ]),
+              ),
             ),
-          ],
-        ),
+          ]),
+        ]),
       ),
     );
   }

@@ -11,8 +11,10 @@ import 'package:sports/model/clubAdmin/get_groups.dart';
 import 'package:sports/model/coach/event_attendance_data.dart';
 import 'package:sports/model/coach/group_memebers_data.dart';
 import 'package:sports/model/guardian/get_your_member.dart';
+import 'package:sports/model/member/metrics.dart';
 import 'package:sports/model/member/profile_data.dart';
 import 'package:sports/utills/shared_preference.dart';
+import '../model/clubAdmin/get_members.dart' as membersModel;
 
 import '../model/clubAdmin/activity_mapped_event_data.dart';
 import '../model/clubAdmin/getSubGroups.dart';
@@ -122,6 +124,7 @@ class ApiBaseHelper {
         options: Options(headers: headers),
       );
       responseJson = _returnResponse(response);
+      print("responseJson ${responseJson}");
     } catch (e) {
       print("sfsdsdsd");
       print(e.toString());
@@ -396,6 +399,29 @@ class ApiBaseHelper {
       throw FetchDataException('No Internet connection');
     }
     return apiResponse;
+  }
+  Future<dynamic> deleteWithBody(String url, [dynamic body]) async {
+    var apiUrl = ApiBaseHelper._baseUrl + url;
+    var headers = getMainHeaders();
+    dynamic responseJson;
+    try {
+      final response = await dio.delete(
+        apiUrl,
+        data: body,
+        options: Options(headers: headers),
+      );
+      responseJson = _returnResponse(response);
+    } on SocketException {
+      throw FetchDataException('No Internet connection');
+    } catch (e) {
+      print("deleteWithBody error: $e");
+      if (e.toString().contains("401")) {
+        clearUserData();
+        throw Exception('token_expired');
+      }
+      rethrow;
+    }
+    return responseJson;
   }
 }
 
@@ -721,11 +747,7 @@ class ClubApiService {
     }
   }
 
-  // ══════════════════════════════════════════════════════════════
-  // EVENT GROUP APIs  — newly added, nothing above changed
-  // ══════════════════════════════════════════════════════════════
 
-  /// POST /api/events/{eventId}/groups
   Future<bool> createGroup(int eventId, Map<String, dynamic> data) async {
     try {
       print("Create group data: $data for eventId: $eventId");
@@ -1171,17 +1193,32 @@ class ClubApiService {
     }
   }
 
+// Replace in ClubApiService:
   Future<PerformanceNotesData> getEventsPerformanceNotes({
     required String eventId,
   }) async {
     try {
       final fullResponse = await _helper.get(
-        "/api/events/$eventId/performance-notes",
+        "api/events/$eventId/performance-notes", // removed leading slash
       );
       final jsonResponse = jsonEncode(fullResponse);
+      print("getEventsPerformanceNotes response: $jsonResponse");
       return PerformanceNotesData.fromJson(fullResponse);
     } catch (e) {
-      print("Add Event failed: $e");
+      print("getEventsPerformanceNotes failed: $e");
+      return PerformanceNotesData.fromJson({});
+    }
+  }
+  Future<PerformanceNotesData> getMemberPerformanceNotes({
+    required String memberId,
+  }) async {
+    try {
+      final fullResponse = await _helper.get(
+        "api/events/members/$memberId/performance-notes",
+      );
+      return PerformanceNotesData.fromJson(fullResponse);
+    } catch (e) {
+      print("getMemberPerformanceNotes failed: $e");
       return PerformanceNotesData.fromJson({});
     }
   }
@@ -1221,7 +1258,20 @@ class ClubApiService {
       return false;
     }
   }
+  Future<List<ActivityData1>> getActivities1() async {
+    try {
+      final response = await _helper.get("api/activities");
+      print("Get activities response: $response");
 
+      if (response != null && response is List) {
+        return response.map((e) => ActivityData1.fromJson(e)).toList();
+      }
+      return [];
+    } catch (e) {
+      print("Get activities failed: $e");
+      return [];
+    }
+  }
   Future<NotificationData> getNotifications() async {
     try {
       final fullResponse = await _helper.get("api/notifications");
@@ -1248,7 +1298,9 @@ class ClubApiService {
 
   Future<bool> createStandaloneGroup(Map<String, dynamic> data) async {
     try {
+      print("CreateGroupData ${data}");
       final fullResponse = await _helper.post("api/groups", data);
+
       return fullResponse['success'] == true;
     } catch (e) {
       print("createStandaloneGroup failed: $e");
@@ -1307,10 +1359,10 @@ class ClubApiService {
       return false;
     }
   }
-
   Future<bool> addMembersToGroup(int groupId, List<int> memberIds) async {
     try {
       final fullResponse = await _helper.post("api/groups/$groupId/members", {
+        "groupId": groupId,
         "memberIds": memberIds,
       });
       return fullResponse['success'] == true;
@@ -1343,6 +1395,62 @@ class ClubApiService {
       return fullResponse['success'] == true;
     } catch (e) {
       print("updateMemberMembership failed: $e");
+      return false;
+    }
+  }
+  Future<List<membersModel.Data>> getGroupDirectMembers(int groupId) async {
+    try {
+      print("getGroupDirectMembers groupId: $groupId");
+      final fullResponse = await _helper.get("api/groups/$groupId/members");
+      final jsonResponse = jsonEncode(fullResponse);
+      print("getGroupDirectMembers response: $jsonResponse");
+      final List<dynamic> data = fullResponse['data'] ?? [];
+      return data.map((json) => membersModel.Data.fromJson(json)).toList();
+    } catch (e) {
+      print("getGroupDirectMembers failed: $e");
+      rethrow;
+    }
+  }
+
+  /// DELETE /api/groups/{groupId}/members  body: { memberIds: [...] }
+  /// Removes one or more members from a standalone group
+  Future<bool> removeMembersFromGroup(int groupId, List<int> memberIds) async {
+    try {
+      print("removeMembersFromGroup groupId: $groupId memberIds: $memberIds");
+      // The API uses DELETE with a body: { "memberIds": [...] }
+      final fullResponse = await _helper.deleteWithBody(
+        "api/groups/$groupId/members",
+        {"memberIds": memberIds},
+      );
+      final jsonResponse = jsonEncode(fullResponse);
+      print("removeMembersFromGroup response: $jsonResponse");
+      return fullResponse['success'] == true;
+    } catch (e) {
+      print("removeMembersFromGroup failed: $e");
+      return false;
+    }
+  }
+  Future<List<Map<String, dynamic>>> getEventMembers(int eventId) async {
+    try {
+      final fullResponse = await _helper.get("api/events/$eventId/members");
+      final List<dynamic> data = fullResponse['data'] ?? [];
+      return data.map((e) => Map<String, dynamic>.from(e)).toList();
+    } catch (e) {
+      print("getEventMembers failed: $e");
+      return [];
+    }
+  }
+  Future<bool> updateEvent(int eventId, Map<String, dynamic> data) async {
+    try {
+      print("Update Events");
+      print("Update Events ${data}");
+;      final fullResponse = await _helper.put(
+        "api/events/$eventId",
+        data,
+      );
+      return fullResponse['success'] == true;
+    } catch (e) {
+      print("updateEvent failed: $e");
       return false;
     }
   }
@@ -1716,17 +1824,6 @@ class MemberApiService {
   // }
 
   final ApiBaseHelper _helper = ApiBaseHelper();
-
-  // ══════════════════════════════════════════════════════════════════════════════
-  // ADD THESE 3 METHODS to ClubApiService in lib/utills/api_service.dart
-  //
-  // STEP 1: Add this import at the top of api_service.dart:
-  //   import '../model/member/get_member_events.dart';
-  //
-  // STEP 2: Paste these 3 methods inside ClubApiService class
-  // ══════════════════════════════════════════════════════════════════════════════
-
-  /// GET /api/member/events — all events for logged-in member
   Future<GetMemberEvents> getMemberEvents() async {
     try {
       final fullResponse = await _helper.get("api/member/events");
@@ -1738,7 +1835,17 @@ class MemberApiService {
       rethrow;
     }
   }
-
+  Future<GetMetrics> getMetrics() async {
+    try {
+      final fullResponse = await _helper.get("api/members/metrics");
+      print("getMemberEvents success: ${fullResponse['success']}");
+      final jsonResponse = jsonEncode(fullResponse);
+      return getMemberMetricsFromJson(jsonResponse);
+    } catch (e) {
+      print("getMemberEvents failed: $e");
+      rethrow;
+    }
+  }
   Future<GetMemberDashboard> getMemberDashboard(int clubId) async {
     try {
       print("Fetching member dashboard for club: $clubId");
@@ -1815,6 +1922,7 @@ class MemberApiService {
       print("Profile update failed: $e");
       return false;
     }
+
   }
 }
 

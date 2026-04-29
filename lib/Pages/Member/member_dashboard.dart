@@ -232,7 +232,6 @@ class _MemberDashboardState extends State<MemberDashboard> {
 
                           16.height,
 
-                          // ── Activities Chips ────────────────────
                           if (isLoading)
                             _shimmerBox(height: 40.h)
                           else if (club != null &&

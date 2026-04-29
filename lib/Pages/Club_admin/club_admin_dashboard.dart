@@ -392,14 +392,12 @@ class _ClubAdminDashboardState extends State<ClubAdminDashboard> {
       ),
     );
   }
-
   void _showEventDetailSheet(Data event) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: cardDark,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24.r))),
-      builder: (_) => EventDetailSheet(eventId: event.eventId, event: event, apiService: apiService),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EventDetailFullScreen(event: event, canEdit: true),
+      ),
     );
   }
 

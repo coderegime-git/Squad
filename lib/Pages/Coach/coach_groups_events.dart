@@ -1,13 +1,33 @@
-// screens/coach/coach_groups.dart
+// lib/screens/coach/coach_groups_screen.dart
+//
+// Mirrors the ClubAdmin groups & subgroups flow exactly.
+// Coach can:
+//   - View all groups        (GET    /api/groups)
+//   - Create group           (POST   /api/groups)  — with coach assignment
+//   - Edit group             (PUT    /api/groups/{groupId})
+//   - Delete group           (DELETE /api/groups/{groupId})
+//   - View group members     (GET    /api/groups/{groupId}/members)
+//   - Add / Remove members   (POST/DELETE /api/groups/{groupId}/members)
+//   - View sub-groups        (GET    /api/groups/{groupId}/sub-groups)
+//   - Create sub-group       (POST   /api/groups/{groupId}/sub-groups)  — with coach
+//   - Edit / Delete sub-group
+//   - Sub-group members      (GET/POST /api/subgroups/{id}/members)
+//   - Remove sub-group member (DELETE /api/subgroups/{id}/members/{memberId})
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nb_utils/nb_utils.dart';
 
-import '../../config/app_theme.dart';
 import '../../config/colors.dart';
-import 'coach_attendance_screen.dart';
+import '../../model/clubAdmin/get_groups.dart';
+import '../../model/clubAdmin/getSubGroups.dart';
+import '../../model/clubAdmin/get_members.dart';
+import '../../model/clubAdmin/get_coaches.dart';
+import '../../model/clubAdmin/get_subgroups_member.dart';
+import '../../utills/api_service.dart';
+import '../../utills/helper.dart';
 
 class CoachGroupsScreen extends StatefulWidget {
   const CoachGroupsScreen({super.key});
@@ -17,127 +37,552 @@ class CoachGroupsScreen extends StatefulWidget {
 }
 
 class _CoachGroupsScreenState extends State<CoachGroupsScreen> {
-  late Future<List<Group>> _groupsFuture;
-
+  final ClubApiService _apiService = ClubApiService();
+  late Future<List<GroupData>> _groupsFuture;
+  bool _isFirstLoad = true;
+  bool _creatingGroup = false;
   @override
   void initState() {
     super.initState();
     _groupsFuture = _fetchGroups();
   }
 
-  Future<List<Group>> _fetchGroups() async {
-    await Future.delayed(const Duration(milliseconds: 800));
-    return [
-      Group(
-        id: "g1",
-        name: "Under-14 A",
-        activity: "Football",
-        memberCount: 18,
-        attendanceRate: 94,
+  Future<List<GroupData>> _fetchGroups() async {
+    final result = await _apiService.getAllGroups();
+    if (mounted) setState(() => _isFirstLoad = false);
+    return result;
+  }
+
+  void _refresh() => setState(() {
+    _isFirstLoad = true;
+    _groupsFuture = _fetchGroups();
+  });
+
+  void _showCreateGroupSheet() async {
+    setState(() => _creatingGroup = true);
+    List<CoachData> allCoaches = [];
+    try {
+      final result = await _apiService.getCoaches();
+      allCoaches = result.data;
+    } catch (_) {}
+    setState(() => _creatingGroup = false);
+
+    final nameCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
+    List<int> selectedCoachIds = [];
+    bool isLoading = false;
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r))),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: EdgeInsets.only(
+              left: 20.w,
+              right: 20.w,
+              top: 20.h,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24.h),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _sheetHandle(),
+                16.height,
+                Row(children: [
+                  Container(
+                    padding: EdgeInsets.all(8.w),
+                    decoration: BoxDecoration(
+                        color: accentGreen.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(10.r)),
+                    child: Icon(Icons.group_add_rounded,
+                        color: accentGreen, size: 20.sp),
+                  ),
+                  12.width,
+                  Text('Create Group',
+                      style: GoogleFonts.montserrat(
+                          fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                ]),
+                20.height,
+                _sheetField('Group Name *', nameCtrl, Icons.group_rounded,
+                    hint: 'e.g., Under 14'),
+                12.height,
+                _sheetField(
+                    'Description (optional)', descCtrl, Icons.description_rounded,
+                    hint: 'Short description', required: false),
+                if (allCoaches.isNotEmpty) ...[
+                  16.height,
+                  _coachPickerSection(
+                    allCoaches,
+                    selectedCoachIds,
+                    setSheet,
+                    label: 'Assign Coaches (optional)',
+                  ),
+                ],
+                20.height,
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: isLoading
+                        ? null
+                        : () async {
+                      if (nameCtrl.text.trim().isEmpty) {
+                        toast('Please enter group name');
+                        return;
+                      }
+                      setSheet(() => isLoading = true);
+                      final success =
+                      await _apiService.createStandaloneGroup({
+                        "activityId": selectedCoachIds,
+                        "name": nameCtrl.text.trim(),
+                        "description": descCtrl.text.trim(),
+                        "coachIds":[],
+                      });
+                      setSheet(() => isLoading = false);
+                      if (success) {
+                        Navigator.pop(ctx);
+                        AppUI.success(context,
+                            'Group "${nameCtrl.text}" created!');
+                        _refresh();
+                      } else {
+                        AppUI.error(
+                            context, 'Failed to create group. Try again.');
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accentGreen,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: EdgeInsets.symmetric(vertical: 14.h),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14.r)),
+                    ),
+                    child: isLoading
+                        ? AppUI.buttonSpinner()
+                        : Text('Create Group',
+                        style: GoogleFonts.poppins(
+                            fontSize: 14.sp, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
-      Group(
-        id: "g2",
-        name: "Under-12 B",
-        activity: "Football",
-        memberCount: 15,
-        attendanceRate: 88,
+    );
+  }
+
+  void _showEditGroupSheet(GroupData group) async {
+    List<CoachData> allCoaches = [];
+    try {
+      final result = await _apiService.getCoaches();
+      allCoaches = result.data;
+    } catch (_) {}
+
+    final nameCtrl = TextEditingController(text: group.name);
+    final descCtrl = TextEditingController(text: group.description ?? '');
+    // Pre-select coaches already assigned
+    List<int> selectedCoachIds = [];
+    bool isLoading = false;
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r))),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: EdgeInsets.only(
+              left: 20.w,
+              right: 20.w,
+              top: 20.h,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24.h),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _sheetHandle(),
+                16.height,
+                Row(children: [
+                  Container(
+                    padding: EdgeInsets.all(8.w),
+                    decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(10.r)),
+                    child: Icon(Icons.edit_rounded,
+                        color: Colors.blue, size: 20.sp),
+                  ),
+                  12.width,
+                  Text('Edit Group',
+                      style: GoogleFonts.montserrat(
+                          fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                ]),
+                20.height,
+                _sheetField('Group Name *', nameCtrl, Icons.group_rounded,
+                    hint: 'e.g., Under 14'),
+                12.height,
+                _sheetField(
+                    'Description (optional)', descCtrl, Icons.description_rounded,
+                    hint: 'Short description', required: false),
+                if (allCoaches.isNotEmpty) ...[
+                  16.height,
+                  _coachPickerSection(
+                    allCoaches,
+                    selectedCoachIds,
+                    setSheet,
+                    label: 'Update Coach Assignment',
+                  ),
+                ],
+                20.height,
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: isLoading
+                        ? null
+                        : () async {
+                      if (nameCtrl.text.trim().isEmpty) {
+                        toast('Please enter group name');
+                        return;
+                      }
+                      setSheet(() => isLoading = true);
+                      final payload = {
+                        "name": nameCtrl.text.trim(),
+                        "description": descCtrl.text.trim(),
+                        "status": group.status,
+                      };
+                      if (selectedCoachIds.isNotEmpty) {
+                        payload["coachIds"] = selectedCoachIds as dynamic;
+                      }
+                      final success =
+                      await _apiService.updateStandaloneGroup(
+                          group.groupId, payload);
+                      setSheet(() => isLoading = false);
+                      if (success) {
+                        Navigator.pop(ctx);
+                        AppUI.success(context, 'Group updated!');
+                        _refresh();
+                      } else {
+                        AppUI.error(context,
+                            'Failed to update group. Try again.');
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accentGreen,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: EdgeInsets.symmetric(vertical: 14.h),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14.r)),
+                    ),
+                    child: isLoading
+                        ? AppUI.buttonSpinner()
+                        : Text('Update Group',
+                        style: GoogleFonts.poppins(
+                            fontSize: 14.sp, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
-      Group(
-        id: "g3",
-        name: "Intermediate Squad",
-        activity: "Swimming",
-        memberCount: 12,
-        attendanceRate: 92,
+    );
+  }
+
+  // ── Delete Group ──────────────────────────────────────────────────────────────
+  Future<void> _confirmDeleteGroup(GroupData group) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        title: Row(children: [
+          Icon(Icons.warning_amber_rounded, color: Colors.red, size: 22.sp),
+          10.width,
+          Text('Delete Group',
+              style: GoogleFonts.montserrat(
+                  fontWeight: FontWeight.w700, fontSize: 16.sp)),
+        ]),
+        content: Text(
+            'Are you sure you want to delete "${group.name}"?\n\nThis will also delete all sub-groups inside.',
+            style: GoogleFonts.poppins(fontSize: 13.sp, color: textSecondary)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Cancel',
+                  style: GoogleFonts.poppins(color: textSecondary))),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.r))),
+              child: Text('Delete',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w700))),
+        ],
       ),
-    ];
+    );
+    if (confirmed == true) {
+      final success = await _apiService.deleteStandaloneGroup(group.groupId);
+      if (success) {
+        AppUI.success(context, 'Group "${group.name}" deleted');
+        _refresh();
+      } else {
+        AppUI.error(context, 'Failed to delete group. Try again.');
+      }
+    }
+  }
+
+  // ── Group Card ────────────────────────────────────────────────────────────────
+  Widget _groupCard(GroupData group) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) => CoachGroupDetailScreen(group: group)))
+          .then((_) => _refresh()),
+      child: Container(
+        margin: EdgeInsets.only(bottom: 12.h),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18.r),
+          border: Border.all(color: accentGreen.withOpacity(0.2)),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2))
+          ],
+        ),
+        child: Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.all(16.w),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48.w,
+                    height: 48.w,
+                    decoration: BoxDecoration(
+                        color: accentGreen.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(14.r)),
+                    child: Center(
+                      child: Text(
+                        group.name.isNotEmpty
+                            ? group.name[0].toUpperCase()
+                            : 'G',
+                        style: GoogleFonts.montserrat(
+                            fontSize: 20.sp,
+                            fontWeight: FontWeight.w800,
+                            color: accentGreen),
+                      ),
+                    ),
+                  ),
+                  14.width,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(group.name,
+                            style: GoogleFonts.montserrat(
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black)),
+                        if (group.description != null &&
+                            group.description!.isNotEmpty) ...[
+                          3.height,
+                          Text(group.description!,
+                              style: GoogleFonts.poppins(
+                                  fontSize: 11.sp, color: textSecondary),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding:
+                    EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                    decoration: BoxDecoration(
+                        color: group.status == 'ACTIVE'
+                            ? accentGreen.withOpacity(0.1)
+                            : Colors.grey.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20.r)),
+                    child: Text(group.status,
+                        style: GoogleFonts.poppins(
+                            fontSize: 10.sp,
+                            color: group.status == 'ACTIVE'
+                                ? accentGreen
+                                : Colors.grey,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ),
+            ),
+            // Action bar
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(18.r),
+                    bottomRight: Radius.circular(18.r)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _actionBtn(
+                      icon: Icons.people_alt_rounded,
+                      label: 'Members',
+                      color: Colors.indigo,
+                      onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  CoachGroupMembersScreen(group: group)))
+                          .then((_) => _refresh()),
+                    ),
+                  ),
+                  _vertDivider(),
+                  Expanded(
+                    child: _actionBtn(
+                      icon: Icons.account_tree_rounded,
+                      label: 'Sub-groups',
+                      color: Colors.teal,
+                      onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  CoachGroupSubGroupsScreen(group: group)))
+                          .then((_) => _refresh()),
+                    ),
+                  ),
+                  _vertDivider(),
+                  Expanded(
+                    child: _actionBtn(
+                      icon: Icons.edit_rounded,
+                      label: 'Edit',
+                      color: Colors.blue,
+                      onTap: () => _showEditGroupSheet(group),
+                    ),
+                  ),
+                  _vertDivider(),
+                  Expanded(
+                    child: _actionBtn(
+                      icon: Icons.delete_rounded,
+                      label: 'Delete',
+                      color: Colors.red,
+                      onTap: () => _confirmDeleteGroup(group),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
-        statusBarColor: Colors.white,
-        statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
-      ),
+          statusBarColor: Colors.white,
+          statusBarIconBrightness: Brightness.light),
       child: Scaffold(
         backgroundColor: Colors.grey.shade100,
         body: Column(
           children: [
             Container(
-              height: 80.h,
               width: double.infinity,
-              padding: EdgeInsets.symmetric(horizontal: 20.w),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.9),
-                border: Border(
-                  bottom: BorderSide(
-                    color: Colors.white.withOpacity(0.08),
-                    width: 0.5,
+              decoration: const BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16)),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding:
+                  EdgeInsets.only(top: 5.h, left: 20.w, right: 20.w),
+                  child: Row(
+                    children: [
+                      Text('Groups',
+                          style: GoogleFonts.montserrat(
+                              color: Colors.white,
+                              fontSize: 20.sp,
+                              fontWeight: FontWeight.bold)),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: _refresh,
+                        child: Container(
+                          padding: EdgeInsets.all(8.w),
+                          decoration: BoxDecoration(
+                              color: accentGreen.withOpacity(0.2),
+                              shape: BoxShape.circle),
+                          child: Icon(Icons.refresh_rounded,
+                              color: accentGreen, size: 20.sp),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              child: Padding(
-                padding: EdgeInsets.only(top: 30),
-                child: Row(
-                  children: [
-                    // Icon(
-                    //   Icons.menu_outlined,
-                    //   color: Colors.white,
-                    //   size: 20.sp,
-                    // ),
-                    // 10.width,
-                    Text(
-                      "My groups",
-                      style: Theme.of(context).textTheme.headlineMedium
-                          ?.copyWith(
-                            color: cardDark,
-                            fontSize: 20.sp,
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    //const Spacer(),
-
-                    //20.width,
-
-                    // Child switcher
-                    // GestureDetector(
-                    //   onTap: () => toast("Switch child"),
-                    //   child: CircleAvatar(
-                    //     radius: 20.r,
-                    //     backgroundColor: accentGreen.withOpacity(0.3),
-                    //     child: Icon(
-                    //       Icons.swap_horiz_rounded,
-                    //       color: accentGreen,
-                    //       size: 24.sp,
-                    //     ),
-                    //   ),
-                    // ),
-                  ],
-                ),
+            ),
+            // Info banner
+            Container(
+              margin: EdgeInsets.fromLTRB(16.w, 14.h, 16.w, 0),
+              padding: EdgeInsets.all(12.w),
+              decoration: BoxDecoration(
+                color: accentGreen.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(color: accentGreen.withOpacity(0.2)),
               ),
+              child: Row(children: [
+                Icon(Icons.info_outline_rounded,
+                    color: accentGreen, size: 16.sp),
+                8.width,
+                Expanded(
+                  child: Text(
+                    'Each group can have sub-groups and direct members. Tap a group card to manage.',
+                    style: GoogleFonts.poppins(
+                        fontSize: 11.sp, color: Colors.black87),
+                  ),
+                ),
+              ]),
             ),
             Expanded(
-              child: FutureBuilder<List<Group>>(
+              child: FutureBuilder<List<GroupData>>(
                 future: _groupsFuture,
                 builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
+                  if (snapshot.connectionState == ConnectionState.waiting &&
+                      _isFirstLoad) {
+                    return _shimmerList();
                   }
-                  final groups = snapshot.data!;
+                  if (snapshot.hasError) return _errorView(_refresh);
+                  final groups = snapshot.data ?? [];
                   return RefreshIndicator(
-                    onRefresh: () async {
-                      setState(() {
-                        _groupsFuture = _fetchGroups();
-                      });
-                    },
+                    onRefresh: () async => _refresh(),
                     color: accentGreen,
-                    child: ListView.builder(
-                      padding: EdgeInsets.all(20.w),
+                    child: groups.isEmpty
+                        ? _emptyView(
+                        icon: Icons.group_off_rounded,
+                        title: 'No groups yet',
+                        subtitle: 'Tap + to create the first group')
+                        : ListView.builder(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 16.w, vertical: 14.h),
                       itemCount: groups.length,
-                      itemBuilder: (context, index) {
-                        return _GroupCard(group: groups[index]);
-                      },
+                      itemBuilder: (_, i) => _groupCard(groups[i]),
                     ),
                   );
                 },
@@ -145,120 +590,125 @@ class _CoachGroupsScreenState extends State<CoachGroupsScreen> {
             ),
           ],
         ),
+        // Replace FAB in CoachGroupsScreen.build():
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _creatingGroup ? null : _showCreateGroupSheet,
+          backgroundColor: _creatingGroup ? accentGreen.withOpacity(0.6) : accentGreen,
+          icon: _creatingGroup
+              ? SizedBox(width: 20.w, height: 20.w,
+              child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+              : Icon(Icons.add_rounded, color: Colors.white, size: 22.sp),
+          label: Text('Add Group',
+              style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
+          elevation: 4,
+        ),
       ),
     );
   }
 }
 
-class _GroupCard extends StatelessWidget {
-  final Group group;
+// ═══════════════════════════════════════════════════════════════════════════════
+// GROUP DETAIL — Members + Sub-groups tabs
+// ═══════════════════════════════════════════════════════════════════════════════
 
-  const _GroupCard({required this.group});
+class CoachGroupDetailScreen extends StatefulWidget {
+  final GroupData group;
+  const CoachGroupDetailScreen({super.key, required this.group});
+
+  @override
+  State<CoachGroupDetailScreen> createState() => _CoachGroupDetailScreenState();
+}
+
+class _CoachGroupDetailScreenState extends State<CoachGroupDetailScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 16.h),
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: cardDark,
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: accentGreen.withOpacity(0.3), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Scaffold(
+      backgroundColor: Colors.grey.shade100,
+      body: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      group.name,
-                      style: GoogleFonts.montserrat(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
-                      ),
+          Container(
+            decoration: const BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(16),
+                  bottomRight: Radius.circular(16)),
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  Padding(
+                    padding:
+                    EdgeInsets.only(top: 5.h, left: 20.w, right: 20.w),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                            onTap: () => Navigator.pop(context),
+                            child: Icon(Icons.arrow_back_ios_rounded,
+                                color: Colors.white, size: 20.sp)),
+                        16.width,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(widget.group.name,
+                                  style: GoogleFonts.montserrat(
+                                      color: Colors.white,
+                                      fontSize: 18.sp,
+                                      fontWeight: FontWeight.bold)),
+                              if (widget.group.description != null &&
+                                  widget.group.description!.isNotEmpty)
+                                Text(widget.group.description!,
+                                    style: GoogleFonts.poppins(
+                                        fontSize: 11.sp,
+                                        color: Colors.grey.shade400),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    4.height,
-                    Text(
-                      group.activity,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12.sp,
-                        color: textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                decoration: BoxDecoration(
-                  color: accentGreen.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20.r),
-                ),
-                child: Text(
-                  "${group.memberCount} members",
-                  style: GoogleFonts.poppins(
-                    fontSize: 11.sp,
-                    color: accentGreen,
-                    fontWeight: FontWeight.w600,
                   ),
-                ),
+                  8.height,
+                  TabBar(
+                    controller: _tabController,
+                    indicatorColor: accentGreen,
+                    labelColor: accentGreen,
+                    unselectedLabelColor: Colors.grey.shade400,
+                    labelStyle: GoogleFonts.poppins(
+                        fontSize: 13.sp, fontWeight: FontWeight.w600),
+                    tabs: const [
+                      Tab(text: 'Members'),
+                      Tab(text: 'Sub-groups'),
+                    ],
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-          16.height,
-          Row(
-            children: [
-              Expanded(
-                child: _StatItem(
-                  label: "Attendance",
-                  value: "${group.attendanceRate}%",
-                  icon: Icons.check_circle_outline_rounded,
-                ),
-              ),
-              Expanded(
-                child: _StatItem(
-                  label: "Members",
-                  value: "${group.memberCount}",
-                  icon: Icons.people_outline_rounded,
-                ),
-              ),
-            ],
-          ),
-          16.height,
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _ActionButton(
-                label: "View Members",
-                icon: Icons.list_rounded,
-                onTap: () => toast("View members of ${group.name}"),
-              ),
-              _ActionButton(
-                label: "Attendance",
-                icon: Icons.assignment_turned_in_rounded,
-                onTap: () {} /*Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CoachAttendanceScreen(
-                      groupName: group.name,
-                      eventName: group.activity,
-                      groupId: group.id,
-                    ),
-                  ),*/,
-              ),
-
-              _ActionButton(
-                label: "Feedback",
-                icon: Icons.rate_review_rounded,
-                onTap: () => toast("Add feedback for ${group.name}"),
-              ),
-            ],
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                CoachGroupMembersScreen(group: widget.group, embedded: true),
+                CoachGroupSubGroupsScreen(group: widget.group, embedded: true),
+              ],
+            ),
           ),
         ],
       ),
@@ -266,677 +716,1595 @@ class _GroupCard extends StatelessWidget {
   }
 }
 
-class _StatItem extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
+// ═══════════════════════════════════════════════════════════════════════════════
+// COACH GROUP MEMBERS SCREEN
+// ═══════════════════════════════════════════════════════════════════════════════
 
-  const _StatItem({
-    required this.label,
-    required this.value,
-    required this.icon,
-  });
+class CoachGroupMembersScreen extends StatefulWidget {
+  final GroupData group;
+  final bool embedded;
+  const CoachGroupMembersScreen(
+      {super.key, required this.group, this.embedded = false});
+
+  @override
+  State<CoachGroupMembersScreen> createState() =>
+      _CoachGroupMembersScreenState();
+}
+
+class _CoachGroupMembersScreenState extends State<CoachGroupMembersScreen> {
+  final ClubApiService _apiService = ClubApiService();
+  late Future<List<Data>> _membersFuture;
+  bool _loadingAll = false;
+  final Set<int> _removingIds = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _membersFuture = _fetchMembers();
+  }
+
+  Future<List<Data>> _fetchMembers() =>
+      _apiService.getGroupDirectMembers(widget.group.groupId);
+
+  void _refresh() => setState(() => _membersFuture = _fetchMembers());
+
+  void _showAddMembersSheet() async {
+    setState(() => _loadingAll = true);
+    List<Data> allMembers = [];
+    List<Data> currentMembers = [];
+    try {
+      final all = await _apiService.getMembers();
+      allMembers = all.data;
+      currentMembers = await _membersFuture.catchError((_) => <Data>[]);
+    } catch (e) {
+      toast('Failed to load members');
+      setState(() => _loadingAll = false);
+      return;
+    }
+    setState(() => _loadingAll = false);
+
+    final currentIds = currentMembers.map((m) => m.memberId).toSet();
+    final available =
+    allMembers.where((m) => !currentIds.contains(m.memberId)).toList();
+
+    if (available.isEmpty) {
+      toast('All club members are already in this group');
+      return;
+    }
+
+    List<int> selectedIds = [];
+    bool isAdding = false;
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r))),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: EdgeInsets.only(
+              left: 20.w,
+              right: 20.w,
+              top: 20.h,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24.h),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _sheetHandle(),
+              16.height,
+              Row(children: [
+                Container(
+                  padding: EdgeInsets.all(8.w),
+                  decoration: BoxDecoration(
+                      color: Colors.indigo.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10.r)),
+                  child: Icon(Icons.person_add_rounded,
+                      color: Colors.indigo, size: 20.sp),
+                ),
+                12.width,
+                Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Add Members to Group',
+                            style: GoogleFonts.montserrat(
+                                fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                        Text(widget.group.name,
+                            style: GoogleFonts.poppins(
+                                fontSize: 11.sp, color: textSecondary)),
+                      ]),
+                ),
+              ]),
+              12.height,
+              Text('${selectedIds.length} of ${available.length} selected',
+                  style: GoogleFonts.poppins(
+                      fontSize: 12.sp,
+                      color: accentGreen,
+                      fontWeight: FontWeight.w600)),
+              8.height,
+              _memberCheckList(
+                  available, selectedIds, setSheet, ctx, Colors.indigo),
+              20.height,
+              _addButton(
+                  isAdding: isAdding,
+                  selectedCount: selectedIds.length,
+                  onTap: () async {
+                    setSheet(() => isAdding = true);
+                    final success = await _apiService.addMembersToGroup(
+                        widget.group.groupId, selectedIds);
+                    setSheet(() => isAdding = false);
+                    if (success) {
+                      Navigator.pop(ctx);
+                      AppUI.success(context,
+                          '${selectedIds.length} member(s) added to group!');
+                      _refresh();
+                    } else {
+                      AppUI.error(context, 'Failed to add members.');
+                    }
+                  }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmRemove(Data member) async {
+    final confirmed = await _removeDialog(context, 'Remove from Group',
+        'Remove "${member.username}" from ${widget.group.name}?');
+    if (confirmed == true) {
+      setState(() => _removingIds.add(member.memberId));
+      final success = await _apiService.removeMembersFromGroup(
+          widget.group.groupId, [member.memberId]);
+      setState(() => _removingIds.remove(member.memberId));
+      if (success) {
+        toast('Member removed from group');
+        _refresh();
+      } else {
+        AppUI.error(context, 'Failed to remove member.');
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    if (widget.embedded) return _buildContent();
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+          statusBarColor: Colors.white,
+          statusBarIconBrightness: Brightness.light),
+      child: Scaffold(
+        backgroundColor: Colors.grey.shade100,
+        appBar: AppBar(
+          backgroundColor: Colors.black,
+          title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Group Members',
+                    style: GoogleFonts.montserrat(
+                        color: Colors.white,
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.bold)),
+                Text(widget.group.name,
+                    style: GoogleFonts.poppins(
+                        fontSize: 11.sp, color: Colors.grey.shade400)),
+              ]),
+          leading: IconButton(
+              icon: Icon(Icons.arrow_back_ios_rounded,
+                  color: Colors.white, size: 20.sp),
+              onPressed: () => Navigator.pop(context)),
+        ),
+        body: _buildContent(),
+        floatingActionButton: _fab(),
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    return Stack(
       children: [
-        Icon(icon, size: 20.sp, color: accentGreen),
-        8.width,
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        FutureBuilder<List<Data>>(
+          future: _membersFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting)
+              return _shimmerList();
+            if (snapshot.hasError) return _errorView(_refresh);
+            final members = snapshot.data ?? [];
+            return RefreshIndicator(
+              onRefresh: () async => _refresh(),
+              color: accentGreen,
+              child: members.isEmpty
+                  ? _emptyView(
+                  icon: Icons.people_outline_rounded,
+                  title: 'No members in this group',
+                  subtitle: 'Tap + to add members')
+                  : ListView.builder(
+                padding:
+                EdgeInsets.fromLTRB(16.w, 14.h, 16.w, 80.h),
+                itemCount: members.length,
+                itemBuilder: (_, i) => _memberTile(members[i]),
+              ),
+            );
+          },
+        ),
+        if (widget.embedded)
+          Positioned(bottom: 16.h, right: 16.w, child: _fab()),
+      ],
+    );
+  }
+
+  Widget _fab() => _loadingAll
+      ? FloatingActionButton(
+      onPressed: null,
+      backgroundColor: accentGreen,
+      child: const CircularProgressIndicator(color: Colors.white))
+      : FloatingActionButton.extended(
+    onPressed: _showAddMembersSheet,
+    backgroundColor: Colors.indigo,
+    icon:
+    Icon(Icons.person_add_rounded, color: Colors.white, size: 20.sp),
+    label: Text('Add Members',
+        style: GoogleFonts.poppins(
+            color: Colors.white, fontWeight: FontWeight.w600)),
+    elevation: 4,
+  );
+
+  Widget _memberTile(Data member) {
+    final isRemoving = _removingIds.contains(member.memberId);
+    return Container(
+      margin: EdgeInsets.only(bottom: 10.h),
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: Colors.indigo.withOpacity(0.15)),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2))
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 22.r,
+            backgroundColor: Colors.indigo.withOpacity(0.1),
+            child: Text(
+                member.username.isNotEmpty
+                    ? member.username[0].toUpperCase()
+                    : '?',
+                style: GoogleFonts.montserrat(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.indigo)),
+          ),
+          12.width,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(member.username,
+                    style: GoogleFonts.montserrat(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black)),
+                3.height,
+                Text(member.email,
+                    style: GoogleFonts.poppins(
+                        fontSize: 11.sp, color: textSecondary)),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: isRemoving ? null : () => _confirmRemove(member),
+            child: Container(
+              width: 34.w,
+              height: 34.w,
+              decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1), shape: BoxShape.circle),
+              child: isRemoving
+                  ? Padding(
+                  padding: EdgeInsets.all(8.w),
+                  child: AppUI.buttonSpinner())
+                  : Icon(Icons.person_remove_rounded,
+                  color: Colors.red.shade600, size: 18.sp),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COACH GROUP SUB-GROUPS SCREEN
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class CoachGroupSubGroupsScreen extends StatefulWidget {
+  final GroupData group;
+  final bool embedded;
+  const CoachGroupSubGroupsScreen(
+      {super.key, required this.group, this.embedded = false});
+
+  @override
+  State<CoachGroupSubGroupsScreen> createState() =>
+      _CoachGroupSubGroupsScreenState();
+}
+
+class _CoachGroupSubGroupsScreenState
+    extends State<CoachGroupSubGroupsScreen> {
+  final ClubApiService _apiService = ClubApiService();
+  late Future<List<SubGroupData>> _subGroupsFuture;
+  bool _isFirstLoad = true;
+  bool _creatingSubGroup = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _subGroupsFuture = _fetchSubGroups();
+  }
+
+  Future<List<SubGroupData>> _fetchSubGroups() async {
+    final result = await _apiService.getSubGroups(widget.group.groupId);
+    if (mounted) setState(() => _isFirstLoad = false);
+    return result.data;
+  }
+
+  void _refresh() => setState(() {
+    _isFirstLoad = true;
+    _subGroupsFuture = _fetchSubGroups();
+  });
+
+  // ── Create Sub-group ──────────────────────────────────────────────────────────
+  void _showCreateSheet() async {
+    setState(() => _creatingSubGroup = true);
+    List<CoachData> allCoaches = [];
+    try {
+      final result = await _apiService.getCoaches();
+      allCoaches = result.data;
+    } catch (_) {}
+    setState(() => _creatingSubGroup = false);
+    final nameCtrl = TextEditingController();
+    final ageCatCtrl = TextEditingController();
+    List<int> selectedCoachIds = [];
+    bool isLoading = false;
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r))),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: EdgeInsets.only(
+              left: 20.w,
+              right: 20.w,
+              top: 20.h,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24.h),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _sheetHandle(),
+                16.height,
+                Row(children: [
+                  Container(
+                    padding: EdgeInsets.all(8.w),
+                    decoration: BoxDecoration(
+                        color: Colors.teal.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(10.r)),
+                    child: Icon(Icons.group_work_rounded,
+                        color: Colors.teal, size: 20.sp),
+                  ),
+                  12.width,
+                  Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Create Sub-group',
+                              style: GoogleFonts.montserrat(
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.bold)),
+                          Text('In: ${widget.group.name}',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 11.sp, color: textSecondary)),
+                        ]),
+                  ),
+                ]),
+                20.height,
+                _sheetField('Sub-group Name *', nameCtrl,
+                    Icons.group_work_rounded,
+                    hint: 'e.g., Boys U14'),
+                12.height,
+                _sheetField('Age Category *', ageCatCtrl, Icons.cake_rounded,
+                    hint: 'e.g., U14, U18, Senior'),
+                if (allCoaches.isNotEmpty) ...[
+                  16.height,
+                  _coachPickerSection(
+                    allCoaches,
+                    selectedCoachIds,
+                    setSheet,
+                    label: 'Assign Coaches (optional)',
+                  ),
+                ],
+                20.height,
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: isLoading
+                        ? null
+                        : () async {
+                      if (nameCtrl.text.trim().isEmpty) {
+                        toast('Please enter sub-group name');
+                        return;
+                      }
+                      if (ageCatCtrl.text.trim().isEmpty) {
+                        toast('Please enter age category');
+                        return;
+                      }
+                      setSheet(() => isLoading = true);
+                      final success = await _apiService.createSubGroup(
+                          widget.group.groupId, {
+                        "name": nameCtrl.text.trim(),
+                        "ageCategory": ageCatCtrl.text.trim(),
+                        "coachIds": selectedCoachIds,
+                      });
+                      setSheet(() => isLoading = false);
+                      if (success) {
+                        Navigator.pop(ctx);
+                        AppUI.success(context, 'Sub-group created!');
+                        _refresh();
+                      } else {
+                        AppUI.error(context,
+                            'Failed to create sub-group. Try again.');
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.teal,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: EdgeInsets.symmetric(vertical: 14.h),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14.r))),
+                    child: isLoading
+                        ? AppUI.buttonSpinner()
+                        : Text('Create Sub-group',
+                        style: GoogleFonts.poppins(
+                            fontSize: 14.sp, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Edit Sub-group ────────────────────────────────────────────────────────────
+  void _showEditSheet(SubGroupData sg) async {
+    List<CoachData> allCoaches = [];
+    try {
+      final result = await _apiService.getCoaches();
+      allCoaches = result.data;
+    } catch (_) {}
+
+    final nameCtrl = TextEditingController(text: sg.name);
+    final ageCatCtrl = TextEditingController(text: sg.ageCategory ?? '');
+    String selectedStatus = sg.status;
+    List<int> selectedCoachIds = [];
+    bool isLoading = false;
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r))),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: EdgeInsets.only(
+              left: 20.w,
+              right: 20.w,
+              top: 20.h,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24.h),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _sheetHandle(),
+                16.height,
+                Row(children: [
+                  Container(
+                    padding: EdgeInsets.all(8.w),
+                    decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(10.r)),
+                    child: Icon(Icons.edit_rounded,
+                        color: Colors.blue, size: 20.sp),
+                  ),
+                  12.width,
+                  Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Edit Sub-group',
+                              style: GoogleFonts.montserrat(
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.bold)),
+                          Text('Group: ${widget.group.name}',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 11.sp, color: textSecondary)),
+                        ]),
+                  ),
+                ]),
+                20.height,
+                _sheetField('Sub-group Name *', nameCtrl,
+                    Icons.group_work_rounded,
+                    hint: 'e.g., Boys U14'),
+                12.height,
+                _sheetField('Age Category *', ageCatCtrl, Icons.cake_rounded,
+                    hint: 'e.g., U14, U18, Senior'),
+                12.height,
+                Text('Status',
+                    style: GoogleFonts.poppins(
+                        fontSize: 12.sp,
+                        color: textSecondary,
+                        fontWeight: FontWeight.w500)),
+                6.height,
+                DropdownButtonFormField<String>(
+                  value: selectedStatus,
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                    contentPadding: EdgeInsets.symmetric(
+                        horizontal: 14.w, vertical: 13.h),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                        borderSide: BorderSide(color: Colors.grey.shade300)),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                        borderSide: BorderSide(color: Colors.grey.shade300)),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                        borderSide:
+                        const BorderSide(color: accentGreen, width: 1.5)),
+                  ),
+                  style: GoogleFonts.poppins(
+                      fontSize: 13.sp, color: Colors.black),
+                  items: ['ACTIVE', 'INACTIVE']
+                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                      .toList(),
+                  onChanged: (val) =>
+                      setSheet(() => selectedStatus = val ?? 'ACTIVE'),
+                ),
+                if (allCoaches.isNotEmpty) ...[
+                  16.height,
+                  _coachPickerSection(
+                    allCoaches,
+                    selectedCoachIds,
+                    setSheet,
+                    label: 'Update Coach Assignment',
+                  ),
+                ],
+                20.height,
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: isLoading
+                        ? null
+                        : () async {
+                      if (nameCtrl.text.trim().isEmpty) {
+                        toast('Please enter sub-group name');
+                        return;
+                      }
+                      if (ageCatCtrl.text.trim().isEmpty) {
+                        toast('Please enter age category');
+                        return;
+                      }
+                      setSheet(() => isLoading = true);
+                      final payload = {
+                        "name": nameCtrl.text.trim(),
+                        "ageCategory": ageCatCtrl.text.trim(),
+                        "status": selectedStatus,
+                      };
+                      if (selectedCoachIds.isNotEmpty) {
+                        payload["coachIds"] =
+                        selectedCoachIds as dynamic;
+                      }
+                      final success = await _apiService.updateSubGroup(
+                        widget.group.groupId,
+                        sg.subGroupId,
+                        payload,
+                      );
+                      setSheet(() => isLoading = false);
+                      if (success) {
+                        Navigator.pop(ctx);
+                        AppUI.success(context, 'Sub-group updated!');
+                        _refresh();
+                      } else {
+                        AppUI.error(context,
+                            'Failed to update sub-group. Try again.');
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: accentGreen,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: EdgeInsets.symmetric(vertical: 14.h),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14.r))),
+                    child: isLoading
+                        ? AppUI.buttonSpinner()
+                        : Text('Update Sub-group',
+                        style: GoogleFonts.poppins(
+                            fontSize: 14.sp, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Delete Sub-group ──────────────────────────────────────────────────────────
+  Future<void> _confirmDelete(SubGroupData sg) async {
+    final confirmed = await _removeDialog(
+        context, 'Delete Sub-group', 'Delete "${sg.name}"?');
+    if (confirmed == true) {
+      final success = await _apiService.deleteSubGroup(
+          widget.group.groupId, sg.subGroupId);
+      if (success) {
+        AppUI.success(context, 'Sub-group deleted');
+        _refresh();
+      } else {
+        AppUI.error(context, 'Failed to delete sub-group.');
+      }
+    }
+  }
+
+  Widget _subGroupCard(SubGroupData sg) {
+    final statusColor = sg.status == 'ACTIVE' ? Colors.teal : Colors.grey;
+    return Container(
+      margin: EdgeInsets.only(bottom: 12.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: Colors.teal.withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2))
+        ],
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.all(14.w),
+            child: Row(
+              children: [
+                Container(
+                  width: 46.w,
+                  height: 46.w,
+                  decoration: BoxDecoration(
+                      color: Colors.teal.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12.r)),
+                  child: Center(
+                    child: Text(
+                      sg.name.isNotEmpty ? sg.name[0].toUpperCase() : 'S',
+                      style: GoogleFonts.montserrat(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.teal),
+                    ),
+                  ),
+                ),
+                12.width,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(sg.name,
+                          style: GoogleFonts.montserrat(
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black)),
+                      if (sg.ageCategory != null &&
+                          sg.ageCategory!.isNotEmpty) ...[
+                        3.height,
+                        Row(children: [
+                          Icon(Icons.cake_rounded,
+                              size: 11.sp, color: textSecondary),
+                          4.width,
+                          Text('Age: ${sg.ageCategory}',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 11.sp, color: textSecondary)),
+                        ]),
+                      ],
+                    ],
+                  ),
+                ),
+                Container(
+                  padding:
+                  EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20.r)),
+                  child: Text(sg.status,
+                      style: GoogleFonts.poppins(
+                          fontSize: 10.sp,
+                          color: statusColor,
+                          fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(16.r),
+                  bottomRight: Radius.circular(16.r)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _actionBtn(
+                    icon: Icons.people_alt_rounded,
+                    label: 'Members',
+                    color: Colors.indigo,
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => CoachSubGroupMembersScreen(
+                                subGroup: sg, group: widget.group))),
+                  ),
+                ),
+                _vertDivider(),
+                Expanded(
+                  child: _actionBtn(
+                    icon: Icons.edit_rounded,
+                    label: 'Edit',
+                    color: Colors.blue,
+                    onTap: () => _showEditSheet(sg),
+                  ),
+                ),
+                _vertDivider(),
+                Expanded(
+                  child: _actionBtn(
+                    icon: Icons.delete_rounded,
+                    label: 'Delete',
+                    color: Colors.red,
+                    onTap: () => _confirmDelete(sg),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.embedded) return _buildContent();
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+          statusBarColor: Colors.white,
+          statusBarIconBrightness: Brightness.light),
+      child: Scaffold(
+        backgroundColor: Colors.grey.shade100,
+        body: Column(
           children: [
-            Text(
-              value,
-              style: GoogleFonts.montserrat(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w700,
+            Container(
+              decoration: const BoxDecoration(
                 color: Colors.black,
+                borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16)),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding:
+                  EdgeInsets.only(top: 5.h, left: 20.w, right: 20.w),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: Icon(Icons.arrow_back_ios_rounded,
+                              color: Colors.white, size: 20.sp)),
+                      16.width,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Sub-groups',
+                                style: GoogleFonts.montserrat(
+                                    color: Colors.white,
+                                    fontSize: 20.sp,
+                                    fontWeight: FontWeight.bold)),
+                            Text(widget.group.name,
+                                style: GoogleFonts.poppins(
+                                    fontSize: 11.sp,
+                                    color: Colors.grey.shade400),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-            Text(
-              label,
-              style: GoogleFonts.poppins(fontSize: 10.sp, color: textSecondary),
-            ),
+            Expanded(child: _buildContent()),
           ],
         ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _creatingSubGroup ? null : _showCreateSheet,
+          backgroundColor: _creatingSubGroup ? Colors.teal.withOpacity(0.6) : Colors.teal,
+          icon: _creatingSubGroup
+              ? SizedBox(width: 20.w, height: 20.w,
+              child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+              : Icon(Icons.add_rounded, color: Colors.white, size: 22.sp),
+          label: Text('Add Sub-group',
+              style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
+          elevation: 4,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    return Stack(
+      children: [
+        FutureBuilder<List<SubGroupData>>(
+          future: _subGroupsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                _isFirstLoad) return _shimmerList();
+            if (snapshot.hasError) return _errorView(_refresh);
+            final subGroups = snapshot.data ?? [];
+            return RefreshIndicator(
+              onRefresh: () async => _refresh(),
+              color: accentGreen,
+              child: subGroups.isEmpty
+                  ? _emptyView(
+                  icon: Icons.group_work_outlined,
+                  title: 'No sub-groups yet',
+                  subtitle: 'Tap + to create the first sub-group')
+                  : ListView.builder(
+                padding:
+                EdgeInsets.fromLTRB(16.w, 14.h, 16.w, 80.h),
+                itemCount: subGroups.length,
+                itemBuilder: (_, i) => _subGroupCard(subGroups[i]),
+              ),
+            );
+          },
+        ),
+        if (widget.embedded)
+          Positioned(
+            bottom: 16.h,
+            right: 16.w,
+            child: FloatingActionButton.extended(
+              onPressed: _showCreateSheet,
+              backgroundColor: Colors.teal,
+              icon: Icon(Icons.add_rounded, color: Colors.white, size: 20.sp),
+              label: Text('Add Sub-group',
+                  style: GoogleFonts.poppins(
+                      color: Colors.white, fontWeight: FontWeight.w600)),
+              elevation: 4,
+            ),
+          ),
       ],
     );
   }
 }
 
-class _ActionButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
+// ═══════════════════════════════════════════════════════════════════════════════
+// COACH SUB-GROUP MEMBERS SCREEN
+// DELETE: /api/subgroups/{subGroupId}/members/{memberId}
+// ═══════════════════════════════════════════════════════════════════════════════
 
-  const _ActionButton({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
+class CoachSubGroupMembersScreen extends StatefulWidget {
+  final SubGroupData subGroup;
+  final GroupData group;
+
+  const CoachSubGroupMembersScreen(
+      {super.key, required this.subGroup, required this.group});
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            padding: EdgeInsets.all(10.w),
-            decoration: BoxDecoration(
-              color: accentGreen.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            child: Icon(icon, color: accentGreen, size: 20.sp),
-          ),
-          4.height,
-          Text(
-            label,
-            style: GoogleFonts.poppins(fontSize: 9.sp, color: Colors.black),
-          ),
-        ],
-      ),
-    );
+  State<CoachSubGroupMembersScreen> createState() =>
+      _CoachSubGroupMembersScreenState();
+}
+
+class _CoachSubGroupMembersScreenState
+    extends State<CoachSubGroupMembersScreen> {
+  final ClubApiService _apiService = ClubApiService();
+  late Future<List<SubMemData>> _membersFuture;
+  bool _loadingAll = false;
+  final Set<int> _removingIds = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _membersFuture = _fetchMembers();
   }
-}
 
-class Group {
-  final String id;
-  final String name;
-  final String activity;
-  final int memberCount;
-  final int attendanceRate;
+  Future<List<SubMemData>> _fetchMembers() async {
+    final result =
+    await _apiService.getSubGroupMembers(widget.subGroup.subGroupId);
+    return result.data;
+  }
 
-  Group({
-    required this.id,
-    required this.name,
-    required this.activity,
-    required this.memberCount,
-    required this.attendanceRate,
-  });
-}
+  void _refresh() => setState(() => _membersFuture = _fetchMembers());
 
-// screens/coach/coach_events.dart
-// class CoachEventsScreen extends StatefulWidget {
-//   const CoachEventsScreen({super.key});
-//
-//   @override
-//   State<CoachEventsScreen> createState() => _CoachEventsScreenState();
-// }
-//
-// class _CoachEventsScreenState extends State<CoachEventsScreen> {
-//   late Future<List<CoachEventDetail>> _eventsFuture;
-//
-//   @override
-//   void initState() {
-//     super.initState();
-//     _eventsFuture = _fetchEvents();
-//   }
-//
-//   Future<List<CoachEventDetail>> _fetchEvents() async {
-//     await Future.delayed(const Duration(milliseconds: 700));
-//     return [
-//       CoachEventDetail(
-//         id: "e1",
-//         title: "Weekend Training Session",
-//         type: "Training",
-//         dateTime: DateTime.now().add(const Duration(days: 2)),
-//         location: "Main Ground",
-//         groupName: "Under-14 A",
-//         attendanceStatus: "Pending",
-//       ),
-//       CoachEventDetail(
-//         id: "e2",
-//         title: "Inter-Club Tournament",
-//         type: "Match",
-//         dateTime: DateTime.now().add(const Duration(days: 5)),
-//         location: "City Stadium",
-//         groupName: "Under-14 A",
-//         attendanceStatus: "Not Started",
-//       ),
-//       CoachEventDetail(
-//         id: "e3",
-//         title: "Swimming Practice",
-//         type: "Training",
-//         dateTime: DateTime.now().add(const Duration(days: 1)),
-//         location: "Pool B",
-//         groupName: "Intermediate Squad",
-//         attendanceStatus: "Completed",
-//       ),
-//     ];
-//   }
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return AnnotatedRegion<SystemUiOverlayStyle>(
-//       value: const SystemUiOverlayStyle(
-//         statusBarColor: Colors.white,
-//         statusBarIconBrightness: Brightness.light,
-//         statusBarBrightness: Brightness.dark,
-//       ),
-//       child: Scaffold(
-//         backgroundColor: scaffoldDark,
-//         floatingActionButton: FloatingActionButton.extended(
-//           onPressed: () {
-//             toast("Create new event");
-//             Navigator.push(
-//               context,
-//               MaterialPageRoute(
-//                 builder: (context) => const CreateEventScreen(),
-//               ),
-//             );
-//           } ,
-//           backgroundColor: accentGreen,
-//           icon: const Icon(Icons.add, color: Colors.white),
-//           label: Text(
-//             "Create Event",
-//             style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600),
-//           ),
-//         ),
-//         body: Column(
-//           children: [
-//             // Container(
-//             //   height: 80.h,
-//             //   width: double.infinity,
-//             //   padding: EdgeInsets.symmetric(horizontal: 20.w),
-//             //   decoration: BoxDecoration(
-//             //     color: Colors.black.withOpacity(0.9),
-//             //     border: Border(
-//             //       bottom: BorderSide(
-//             //         color: Colors.white.withOpacity(0.08),
-//             //         width: 0.5,
-//             //       ),
-//             //     ),
-//             //   ),
-//             //   child: Padding(
-//             //     padding: EdgeInsets.only(top: 20),
-//             //     child: Row(
-//             //       children: [
-//             //         // Icon(
-//             //         //   Icons.menu_outlined,
-//             //         //   color: Colors.white,
-//             //         //   size: 20.sp,
-//             //         // ),
-//             //         // 10.width,
-//             //
-//             //         Text("Events",style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: cardDark,fontSize: 20.sp,fontWeight: FontWeight.bold,),),
-//             //         const Spacer(),
-//             //
-//             //
-//             //         //20.width,
-//             //
-//             //         // Child switcher
-//             //         // GestureDetector(
-//             //         //   onTap: () => toast("Switch child"),
-//             //         //   child: CircleAvatar(
-//             //         //     radius: 20.r,
-//             //         //     backgroundColor: accentGreen.withOpacity(0.3),
-//             //         //     child: Icon(
-//             //         //       Icons.swap_horiz_rounded,
-//             //         //       color: accentGreen,
-//             //         //       size: 24.sp,
-//             //         //     ),
-//             //         //   ),
-//             //         // ),
-//             //       ],
-//             //     ),
-//             //   ),
-//             // ),
-//             Container(
-//               height: 85.h,                      // slightly taller → better proportions
-//               width: double.infinity,
-//               decoration: BoxDecoration(
-//                 color: Colors.black,
-//                 borderRadius: const BorderRadius.only(
-//                   bottomLeft: Radius.circular(16),
-//                   bottomRight: Radius.circular(16),
-//                 ),
-//                 boxShadow: [
-//                   BoxShadow(
-//                     color: Colors.black.withOpacity(0.25),
-//                     blurRadius: 10,
-//                     offset: const Offset(0, 5),
-//                   ),
-//                 ],
-//               ),
-//               child: SafeArea(
-//                 child: Padding(
-//                   padding: EdgeInsets.only(
-//                     top: 5.h,
-//                     left: 20.w,
-//                     right: 20.w,
-//                   ),
-//                   child: Row(
-//                     crossAxisAlignment: CrossAxisAlignment.center,
-//                     children: [
-//                       Text(
-//                         "Events",
-//                         style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-//                           color: Colors.white,
-//                           fontSize: 20.sp,
-//                           fontWeight: FontWeight.bold,
-//                         ),
-//                       ),
-//                       //const Spacer(),
-//
-//                       // GestureDetector(
-//                       //   onTap: () {
-//                       //     //Navigator.pushNamed(context, AppRoutes.guardianNotifications);
-//                       //   },
-//                       //   child: Stack(
-//                       //     children: [
-//                       //       Icon(
-//                       //         Icons.notifications_none_rounded,
-//                       //         color: Colors.white,
-//                       //         size: 26.sp,
-//                       //       ),
-//                       //       Positioned(
-//                       //         right: 0,
-//                       //         top: 0,
-//                       //         child: Container(
-//                       //           width: 10.r,
-//                       //           height: 10.r,
-//                       //           decoration: BoxDecoration(
-//                       //             color: accentOrange,
-//                       //             shape: BoxShape.circle,
-//                       //             border: Border.all(
-//                       //               color: Colors.black,
-//                       //               width: 1.5,
-//                       //             ),
-//                       //           ),
-//                       //         ),
-//                       //       ),
-//                       //     ],
-//                       //   ),
-//                       // ),
-//                     ],
-//                   ),
-//                 ),
-//               ),
-//             ),
-//             Expanded(
-//               child: FutureBuilder<List<CoachEventDetail>>(
-//                 future: _eventsFuture,
-//                 builder: (context, snapshot) {
-//                   if (!snapshot.hasData) {
-//                     return const Center(child: CircularProgressIndicator());
-//                   }
-//                   final events = snapshot.data!;
-//                   return RefreshIndicator(
-//                     onRefresh: () async {
-//                       setState(() {
-//                         _eventsFuture = _fetchEvents();
-//                       });
-//                     },
-//                     color: accentGreen,
-//                     child: ListView.builder(
-//                       padding: EdgeInsets.all(20.w),
-//                       itemCount: events.length,
-//                       itemBuilder: (context, index) {
-//                         return _EventCard(event: events[index]);
-//                       },
-//                     ),
-//                   );
-//                 },
-//               ),
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
+  void _showAddMembersSheet() async {
+    setState(() => _loadingAll = true);
+    List<Data> allMembers = [];
+    List<SubMemData> currentMembers = [];
+    try {
+      final allResult = await _apiService.getMembers();
+      allMembers = allResult.data;
+      currentMembers =
+      await _membersFuture.catchError((_) => <SubMemData>[]);
+    } catch (e) {
+      toast('Failed to load members');
+      setState(() => _loadingAll = false);
+      return;
+    }
+    setState(() => _loadingAll = false);
 
-class _EventCard extends StatelessWidget {
-  final CoachEventDetail event;
+    final currentIds = currentMembers.map((m) => m.memberId).toSet();
+    final available =
+    allMembers.where((m) => !currentIds.contains(m.memberId)).toList();
 
-  const _EventCard({required this.event});
-
-  @override
-  Widget build(BuildContext context) {
-    Color statusColor;
-    switch (event.attendanceStatus) {
-      case "Completed":
-        statusColor = accentGreen;
-        break;
-      case "Pending":
-        statusColor = accentOrange;
-        break;
-      default:
-        statusColor = Colors.grey;
+    if (available.isEmpty) {
+      toast('All club members are already in this sub-group');
+      return;
     }
 
-    return Container(
-      margin: EdgeInsets.only(bottom: 16.h),
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: cardDark,
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: statusColor.withOpacity(0.3), width: 1.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    List<int> selectedIds = [];
+    bool isAdding = false;
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r))),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: EdgeInsets.only(
+              left: 20.w,
+              right: 20.w,
+              top: 20.h,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24.h),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  event.title,
-                  style: GoogleFonts.montserrat(
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black,
-                  ),
+              _sheetHandle(),
+              16.height,
+              Row(children: [
+                Container(
+                  padding: EdgeInsets.all(8.w),
+                  decoration: BoxDecoration(
+                      color: accentGreen.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10.r)),
+                  child: Icon(Icons.person_add_rounded,
+                      color: accentGreen, size: 20.sp),
                 ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20.r),
-                ),
-                child: Text(
-                  event.type,
-                  style: GoogleFonts.poppins(
-                    fontSize: 11.sp,
-                    color: statusColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          8.height,
-          Text(
-            event.groupName,
-            style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary),
-          ),
-          8.height,
-          Row(
-            children: [
-              Icon(
-                Icons.calendar_today_rounded,
-                size: 14.sp,
-                color: textSecondary,
-              ),
-              6.width,
-              Text(
-                "In ${event.dateTime.difference(DateTime.now()).inDays} days",
-                style: GoogleFonts.poppins(
-                  fontSize: 11.sp,
-                  color: textSecondary,
-                ),
-              ),
-            ],
-          ),
-          4.height,
-          Row(
-            children: [
-              Icon(
-                Icons.location_on_rounded,
-                size: 14.sp,
-                color: textSecondary,
-              ),
-              6.width,
-              Text(
-                event.location,
-                style: GoogleFonts.poppins(
-                  fontSize: 11.sp,
-                  color: textSecondary,
-                ),
-              ),
-            ],
-          ),
-          12.height,
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => toast("View event details"),
-                  style: OutlinedButton.styleFrom(
-                    //backgroundColor: Colors.white,
-                    side: BorderSide(color: Colors.deepOrangeAccent, width: 1),
-                    padding: EdgeInsets.symmetric(vertical: 10.h),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                  ),
-                  child: Text(
-                    "View Details",
-                    style: GoogleFonts.poppins(
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
-                    ),
-                  ),
-                ),
-              ),
-              if (event.attendanceStatus != "Completed") ...[
                 12.width,
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => toast("Take attendance"),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: accentGreen, width: 1),
-                      padding: EdgeInsets.symmetric(vertical: 10.h),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                    ),
-                    child: Text(
-                      "Attendance",
-                      style: GoogleFonts.poppins(
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w600,
-                        color: accentGreen,
-                      ),
-                    ),
-                  ),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Add to Sub-group',
+                            style: GoogleFonts.montserrat(
+                                fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                        Text(
+                            '${widget.group.name} › ${widget.subGroup.name}',
+                            style: GoogleFonts.poppins(
+                                fontSize: 11.sp, color: textSecondary)),
+                      ]),
                 ),
-              ],
+              ]),
+              12.height,
+              Text(
+                  '${selectedIds.length} of ${available.length} available',
+                  style: GoogleFonts.poppins(
+                      fontSize: 12.sp,
+                      color: accentGreen,
+                      fontWeight: FontWeight.w600)),
+              8.height,
+              _memberCheckList(
+                  available, selectedIds, setSheet, ctx, accentGreen),
+              20.height,
+              _addButton(
+                  isAdding: isAdding,
+                  selectedCount: selectedIds.length,
+                  onTap: () async {
+                    setSheet(() => isAdding = true);
+                    final success = await _apiService.addMembersToSubGroup(
+                        widget.subGroup.subGroupId, selectedIds);
+                    setSheet(() => isAdding = false);
+                    if (success) {
+                      Navigator.pop(ctx);
+                      AppUI.success(context,
+                          '${selectedIds.length} member(s) added!');
+                      _refresh();
+                    } else {
+                      AppUI.error(context, 'Failed to add members.');
+                    }
+                  }),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// DELETE /api/subgroups/{subGroupId}/members/{memberId}
+  Future<void> _confirmRemove(SubMemData member) async {
+    final confirmed = await _removeDialog(context, 'Remove Member',
+        'Remove "${member.name}" from ${widget.subGroup.name}?');
+    if (confirmed == true) {
+      setState(() => _removingIds.add(member.memberId));
+      final success = await _apiService.removeMemberFromSubGroup(
+          widget.subGroup.subGroupId, member.memberId);
+      setState(() => _removingIds.remove(member.memberId));
+      if (success) {
+        toast('Member removed');
+        _refresh();
+      } else {
+        AppUI.error(context, 'Failed to remove member.');
+      }
+    }
+  }
+
+  Widget _memberCard(SubMemData member) {
+    final isRemoving = _removingIds.contains(member.memberId);
+    return Container(
+      margin: EdgeInsets.only(bottom: 10.h),
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: accentGreen.withOpacity(0.15)),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2))
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 22.r,
+            backgroundColor: accentGreen.withOpacity(0.1),
+            child: Text(
+                member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
+                style: GoogleFonts.montserrat(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w700,
+                    color: accentGreen)),
+          ),
+          12.width,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(member.name,
+                    style: GoogleFonts.montserrat(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black)),
+                3.height,
+                Text(member.email,
+                    style: GoogleFonts.poppins(
+                        fontSize: 11.sp, color: textSecondary)),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: isRemoving ? null : () => _confirmRemove(member),
+            child: Container(
+              width: 34.w,
+              height: 34.w,
+              decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1), shape: BoxShape.circle),
+              child: isRemoving
+                  ? Padding(
+                  padding: EdgeInsets.all(8.w),
+                  child: AppUI.buttonSpinner())
+                  : Icon(Icons.person_remove_rounded,
+                  color: Colors.red.shade600, size: 18.sp),
+            ),
           ),
         ],
       ),
     );
   }
-}
-
-class CoachEventDetail {
-  final String id;
-  final String title;
-  final String type;
-  final DateTime dateTime;
-  final String location;
-  final String groupName;
-  final String attendanceStatus;
-
-  CoachEventDetail({
-    required this.id,
-    required this.title,
-    required this.type,
-    required this.dateTime,
-    required this.location,
-    required this.groupName,
-    required this.attendanceStatus,
-  });
-}
-
-class CreateEventScreen extends StatefulWidget {
-  const CreateEventScreen({Key? key}) : super(key: key);
-
-  @override
-  State<CreateEventScreen> createState() => _CreateEventScreenState();
-}
-
-class _CreateEventScreenState extends State<CreateEventScreen> {
-  final _formKey = GlobalKey<FormState>();
-  String _selectedType = 'Training';
-  String _selectedGroup = 'Under-14 A';
-  DateTime _selectedDate = DateTime.now();
-  TimeOfDay _startTime = const TimeOfDay(hour: 16, minute: 0);
-  TimeOfDay _endTime = const TimeOfDay(hour: 18, minute: 0);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Create Event')),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(AppConstants.paddingMedium),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+          statusBarColor: Colors.white,
+          statusBarIconBrightness: Brightness.light),
+      child: Scaffold(
+        backgroundColor: Colors.grey.shade100,
+        body: Column(
           children: [
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Event Title',
-                hintText: 'Enter event title',
-                prefixIcon: Icon(Icons.title),
+            Container(
+              decoration: const BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16)),
               ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter event title';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: _selectedType,
-              decoration: const InputDecoration(
-                labelText: 'Event Type',
-                prefixIcon: Icon(Icons.category),
-              ),
-              items: ['Training', 'Match', 'Tournament'].map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedType = newValue!;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: _selectedGroup,
-              decoration: const InputDecoration(
-                labelText: 'Group',
-                prefixIcon: Icon(Icons.groups),
-              ),
-              items: ['Under-14 A', 'Under-16', 'Under-12'].map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedGroup = newValue!;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.calendar_today),
-              title: const Text('Date'),
-              subtitle: Text(
-                '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-              ),
-              onTap: () async {
-                final DateTime? picked = await showDatePicker(
-                  context: context,
-                  initialDate: _selectedDate,
-                  firstDate: DateTime.now(),
-                  lastDate: DateTime(2027),
-                );
-                if (picked != null && picked != _selectedDate) {
-                  setState(() {
-                    _selectedDate = picked;
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.access_time),
-                    title: const Text('Start Time'),
-                    subtitle: Text(_startTime.format(context)),
-                    onTap: () async {
-                      final TimeOfDay? picked = await showTimePicker(
-                        context: context,
-                        initialTime: _startTime,
-                      );
-                      if (picked != null && picked != _startTime) {
-                        setState(() {
-                          _startTime = picked;
-                        });
-                      }
-                    },
+              child: SafeArea(
+                child: Padding(
+                  padding:
+                  EdgeInsets.only(top: 5.h, left: 20.w, right: 20.w),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: Icon(Icons.arrow_back_ios_rounded,
+                              color: Colors.white, size: 20.sp)),
+                      16.width,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Members',
+                                style: GoogleFonts.montserrat(
+                                    color: Colors.white,
+                                    fontSize: 20.sp,
+                                    fontWeight: FontWeight.bold)),
+                            Text(
+                                '${widget.group.name} › ${widget.subGroup.name}',
+                                style: GoogleFonts.poppins(
+                                    fontSize: 11.sp,
+                                    color: Colors.grey.shade400),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                Expanded(
-                  child: ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.access_time),
-                    title: const Text('End Time'),
-                    subtitle: Text(_endTime.format(context)),
-                    onTap: () async {
-                      final TimeOfDay? picked = await showTimePicker(
-                        context: context,
-                        initialTime: _endTime,
-                      );
-                      if (picked != null && picked != _endTime) {
-                        setState(() {
-                          _endTime = picked;
-                        });
-                      }
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Location',
-                hintText: 'Enter location',
-                prefixIcon: Icon(Icons.location_on),
               ),
             ),
-            const SizedBox(height: 16),
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Description',
-                hintText: 'Enter event description',
-                prefixIcon: Icon(Icons.description),
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                if (_formKey.currentState!.validate()) {
-                  // TODO: Save event
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Event created successfully')),
+            Expanded(
+              child: FutureBuilder<List<SubMemData>>(
+                future: _membersFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting)
+                    return _shimmerList();
+                  if (snapshot.hasError) return _errorView(_refresh);
+                  final members = snapshot.data ?? [];
+                  return RefreshIndicator(
+                    onRefresh: () async => _refresh(),
+                    color: accentGreen,
+                    child: members.isEmpty
+                        ? _emptyView(
+                        icon: Icons.people_outline_rounded,
+                        title: 'No members yet',
+                        subtitle: 'Tap + to add members')
+                        : ListView.builder(
+                      padding: EdgeInsets.fromLTRB(
+                          16.w, 14.h, 16.w, 80.h),
+                      itemCount: members.length,
+                      itemBuilder: (_, i) => _memberCard(members[i]),
+                    ),
                   );
-                }
-              },
-              child: const Text('Create Event'),
+                },
+              ),
             ),
           ],
+        ),
+        floatingActionButton: _loadingAll
+            ? FloatingActionButton(
+            onPressed: null,
+            backgroundColor: accentGreen,
+            child: const CircularProgressIndicator(color: Colors.white))
+            : FloatingActionButton.extended(
+          onPressed: _showAddMembersSheet,
+          backgroundColor: accentGreen,
+          icon: Icon(Icons.person_add_rounded,
+              color: Colors.white, size: 22.sp),
+          label: Text('Add Members',
+              style: GoogleFonts.poppins(
+                  color: Colors.white, fontWeight: FontWeight.w600)),
+          elevation: 4,
         ),
       ),
     );
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SHARED HELPERS  (file-scoped — mirrors clubadmin_groups_screen helpers)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+Widget _sheetHandle() => Center(
+  child: Container(
+      width: 40.w,
+      height: 4.h,
+      decoration: BoxDecoration(
+          color: Colors.grey.shade300,
+          borderRadius: BorderRadius.circular(2.r))),
+);
+
+Widget _sheetField(
+    String label,
+    TextEditingController ctrl,
+    IconData icon, {
+      String? hint,
+      bool required = true,
+    }) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(label,
+          style: GoogleFonts.poppins(
+              fontSize: 12.sp,
+              color: textSecondary,
+              fontWeight: FontWeight.w500)),
+      6.height,
+      TextFormField(
+        controller: ctrl,
+        style: GoogleFonts.poppins(fontSize: 13.sp, color: Colors.black),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: GoogleFonts.poppins(
+              fontSize: 12.sp, color: textSecondary.withOpacity(0.5)),
+          prefixIcon: Icon(icon, color: textSecondary, size: 18.sp),
+          filled: true,
+          fillColor: Colors.grey.shade100,
+          contentPadding:
+          EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: Colors.grey.shade300)),
+          enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: Colors.grey.shade300)),
+          focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: const BorderSide(color: accentGreen, width: 1.5)),
+        ),
+      ),
+    ],
+  );
+}
+
+/// Multi-select coach picker rendered as a compact chip list
+Widget _coachPickerSection(
+    List<CoachData> coaches,
+    List<int> selectedIds,
+    StateSetter setSheet, {
+      required String label,
+    }) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(label,
+          style: GoogleFonts.poppins(
+              fontSize: 12.sp,
+              color: textSecondary,
+              fontWeight: FontWeight.w500)),
+      8.height,
+      Container(
+        constraints: BoxConstraints(maxHeight: 140.h),
+        decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: Colors.grey.shade300)),
+        child: ListView.builder(
+          shrinkWrap: true,
+          physics: const ClampingScrollPhysics(),
+          padding: EdgeInsets.zero,
+          itemCount: coaches.length,
+          itemBuilder: (_, i) {
+            final coach = coaches[i];
+            final selected = selectedIds.contains(coach.coachId);
+            return CheckboxListTile(
+              title: Text(coach.username,
+                  style: GoogleFonts.poppins(
+                      fontSize: 13.sp, color: Colors.black87)),
+              subtitle: coach.specialization != null &&
+                  coach.specialization!.isNotEmpty
+                  ? Text(coach.specialization!,
+                  style: GoogleFonts.poppins(
+                      fontSize: 11.sp, color: textSecondary))
+                  : null,
+              value: selected,
+              activeColor: accentGreen,
+              dense: true,
+              visualDensity: VisualDensity.compact,
+              contentPadding:
+              EdgeInsets.symmetric(horizontal: 12.w, vertical: 2.h),
+              onChanged: (bool? val) {
+                setSheet(() {
+                  if (val == true)
+                    selectedIds.add(coach.coachId);
+                  else
+                    selectedIds.remove(coach.coachId);
+                });
+              },
+            );
+          },
+        ),
+      ),
+      if (selectedIds.isNotEmpty) ...[
+        8.height,
+        Text('${selectedIds.length} coach(es) selected',
+            style: GoogleFonts.poppins(
+                fontSize: 11.sp,
+                color: accentGreen,
+                fontWeight: FontWeight.w600)),
+      ],
+    ],
+  );
+}
+
+Widget _vertDivider() =>
+    Container(width: 1, height: 36.h, color: Colors.grey.shade200);
+
+Widget _actionBtn({
+  required IconData icon,
+  required String label,
+  required Color color,
+  required VoidCallback onTap,
+}) =>
+    GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 10.h),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, color: color, size: 18.sp),
+          4.height,
+          Text(label,
+              style: GoogleFonts.poppins(
+                  fontSize: 9.sp, color: color, fontWeight: FontWeight.w600)),
+        ]),
+      ),
+    );
+
+Widget _shimmerList() {
+  return ListView.builder(
+    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+    itemCount: 4,
+    itemBuilder: (_, i) => _ShimmerCard(),
+  );
+}
+
+class _ShimmerCard extends StatefulWidget {
+  @override
+  State<_ShimmerCard> createState() => _ShimmerCardState();
+}
+
+class _ShimmerCardState extends State<_ShimmerCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1200))
+      ..repeat(reverse: true);
+    _anim = Tween<double>(begin: 0.3, end: 0.7).animate(_ctrl);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (_, __) => Container(
+        margin: EdgeInsets.only(bottom: 12.h),
+        height: 80.h,
+        decoration: BoxDecoration(
+          color: Colors.grey.withOpacity(_anim.value),
+          borderRadius: BorderRadius.circular(16.r),
+        ),
+      ),
+    );
+  }
+}
+
+Widget _errorView(VoidCallback onRetry) => Center(
+  child: Column(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      Icon(Icons.cloud_off_rounded, size: 52.sp, color: Colors.red.shade300),
+      12.height,
+      Text('Failed to load',
+          style: GoogleFonts.montserrat(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87)),
+      6.height,
+      Text('Check your connection and retry',
+          style:
+          GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary)),
+      16.height,
+      ElevatedButton.icon(
+          onPressed: onRetry,
+          style: ElevatedButton.styleFrom(
+              backgroundColor: accentGreen, foregroundColor: Colors.white),
+          icon: const Icon(Icons.refresh_rounded),
+          label: Text('Retry', style: GoogleFonts.poppins())),
+    ],
+  ),
+);
+
+Widget _emptyView({
+  required IconData icon,
+  required String title,
+  required String subtitle,
+}) =>
+    ListView(children: [
+      SizedBox(height: 100.h),
+      Center(
+        child: Column(children: [
+          Container(
+            padding: EdgeInsets.all(20.w),
+            decoration:
+            BoxDecoration(color: Colors.grey.shade200, shape: BoxShape.circle),
+            child: Icon(icon, size: 40.sp, color: Colors.grey.shade400),
+          ),
+          16.height,
+          Text(title,
+              style: GoogleFonts.montserrat(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade500)),
+          8.height,
+          Text(subtitle,
+              style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary)),
+        ]),
+      ),
+    ]);
+
+Widget _memberCheckList(
+    List<Data> available,
+    List<int> selectedIds,
+    StateSetter setSheet,
+    BuildContext ctx,
+    Color accentColor,
+    ) {
+  return Container(
+    constraints:
+    BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.38),
+    decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: Colors.grey.shade300)),
+    child: ListView.builder(
+      shrinkWrap: true,
+      physics: const ClampingScrollPhysics(),
+      padding: EdgeInsets.zero,
+      itemCount: available.length,
+      itemBuilder: (_, i) {
+        final member = available[i];
+        final selected = selectedIds.contains(member.memberId);
+        return CheckboxListTile(
+          title: Text(member.username,
+              style:
+              GoogleFonts.poppins(fontSize: 13.sp, color: Colors.black87)),
+          subtitle: Text(member.email,
+              style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary)),
+          value: selected,
+          activeColor: accentColor,
+          dense: true,
+          visualDensity: VisualDensity.compact,
+          contentPadding:
+          EdgeInsets.symmetric(horizontal: 16.w, vertical: 2.h),
+          onChanged: (bool? val) {
+            setSheet(() {
+              if (val == true)
+                selectedIds.add(member.memberId);
+              else
+                selectedIds.remove(member.memberId);
+            });
+          },
+        );
+      },
+    ),
+  );
+}
+
+Widget _addButton({
+  required bool isAdding,
+  required int selectedCount,
+  required VoidCallback onTap,
+}) =>
+    SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: (isAdding || selectedCount == 0) ? null : onTap,
+        style: ElevatedButton.styleFrom(
+            backgroundColor: accentGreen,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: Colors.grey.shade300,
+            elevation: 0,
+            padding: EdgeInsets.symmetric(vertical: 14.h),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14.r))),
+        child: isAdding
+            ? AppUI.buttonSpinner()
+            : Text(
+          selectedCount == 0
+              ? 'Select members first'
+              : 'Add $selectedCount Member${selectedCount > 1 ? 's' : ''}',
+          style: GoogleFonts.poppins(
+              fontSize: 14.sp, fontWeight: FontWeight.w700),
+        ),
+      ),
+    );
+
+Future<bool?> _removeDialog(
+    BuildContext context, String title, String message) =>
+    showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        title: Row(children: [
+          Icon(Icons.warning_amber_rounded, color: Colors.red, size: 22.sp),
+          10.width,
+          Text(title,
+              style: GoogleFonts.montserrat(
+                  fontWeight: FontWeight.w700, fontSize: 16.sp)),
+        ]),
+        content: Text(message,
+            style:
+            GoogleFonts.poppins(fontSize: 13.sp, color: textSecondary)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Cancel',
+                  style: GoogleFonts.poppins(color: textSecondary))),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.r))),
+              child: Text('Confirm',
+                  style:
+                  GoogleFonts.poppins(fontWeight: FontWeight.w700))),
+        ],
+      ),
+    );

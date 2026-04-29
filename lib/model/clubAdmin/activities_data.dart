@@ -100,3 +100,25 @@ class ActivityListData {
     return data;
   }
 }
+class ActivityData1 {
+  final int id;
+  final int clubId;
+  final String name;
+  final String createdAt;
+
+  ActivityData1({
+    required this.id,
+    required this.clubId,
+    required this.name,
+    required this.createdAt,
+  });
+
+  factory ActivityData1.fromJson(Map<String, dynamic> json) {
+    return ActivityData1(
+      id: json['id'],
+      clubId: json['clubId'],
+      name: json['name'],
+      createdAt: json['createdAt'],
+    );
+  }
+}
