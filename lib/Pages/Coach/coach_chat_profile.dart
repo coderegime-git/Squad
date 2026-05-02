@@ -249,7 +249,6 @@ class _CoachProfileScreenState extends State<CoachProfileScreen> {
     setState(() {
       isLoad = isLoads;
     });
-
     memberProfileData = await apiService.getCouchProfile();
     setState(() {
       isLoad = false;
@@ -494,11 +493,11 @@ class _CoachProfileScreenState extends State<CoachProfileScreen> {
                         12.height,
                         _buildSectionTitle("Settings"),
                         12.height,
-                        _SettingsTile(
-                          icon: Icons.person_outline_rounded,
-                          title: "Edit Profile",
-                          onTap: () => toast("Edit profile"),
-                        ),
+                        // _SettingsTile(
+                        //   icon: Icons.person_outline_rounded,
+                        //   title: "Edit Profile",
+                        //   onTap: () => toast("Edit profile"),
+                        // ),
                         _SettingsTile(
                           icon: Icons.security_rounded,
                           title: "Privacy & Security",

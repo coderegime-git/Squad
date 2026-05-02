@@ -5,10 +5,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nb_utils/nb_utils.dart';
 import 'package:sports/Pages/Member/edit_profile.dart';
+import 'package:sports/model/clubAdmin/get_guardians.dart';
 import 'package:sports/model/member/profile_data.dart';
 import 'package:sports/utills/api_service.dart';
 
 import '../../config/colors.dart';
+import '../../model/member/get_guardian_for_members.dart';
 import '../../utills/shared_preference.dart';
 import '../splash.dart';
 
@@ -306,10 +308,12 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
   late MemberProfileData memberProfileData;
   bool isLoad = true;
   final memberApiService = MemberApiService();
+  List<GuardianDataMembers> _guardians = [];
 
   @override
   void initState() {
     getProfileData();
+    getGuardianMember();
     super.initState();
   }
 
@@ -322,6 +326,16 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
     setState(() {
       isLoad = false;
     });
+  }
+  Future<void> getGuardianMember()async{
+    try{
+      final result = await memberApiService.getMembersGuardian();
+      setState(() {
+        _guardians = result.data;
+      });
+    }catch(e){
+    print(e);
+    }
   }
   Widget _buildGuardianSection(MemberProfileData profileData) {
     return Container();

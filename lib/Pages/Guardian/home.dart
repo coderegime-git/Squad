@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../config/colors.dart';
 import '../../model/guardian/getGuardianEvents.dart';
+import '../../model/guardian/get_member_dashboard_data.dart';
 import '../../model/guardian/get_your_member.dart';
 import '../../utills/api_service.dart';
 import '../../utills/shared_preference.dart';
@@ -24,34 +25,61 @@ class GuardianDashboard extends StatefulWidget {
 class _GuardianDashboardState extends State<GuardianDashboard> {
   final ParentApiService _api = ParentApiService();
 
-  int? _selectedMemberId;
   List<Data> _children = [];
+  int? _selectedMemberId;
   bool _isLoadingChildren = true;
+
+  GuardianDashboardData? _dashboardData;
+  bool _isLoadingDashboard = false;
+
   List<GuardianEventData> _pendingEvents = [];
   bool _isLoadingEvents = false;
 
   String get _username => SharedPreferenceHelper.getUsername() ?? 'Guardian';
 
+  // Convenience getter for selected child dashboard body
+  GuardianDashboardBody? get _dashBody => _dashboardData?.data;
+  SelectedChildData? get _selectedChild => _dashBody?.selectedChild;
+
   @override
   void initState() {
     super.initState();
-    _loadChildren();
+    _init();
   }
 
-  Future<void> _loadChildren() async {
+  /// Step 1 — load members, Step 2 — load dashboard for first member
+  Future<void> _init() async {
+    setState(() => _isLoadingChildren = true);
     try {
       final result = await _api.getYourMembers();
       setState(() {
         _children = result.data;
-        if (_children.isNotEmpty) {
-          _selectedMemberId = _children.first.memberId;
-          _loadPendingEvents(_selectedMemberId!);
-        }
         _isLoadingChildren = false;
       });
+      if (_children.isNotEmpty) {
+        _selectedMemberId = _children.first.memberId;
+        await Future.wait([
+          _loadDashboard(_selectedMemberId!),
+          _loadPendingEvents(_selectedMemberId!),
+        ]);
+      }
     } catch (e) {
       setState(() => _isLoadingChildren = false);
-      if (mounted) toast('Failed to load children');
+      if (mounted) toast('Failed to load members');
+    }
+  }
+
+  Future<void> _loadDashboard(int memberId) async {
+    setState(() => _isLoadingDashboard = true);
+    try {
+      final result = await _api.getGuardianDashboard(memberId: memberId);
+      setState(() {
+        _dashboardData = result;
+        _isLoadingDashboard = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingDashboard = false);
+      if (mounted) toast('Failed to load dashboard');
     }
   }
 
@@ -69,11 +97,8 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
   }
 
   Future<void> _updateStatus(int memberId, int eventId, String status) async {
-    final success = await _api.updateGuardianEventStatus(
-      memberId,
-      eventId,
-      status,
-    );
+    final success =
+    await _api.updateGuardianEventStatus(memberId, eventId, status);
     if (mounted) {
       if (success) {
         toast(status == 'ACCEPT' ? 'Event accepted!' : 'Event declined');
@@ -82,6 +107,17 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
         toast('Failed to update status');
       }
     }
+  }
+
+  Future<void> _onRefresh() => _init();
+
+  void _onChildTap(Data member) {
+    if (_selectedMemberId == member.memberId) return;
+    setState(() => _selectedMemberId = member.memberId);
+    Future.wait([
+      _loadDashboard(member.memberId),
+      _loadPendingEvents(member.memberId),
+    ]);
   }
 
   @override
@@ -96,58 +132,13 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
         backgroundColor: Colors.grey.shade100,
         body: Column(
           children: [
-            // ── Header ──────────────────────────────────────────────────
-            Container(
-              height: 85.h,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(16),
-                  bottomRight: Radius.circular(16),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.25),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                child: Padding(
-                  padding: EdgeInsets.only(top: 5.h, left: 20.w, right: 20.w),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Hello, $_username",
-                        style: Theme.of(context).textTheme.headlineMedium
-                            ?.copyWith(
-                          color: Colors.white,
-                          fontSize: 20.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Spacer(),
-                      NotificationBellIcon(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const NotificationScreen(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            // ── Header ───────────────────────────────────────────────
+            _buildHeader(),
 
-            // ── Body ────────────────────────────────────────────────────
+            // ── Body ─────────────────────────────────────────────────
             Expanded(
               child: RefreshIndicator(
-                onRefresh: _loadChildren,
+                onRefresh: _onRefresh,
                 color: accentGreen,
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -157,7 +148,7 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
                     children: [
                       20.height,
 
-                      // ── Children Selector ────────────────────────────
+                      // ── Children Selector ────────────────────────
                       if (_isLoadingChildren)
                         const ChildSelectorShimmer()
                       else if (_children.isEmpty)
@@ -166,150 +157,108 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
                         _buildChildrenList(),
 
                       24.height,
-                      Row(
-                        // mainAxisAlignment: MainAxisAlignment.center,
-                        // crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          _buildStatCard(
-                            icon: Icons.check_circle_outline_rounded,
-                            label: "Attendance",
-                            value: "94%",
-                            color: accentOrange,
-                            subtitle: "This season",
-                          ),
-                          Expanded(child: SizedBox()),
-                        ],
-                      ),
+
+                      // ── Stats Row ────────────────────────────────
+                      if (_isLoadingDashboard)
+                        _shimmerBox(height: 90.h)
+                      else if (_selectedChild != null)
+                        _buildStatsRow(_selectedChild!),
 
                       24.height,
 
-                      // ── Performance Reports ──────────────────────────
-                      Text(
-                        "Performance Reports",
-                        style: GoogleFonts.montserrat(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                      12.height,
-                      _PerformanceReportCard(
-                        childName: "Abinesh",
-                        coachName: "Coach Michael",
-                        activity: "Football",
-                        date: "Feb 3, 2026",
-                        note: "Excellent progress in ball control. Keep practicing dribbling.",
-                      ),
-                      _PerformanceReportCard(
-                        childName: "Gopal",
-                        coachName: "Coach Sarah",
-                        activity: "Swimming",
-                        date: "Feb 1, 2026",
-                        note: "Good improvement in freestyle stroke. Work on breathing technique.",
-                      ),
-
-                      24.height,
-
-                      // ── Pending Events ───────────────────────────────
+                      // ── Pending Events ───────────────────────────
                       if (_children.isNotEmpty) ...[
                         Row(
                           children: [
-                            Text(
-                              "Pending Events",
-                              style: GoogleFonts.montserrat(
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.grey.shade700,
-                              ),
-                            ),
+                            _buildSectionHeader("Pending Events"),
                             8.width,
-                            if (_pendingEvents.isNotEmpty)
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 8.w,
-                                  vertical: 2.h,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: accentOrange.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(20.r),
-                                ),
-                                child: Text(
-                                  '${_pendingEvents.length}',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 11.sp,
-                                    color: accentOrange,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
+                            // if (_pendingEvents.isNotEmpty)
+                            //   Container(
+                            //     padding: EdgeInsets.symmetric(
+                            //         horizontal: 8.w, vertical: 2.h),
+                            //     decoration: BoxDecoration(
+                            //       color: accentOrange.withOpacity(0.15),
+                            //       borderRadius: BorderRadius.circular(20.r),
+                            //     ),
+                            //     child: Text(
+                            //       '\${_pendingEvents.length}',
+                            //       style: GoogleFonts.poppins(
+                            //         fontSize: 11.sp,
+                            //         color: accentOrange,
+                            //         fontWeight: FontWeight.w700,
+                            //       ),
+                            //     ),
+                            //   ),
                           ],
                         ),
                         12.height,
-
                         if (_isLoadingEvents)
                           _shimmerBox(height: 100.h)
                         else if (_pendingEvents.isEmpty)
-                          Container(
-                            padding: EdgeInsets.all(20.w),
-                            decoration: BoxDecoration(
-                              color: cardDark,
-                              borderRadius: BorderRadius.circular(16.r),
-                              border: Border.all(color: Colors.grey.shade300),
-                            ),
-                            child: Center(
-                              child: Text(
-                                "No pending events for this child",
-                                style: GoogleFonts.poppins(
-                                  color: textSecondary,
-                                ),
-                              ),
-                            ),
-                          )
+                          _buildEmptyCard("No pending events for this child")
                         else
                           ..._pendingEvents.map(
                                 (e) => _PendingEventCard(
                               event: e,
                               onAccept: () => _updateStatus(
-                                _selectedMemberId!,
-                                e.eventId,
-                                'ACCEPT',
-                              ),
+                                  _selectedMemberId!, e.eventId, 'ACCEPT'),
                               onDecline: () => _updateStatus(
-                                _selectedMemberId!,
-                                e.eventId,
-                                'REJECT',
-                              ),
+                                  _selectedMemberId!, e.eventId, 'REJECT'),
                             ),
                           ),
+                        24.height,
                       ],
 
-                      24.height,
+                      // ── Upcoming Events ───────────────────────────
+                      if (_children.isNotEmpty) ...[
+                        _buildSectionHeader("Upcoming Events"),
+                        12.height,
+                        if (_isLoadingDashboard)
+                          _shimmerBox(height: 100.h)
+                        else if (_selectedChild == null ||
+                            _selectedChild!.events.isEmpty)
+                          _buildEmptyCard("No upcoming events for this child")
+                        else
+                          ..._selectedChild!.events
+                              .map((e) => _EventTile(event: e)),
+                        24.height,
+                      ],
 
-                      // ── Recent Club Updates ──────────────────────────
-                      Text(
-                        "Recent Club Updates",
-                        style: GoogleFonts.montserrat(
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black,
-                        ),
-                      ),
+                      // ── Payments ─────────────────────────────────
+                      if (_children.isNotEmpty) ...[
+                        _buildSectionHeader("Payments"),
+                        12.height,
+                        if (_isLoadingDashboard)
+                          _shimmerBox(height: 80.h)
+                        else if (_selectedChild != null)
+                          _PaymentCard(payment: _selectedChild!.payments),
+                        24.height,
+                      ],
+
+                      // ── Notifications / Club Updates ─────────────
+                      _buildSectionHeader("Club Updates"),
                       16.height,
-                      Column(
-                        children: List.generate(3, (index) {
-                          return Padding(
-                            padding: EdgeInsets.only(bottom: 14.h),
-                            child: NotificationListTile(
-                              title: [
-                                "Payment due in 4 days – ₹2500",
-                                "Match availability needed by tomorrow",
-                                "Child promoted to starting lineup!",
-                              ][index],
-                              time: ["3h ago", "Yesterday", "2d ago"][index],
+                      if (_isLoadingDashboard)
+                        _shimmerBox(height: 120.h)
+                      else if (_dashBody == null ||
+                          _dashBody!.notifications.isEmpty)
+                        _buildEmptyCard("No recent updates")
+                      else
+                        Column(
+                          children: _dashBody!.notifications
+                              .asMap()
+                              .entries
+                              .map(
+                                (entry) => Padding(
+                              padding: EdgeInsets.only(bottom: 14.h),
+                              child: NotificationListTile(
+                                title: entry.value,
+                                time: '',
+                              ),
                             ),
-                          );
-                        }),
-                      ),
+                          )
+                              .toList(),
+                        ),
 
                       100.height,
                     ],
@@ -323,7 +272,56 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
     );
   }
 
-  // ── Children List ──────────────────────────────────────────────────────────
+  // ── Header ─────────────────────────────────────────────────────────────────
+  Widget _buildHeader() {
+    return Container(
+      height: 85.h,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(16),
+          bottomRight: Radius.circular(16),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.25),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.only(top: 5.h, left: 20.w, right: 20.w),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                "Hello, $_username",
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: Colors.white,
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              NotificationBellIcon(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const NotificationScreen(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Children horizontal list ───────────────────────────────────────────────
   Widget _buildChildrenList() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -346,10 +344,7 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
               final member = _children[index];
               final isSelected = member.memberId == _selectedMemberId;
               return GestureDetector(
-                onTap: () {
-                  setState(() => _selectedMemberId = member.memberId);
-                  _loadPendingEvents(member.memberId);
-                },
+                onTap: () => _onChildTap(member),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   width: 150.w,
@@ -412,40 +407,28 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
     );
   }
 
-  // ── No Children Widget ─────────────────────────────────────────────────────
-  Widget _buildNoChildrenWidget() {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 24.h),
-      child: Center(
-        child: Column(
-          children: [
-            Icon(
-              Icons.child_care_rounded,
-              size: 48.sp,
-              color: Colors.grey.shade400,
-            ),
-            12.height,
-            Text(
-              "No children linked yet.",
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 14.sp,
-                color: Colors.grey.shade500,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            6.height,
-            Text(
-              "Please wait while your club admin links a member to your account.",
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 12.sp,
-                color: Colors.grey.shade400,
-              ),
-            ),
-          ],
+  // ── Stats Row (Attendance + Performance Rating) ────────────────────────────
+  Widget _buildStatsRow(SelectedChildData child) {
+    return Row(
+      children: [
+        _buildStatCard(
+          icon: Icons.check_circle_outline_rounded,
+          label: "Attendance",
+          value: "${child.attendancePercentage.toStringAsFixed(0)}%",
+          color: accentOrange,
+          subtitle: "This season",
         ),
-      ),
+        12.width,
+        _buildStatCard(
+          icon: Icons.star_rounded,
+          label: "Performance",
+          value: child.performanceRating != null
+              ? "${child.performanceRating!.toStringAsFixed(1)} / 10"
+              : "N/A",
+          color: accentGreen,
+          subtitle: "Coach rating",
+        ),
+      ],
     );
   }
 
@@ -459,7 +442,6 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
   }) {
     return Expanded(
       child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 6.w),
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
           color: cardDark,
@@ -505,7 +487,71 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
     );
   }
 
-  // ── Shimmer Box ────────────────────────────────────────────────────────────
+  // ── No Children ────────────────────────────────────────────────────────────
+  Widget _buildNoChildrenWidget() {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 24.h),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(Icons.child_care_rounded,
+                size: 48.sp, color: Colors.grey.shade400),
+            12.height,
+            Text(
+              "No children linked yet.",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 14.sp,
+                color: Colors.grey.shade500,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            6.height,
+            Text(
+              "Please wait while your club admin links a member to your account.",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 12.sp,
+                color: Colors.grey.shade400,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Section Header ─────────────────────────────────────────────────────────
+  Widget _buildSectionHeader(String title) {
+    return Text(
+      title,
+      style: GoogleFonts.montserrat(
+        fontSize: 14.sp,
+        fontWeight: FontWeight.w700,
+        color: Colors.grey.shade700,
+      ),
+    );
+  }
+
+  // ── Empty State Card ───────────────────────────────────────────────────────
+  Widget _buildEmptyCard(String message) {
+    return Container(
+      padding: EdgeInsets.all(20.w),
+      decoration: BoxDecoration(
+        color: cardDark,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Center(
+        child: Text(
+          message,
+          style: GoogleFonts.poppins(color: textSecondary),
+        ),
+      ),
+    );
+  }
+
+  // ── Shimmer Placeholder ────────────────────────────────────────────────────
   Widget _shimmerBox({required double height}) {
     return Container(
       height: height,
@@ -518,64 +564,68 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
   }
 }
 
-// ── Performance Report Card ──────────────────────────────────────────────────
-class _PerformanceReportCard extends StatelessWidget {
-  final String childName;
-  final String coachName;
-  final String activity;
-  final String date;
-  final String note;
+// ── Event Tile ───────────────────────────────────────────────────────────────
+class _EventTile extends StatelessWidget {
+  final GuardianChildEvent event;
 
-  const _PerformanceReportCard({
-    required this.childName,
-    required this.coachName,
-    required this.activity,
-    required this.date,
-    required this.note,
-  });
+  const _EventTile({required this.event});
+
+  Color get _statusColor {
+    switch (event.rsvpStatus.toUpperCase()) {
+      case 'ACCEPTED':
+        return accentGreen;
+      case 'REJECTED':
+        return Colors.red;
+      default:
+        return accentOrange;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(16.w),
+      margin: EdgeInsets.only(bottom: 10.h),
+      padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
         color: cardDark,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: accentGreen.withOpacity(0.3), width: 1.2),
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 18.r,
-                backgroundColor: accentGreen.withOpacity(0.15),
-                child: Text(
-                  childName[0],
+          Container(
+            padding: EdgeInsets.all(10.w),
+            decoration: BoxDecoration(
+              color: _statusColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+            child: Icon(
+              Icons.event_rounded,
+              color: _statusColor,
+              size: 20.sp,
+            ),
+          ),
+          12.width,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  event.title,
                   style: GoogleFonts.montserrat(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14.sp,
-                    color: accentGreen,
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
                   ),
                 ),
-              ),
-              10.width,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                4.height,
+                Row(
                   children: [
+                    Icon(Icons.calendar_today_rounded,
+                        size: 11.sp, color: textSecondary),
+                    4.width,
                     Text(
-                      childName,
-                      style: GoogleFonts.montserrat(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
-                      ),
-                    ),
-                    Text(
-                      '$activity • $coachName',
+                      event.eventDate,
                       style: GoogleFonts.poppins(
                         fontSize: 11.sp,
                         color: textSecondary,
@@ -583,35 +633,22 @@ class _PerformanceReportCard extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                decoration: BoxDecoration(
-                  color: accentGreen.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8.r),
-                ),
-                child: Icon(
-                  Icons.description_rounded,
-                  color: accentGreen,
-                  size: 16.sp,
-                ),
-              ),
-            ],
-          ),
-          10.height,
-          Text(
-            note,
-            style: GoogleFonts.poppins(
-              fontSize: 12.sp,
-              color: Colors.grey.shade600,
+              ],
             ),
           ),
-          8.height,
-          Text(
-            date,
-            style: GoogleFonts.poppins(
-              fontSize: 10.sp,
-              color: textSecondary.withOpacity(0.7),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+            decoration: BoxDecoration(
+              color: _statusColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            child: Text(
+              event.rsvpStatus,
+              style: GoogleFonts.poppins(
+                fontSize: 10.sp,
+                color: _statusColor,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -620,7 +657,92 @@ class _PerformanceReportCard extends StatelessWidget {
   }
 }
 
-// ── Pending Event Card ───────────────────────────────────────────────────────
+// ── Payment Card ─────────────────────────────────────────────────────────────
+class _PaymentCard extends StatelessWidget {
+  final GuardianPayment payment;
+
+  const _PaymentCard({required this.payment});
+
+  Color get _statusColor {
+    switch (payment.status.toUpperCase()) {
+      case 'PAID':
+        return accentGreen;
+      case 'OVERDUE':
+        return Colors.red;
+      default:
+        return accentOrange;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: cardDark,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: _statusColor.withOpacity(0.35), width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(12.w),
+            decoration: BoxDecoration(
+              color: _statusColor.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.account_balance_wallet_rounded,
+              color: _statusColor,
+              size: 24.sp,
+            ),
+          ),
+          16.width,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  payment.due > 0 ? "Amount Due: ₹${payment.due}" : "No dues",
+                  style: GoogleFonts.montserrat(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
+                ),
+                4.height,
+                Text(
+                  "Status: ${payment.status}",
+                  style: GoogleFonts.poppins(
+                    fontSize: 12.sp,
+                    color: textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+            decoration: BoxDecoration(
+              color: _statusColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            child: Text(
+              payment.status,
+              style: GoogleFonts.poppins(
+                fontSize: 11.sp,
+                color: _statusColor,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Pending Event Card ────────────────────────────────────────────────────────
 class _PendingEventCard extends StatelessWidget {
   final GuardianEventData event;
   final VoidCallback onAccept;
@@ -681,24 +803,14 @@ class _PendingEventCard extends StatelessWidget {
               5.width,
               Text(
                 event.teamName,
-                style: GoogleFonts.poppins(
-                  fontSize: 12.sp,
-                  color: textSecondary,
-                ),
+                style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary),
               ),
               16.width,
-              Icon(
-                Icons.calendar_today_rounded,
-                size: 13.sp,
-                color: textSecondary,
-              ),
+              Icon(Icons.calendar_today_rounded, size: 13.sp, color: textSecondary),
               5.width,
               Text(
                 event.eventDate,
-                style: GoogleFonts.poppins(
-                  fontSize: 12.sp,
-                  color: textSecondary,
-                ),
+                style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary),
               ),
             ],
           ),

@@ -1,4 +1,4 @@
-// lib/pages/guardian/guardian_metrics.dart
+// screens/guardian/guardian_metrics.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -8,16 +8,10 @@ import 'package:shimmer/shimmer.dart';
 import 'package:intl/intl.dart';
 
 import '../../config/colors.dart';
-
-// lib/pages/guardian/guardian_metrics.dart
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:nb_utils/nb_utils.dart';
-
-import '../../config/colors.dart';
 import '../../config/app_theme.dart';
+import '../../model/guardian/get_your_member.dart';
+import '../../model/member/metrics.dart' hide Data;
+import '../../utills/api_service.dart';
 
 class GuardianMetricsScreen extends StatefulWidget {
   const GuardianMetricsScreen({super.key});
@@ -26,381 +20,495 @@ class GuardianMetricsScreen extends StatefulWidget {
   State<GuardianMetricsScreen> createState() => _GuardianMetricsScreenState();
 }
 
-class _GuardianMetricsScreenState extends State<GuardianMetricsScreen> {
+class _GuardianMetricsScreenState extends State<GuardianMetricsScreen>
+    with SingleTickerProviderStateMixin {
+  final ParentApiService _api = ParentApiService();
+  final MemberApiService _memberApi = MemberApiService();
+
+  List<Data> _children = [];
+  bool _isLoadingChildren = true;
+  int? _selectedMemberId;
+  String _selectedMemberName = '';
+
+  GetMetrics? _metrics;
+  bool _isLoadingMetrics = false;
+  String? _metricsError;
+
+  late AnimationController _fadeCtrl;
+  late Animation<double> _fadeAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 450),
+    );
+    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeIn);
+    _loadChildren();
+  }
+
+  @override
+  void dispose() {
+    _fadeCtrl.dispose();
+    super.dispose();
+  }
+
+  // ── Load guardian's children ──────────────────────────────────────
+  Future<void> _loadChildren() async {
+    setState(() => _isLoadingChildren = true);
+    try {
+      final result = await _api.getYourMembers();
+      setState(() {
+        _children = result.data;
+        _isLoadingChildren = false;
+      });
+      if (_children.isNotEmpty) _selectChild(_children.first);
+    } catch (e) {
+      setState(() => _isLoadingChildren = false);
+      if (mounted) toast('Failed to load children');
+    }
+  }
+
+  void _selectChild(Data child) {
+    setState(() {
+      _selectedMemberId = child.memberId;
+      _selectedMemberName = child.username;
+      _metrics = null;
+    });
+    _loadMetrics(child.memberId);
+  }
+
+  // ── Load metrics by memberId ──────────────────────────────────────
+  Future<void> _loadMetrics(int memberId) async {
+    setState(() {
+      _isLoadingMetrics = true;
+      _metricsError = null;
+    });
+    try {
+      final result = await _memberApi.getMemberMetricsById(memberId);
+      setState(() {
+        _metrics = result;
+        _isLoadingMetrics = false;
+      });
+      _fadeCtrl.forward(from: 0);
+    } catch (e) {
+      setState(() {
+        _isLoadingMetrics = false;
+        _metricsError = 'Failed to load metrics';
+      });
+    }
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
-        statusBarColor: Colors.white,
+        statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
       ),
       child: Scaffold(
         backgroundColor: Colors.grey.shade100,
         body: Column(
           children: [
-            Container(
-              height: 85.h,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(16),
-                  bottomRight: Radius.circular(16),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.25),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                child: Padding(
-                  padding: EdgeInsets.only(top: 5.h, left: 20.w, right: 20.w),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Metrics",
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: Colors.white,
-                          fontSize: 20.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            _buildHeader(),
             Expanded(
-              child: ListView(
-                padding: EdgeInsets.all(AppConstants.paddingMedium),
+              child: _isLoadingChildren
+                  ? _buildFullShimmer()
+                  : _children.isEmpty
+                  ? _buildNoChildrenState()
+                  : _buildBody(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Header ────────────────────────────────────────────────────────
+  Widget _buildHeader() {
+    return Container(
+      height: 85.h,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(16),
+          bottomRight: Radius.circular(16),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.25),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20.w),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Overall Performance ──────────────────────────────
                   Text(
-                    'Overall Performance',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 14.sp),
-                  ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    'Jan 2026 – Apr 2026',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 11.sp,
-                      color: AppColors.mediumGrey,
+                    "Metrics",
+                    style: GoogleFonts.montserrat(
+                      color: Colors.white,
+                      fontSize: 20.sp,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 12.h),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          context,
-                          title: 'Attendance',
-                          value: '92%',
-                          icon: Icons.check_circle_outline,
-                          color: AppColors.green,
-                        ),
-                      ),
-                      SizedBox(width: 12.w),
-                      Expanded(
-                        child: _buildStatCard(
-                          context,
-                          title: 'Sessions',
-                          value: '24',
-                          icon: Icons.sports_soccer,
-                          color: AppColors.orange,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 12.h),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          context,
-                          title: 'Streak',
-                          value: '5 days',
-                          icon: Icons.local_fire_department,
-                          color: AppColors.error,
-                        ),
-                      ),
-                      SizedBox(width: 12.w),
-                      Expanded(child: SizedBox()),
-                    ],
-                  ),
-                  SizedBox(height: 24.h),
-
-                  // ── Activity Breakdown ───────────────────────────────
-                  Text(
-                    'Activity Breakdown',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 14.sp),
-                  ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    'Jan 2026 – Apr 2026',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 11.sp,
-                      color: AppColors.mediumGrey,
-                    ),
-                  ),
-                  SizedBox(height: 12.h),
-                  _buildActivityCard(context, activity: 'Football', attendance: 92, sessions: 18),
-                  SizedBox(height: 12.h),
-                  _buildActivityCard(context, activity: 'Swimming', attendance: 88, sessions: 6),
-                  SizedBox(height: 24.h),
-
-                  // ── Attendance History ───────────────────────────────
-                  Text(
-                    'Attendance History',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 14.sp),
-                  ),
-                  SizedBox(height: 12.h),
-                  Card(
-                    elevation: 2,
-                    child: Padding(
-                      padding: EdgeInsets.all(AppConstants.paddingMedium),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Last 7 Sessions',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 14.sp),
-                          ),
-                          SizedBox(height: 16.h),
-                          _buildAttendanceRow(context, date: 'Feb 5, 2026', session: 'Football Training', status: 'Present'),
-                          SizedBox(height: 12.h),
-                          _buildAttendanceRow(context, date: 'Feb 3, 2026', session: 'Swimming Practice', status: 'Present'),
-                          SizedBox(height: 12.h),
-                          _buildAttendanceRow(context, date: 'Feb 1, 2026', session: 'Football Training', status: 'Present'),
-                          SizedBox(height: 12.h),
-                          _buildAttendanceRow(context, date: 'Jan 30, 2026', session: 'Football Training', status: 'Absent'),
-                          SizedBox(height: 12.h),
-                          _buildAttendanceRow(context, date: 'Jan 28, 2026', session: 'Swimming Practice', status: 'Present'),
-                        ],
+                  if (_selectedMemberName.isNotEmpty)
+                    Text(
+                      _selectedMemberName,
+                      style: GoogleFonts.poppins(
+                        color: accentGreen,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                  ),
-                  SizedBox(height: 15.h),
-
-                  // ── Coach Feedback ───────────────────────────────────
-                  Text(
-                    'Coach Feedback',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 14.sp),
-                  ),
-                  SizedBox(height: 12.h),
-                  _buildFeedbackCard(
-                    context,
-                    coach: 'Coach Michael',
-                    activity: 'Football',
-                    date: 'Feb 3, 2026',
-                    feedback: 'Excellent progress in ball control and passing accuracy. Keep practicing dribbling techniques.',
-                  ),
-                  SizedBox(height: 12.h),
-                  _buildFeedbackCard(
-                    context,
-                    coach: 'Coach Sarah',
-                    activity: 'Swimming',
-                    date: 'Feb 1, 2026',
-                    feedback: 'Good improvement in freestyle stroke. Work on breathing technique for longer distances.',
-                  ),
-                  SizedBox(height: 12.h),
-                  _buildFeedbackCard(
-                    context,
-                    coach: 'Coach Michael',
-                    activity: 'Football',
-                    date: 'Jan 28, 2026',
-                    feedback: 'Strong defensive skills. Focus on positioning during corner kicks.',
-                  ),
-                  SizedBox(height: 100.h),
                 ],
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(BuildContext context, {
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(AppConstants.paddingMedium),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 32.sp),
-            SizedBox(height: 8.h),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: color, fontSize: 17.sp),
-            ),
-            SizedBox(height: 4.h),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 12.sp),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActivityCard(BuildContext context, {
-    required String activity,
-    required int attendance,
-    required int sessions,
-  }) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: EdgeInsets.all(AppConstants.paddingMedium),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  child: const Icon(Icons.sports_soccer, color: AppColors.green, size: 24),
-                ),
-                SizedBox(width: 12.w),
-                Expanded(
-                  child: Text(
-                    activity,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 13.sp),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16.h),
-            Row(
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Attendance',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.mediumGrey, fontSize: 12.sp)),
-                    SizedBox(height: 4.h),
-                    Text('$attendance%',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.green, fontSize: 15.sp)),
-                  ],
-                ),
-                180.width,
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Sessions',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.mediumGrey, fontSize: 12.sp)),
-                    SizedBox(height: 4.h),
-                    Text(sessions.toString(),
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.orange, fontSize: 15.sp)),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAttendanceRow(BuildContext context, {
-    required String date,
-    required String session,
-    required String status,
-  }) {
-    final isPresent = status == 'Present';
-    return Row(
-      children: [
-        Icon(
-          isPresent ? Icons.check_circle : Icons.cancel,
-          color: isPresent ? AppColors.success : AppColors.error,
-          size: 20,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(session, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.black)),
-              const SizedBox(height: 2),
-              Text(date, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.mediumGrey)),
             ],
           ),
         ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: (isPresent ? AppColors.success : AppColors.error).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Text(
-            status,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: isPresent ? AppColors.success : AppColors.error,
-              fontWeight: FontWeight.w600,
-            ),
+      ),
+    );
+  }
+
+  // ── Body ──────────────────────────────────────────────────────────
+  Widget _buildBody() {
+    return Column(
+      children: [
+        _buildChildSelector(),
+        Expanded(
+          child: _isLoadingMetrics
+              ? _buildFullShimmer()
+              : _metricsError != null
+              ? _buildErrorState()
+              : _metrics == null
+              ? const SizedBox()
+              : FadeTransition(
+            opacity: _fadeAnim,
+            child: _buildMetricsContent(),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildFeedbackCard(BuildContext context, {
-    required String coach,
-    required String activity,
-    required String date,
-    required String feedback,
-  }) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppConstants.paddingMedium),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: AppColors.green.withOpacity(0.1),
-                  child: const Icon(Icons.person, color: AppColors.green),
+  // ── Child Selector ────────────────────────────────────────────────
+  Widget _buildChildSelector() {
+    return Container(
+      color: Colors.white,
+      padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 16.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.bar_chart_rounded,
+                  size: 14.sp, color: Colors.grey.shade600),
+              6.width,
+              Text(
+                "Metrics for",
+                style: GoogleFonts.poppins(
+                    fontSize: 11.sp, color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+          8.height,
+          SizedBox(
+            height: 42.h,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _children.length,
+              itemBuilder: (context, index) {
+                final child = _children[index];
+                final isSelected = child.memberId == _selectedMemberId;
+                return GestureDetector(
+                  onTap: () => _selectChild(child),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    margin: EdgeInsets.only(right: 10.w),
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 16.w, vertical: 6.h),
+                    decoration: BoxDecoration(
+                      color:
+                      isSelected ? Colors.black : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(30.r),
+                      border: Border.all(
+                        color: isSelected
+                            ? Colors.black
+                            : Colors.grey.shade300,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircleAvatar(
+                          radius: 10.r,
+                          backgroundColor:
+                          isSelected ? accentGreen : Colors.grey.shade400,
+                          child: Text(
+                            child.username.isNotEmpty
+                                ? child.username[0].toUpperCase()
+                                : '?',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 9.sp,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        6.width,
+                        Text(
+                          child.username,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected
+                                ? Colors.white
+                                : Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Metrics Content ───────────────────────────────────────────────
+  Widget _buildMetricsContent() {
+    final data = _metrics!.data;
+    return RefreshIndicator(
+      onRefresh: () async {
+        if (_selectedMemberId != null) await _loadMetrics(_selectedMemberId!);
+      },
+      color: accentGreen,
+      child: ListView(
+        padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 100.h),
+        children: [
+          // ── Overview Cards ─────────────────────────────────────────
+          _sectionTitle("Overview"),
+          8.height,
+          Row(
+            children: [
+              Expanded(
+                child: _StatCard(
+                  icon: Icons.check_circle_outline_rounded,
+                  label: "Attendance",
+                  value: "${data.attendancePercentage}%",
+                  color: accentGreen,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(coach, style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 2),
-                      Text(activity, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.mediumGrey)),
-                    ],
+              ),
+              12.width,
+              Expanded(
+                child: _StatCard(
+                  icon: Icons.local_fire_department_rounded,
+                  label: "Streak",
+                  value: "${data.currentStreak}d",
+                  color: Colors.deepOrange,
+                ),
+              ),
+            ],
+          ),
+          16.height,
+
+          // ── Activities ─────────────────────────────────────────────
+          if (data.activities.isNotEmpty) ...[
+            _sectionTitle("Activities"),
+            8.height,
+            Wrap(
+              spacing: 8.w,
+              runSpacing: 8.h,
+              children: data.activities
+                  .map((act) => _ActivityChip(activity: act))
+                  .toList(),
+            ),
+            20.height,
+          ],
+
+          // ── Upcoming Events ────────────────────────────────────────
+          if (data.upcomingEvents.isNotEmpty) ...[
+            _sectionTitle("Upcoming Events"),
+            8.height,
+            ...data.upcomingEvents
+                .map((e) => _UpcomingEventCard(event: e))
+                .toList(),
+            12.height,
+          ],
+
+          // ── Attendance History ─────────────────────────────────────
+          if (data.attendanceHistory.isNotEmpty) ...[
+            _sectionTitle("Attendance History"),
+            8.height,
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16.r)),
+              child: Padding(
+                padding: EdgeInsets.all(16.w),
+                child: Column(
+                  children: data.attendanceHistory
+                      .asMap()
+                      .entries
+                      .map((entry) {
+                    final isLast =
+                        entry.key == data.attendanceHistory.length - 1;
+                    return Column(
+                      children: [
+                        _AttendanceRow(record: entry.value),
+                        if (!isLast)
+                          Divider(
+                              height: 20.h, color: Colors.grey.shade200),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+            20.height,
+          ],
+
+          // ── Coach Feedback ─────────────────────────────────────────
+          if (data.coachFeedback.isNotEmpty) ...[
+            _sectionTitle("Coach Feedback"),
+            8.height,
+            ...data.coachFeedback
+                .map((f) => _CoachFeedbackCard(feedback: f))
+                .toList(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String title) {
+    return Text(
+      title,
+      style: GoogleFonts.montserrat(
+        fontSize: 14.sp,
+        fontWeight: FontWeight.w700,
+        color: Colors.grey.shade700,
+      ),
+    );
+  }
+
+  // ── Placeholder / Error states ────────────────────────────────────
+  Widget _buildNoChildrenState() {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(32.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.child_care_rounded,
+                size: 64.sp, color: Colors.grey.shade400),
+            16.height,
+            Text(
+              "No children linked yet",
+              style: GoogleFonts.montserrat(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            8.height,
+            Text(
+              "Please wait while your club admin links a member to your account.",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                  fontSize: 13.sp, color: Colors.grey.shade400),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.error_outline_rounded,
+              size: 52.sp, color: Colors.red.shade300),
+          12.height,
+          Text(
+            _metricsError ?? 'Something went wrong',
+            style:
+            GoogleFonts.poppins(fontSize: 14.sp, color: Colors.grey.shade600),
+          ),
+          16.height,
+          ElevatedButton.icon(
+            onPressed: () {
+              if (_selectedMemberId != null) {
+                _loadMetrics(_selectedMemberId!);
+              }
+            },
+            icon: const Icon(Icons.refresh_rounded),
+            label: Text("Retry", style: GoogleFonts.poppins()),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFullShimmer() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Padding(
+        padding: EdgeInsets.all(16.w),
+        child: Column(
+          children: [
+            Row(children: [
+              Expanded(
+                child: Container(
+                  height: 100.h,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16.r),
                   ),
                 ),
-              ],
+              ),
+              12.width,
+              Expanded(
+                child: Container(
+                  height: 100.h,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16.r),
+                  ),
+                ),
+              ),
+            ]),
+            16.height,
+            ...List.generate(
+              4,
+                  (_) => Container(
+                height: 70.h,
+                margin: EdgeInsets.only(bottom: 12.h),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+              ),
             ),
-            const SizedBox(height: 12),
-            Text(
-              feedback,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade800, fontSize: 12.sp),
-            ),
-            const SizedBox(height: 8),
-            Text(date, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.mediumGrey)),
           ],
         ),
       ),
@@ -408,58 +516,176 @@ class _GuardianMetricsScreenState extends State<GuardianMetricsScreen> {
   }
 }
 
-// Coach Note Card
-class _CoachNoteCard extends StatelessWidget {
-  final CoachNote note;
+// ── Stat Card ─────────────────────────────────────────────────────────────────
+class _StatCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
 
-  const _CoachNoteCard({required this.note});
+  const _StatCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final isPositive = note.category == "Positive" || note.category == "Highlight";
-    final color = isPositive ? accentGreen : accentOrange;
-
     return Container(
-      margin: EdgeInsets.only(bottom: 16.h),
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: cardDark,
+        color: color.withOpacity(0.08),
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: color.withOpacity(0.4), width: 1.2),
+        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                DateFormat('MMM dd, yyyy').format(note.date),
-                style: GoogleFonts.poppins(fontSize: 13.sp, color: textSecondary),
-              ),
-            ],
-          ),
+          Icon(icon, color: color, size: 28.sp),
           8.height,
           Text(
-            note.note,
+            value,
+            style: GoogleFonts.montserrat(
+              fontSize: 22.sp,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+          4.height,
+          Text(
+            label,
             style: GoogleFonts.poppins(
-              fontSize: 11.sp,
+              fontSize: 12.sp,
               color: Colors.grey.shade600,
             ),
           ),
-          12.height,
+        ],
+      ),
+    );
+  }
+}
+
+// ── Activity Chip ─────────────────────────────────────────────────────────────
+class _ActivityChip extends StatelessWidget {
+  final String activity;
+
+  const _ActivityChip({required this.activity});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+      decoration: BoxDecoration(
+        color: accentGreen.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(30.r),
+        border: Border.all(color: accentGreen.withOpacity(0.4), width: 1.2),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.sports_rounded, size: 14.sp, color: accentGreen),
+          6.width,
+          Text(
+            activity,
+            style: GoogleFonts.poppins(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w600,
+              color: accentGreen,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Upcoming Event Card ───────────────────────────────────────────────────────
+class _UpcomingEventCard extends StatelessWidget {
+  final UpcomingEvents event;
+
+  const _UpcomingEventCard({required this.event});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 10.h),
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: cardDark,
+        borderRadius: BorderRadius.circular(14.r),
+        border:
+        Border.all(color: accentOrange.withOpacity(0.3), width: 1.2),
+      ),
+      child: Row(
+        children: [
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+            width: 44.w,
+            height: 44.h,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
+              color: accentOrange.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            child: Icon(Icons.event_rounded,
+                color: accentOrange, size: 22.sp),
+          ),
+          12.width,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  event.eventName,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w700,
+                    color: textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                5.height,
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today_rounded,
+                        size: 11.sp, color: textSecondary),
+                    4.width,
+                    Text(
+                      event.eventDate,
+                      style: GoogleFonts.poppins(
+                          fontSize: 11.sp, color: textSecondary),
+                    ),
+                    if (event.location.isNotEmpty) ...[
+                      12.width,
+                      Icon(Icons.location_on_outlined,
+                          size: 11.sp, color: textSecondary),
+                      4.width,
+                      Expanded(
+                        child: Text(
+                          event.location,
+                          style: GoogleFonts.poppins(
+                              fontSize: 11.sp, color: textSecondary),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding:
+            EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+            decoration: BoxDecoration(
+              color: accentOrange.withOpacity(0.12),
               borderRadius: BorderRadius.circular(20.r),
             ),
             child: Text(
-              note.category,
+              event.eventType,
               style: GoogleFonts.poppins(
-                fontSize: 12.sp,
-                color: color,
-                fontWeight: FontWeight.w600,
+                fontSize: 10.sp,
+                color: accentOrange,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -469,42 +695,136 @@ class _CoachNoteCard extends StatelessWidget {
   }
 }
 
-// Models
-class MetricsSummary {
-  final int attendancePercentage;
-  final int present;
-  final int totalSessions;
-  final int totalEvents;
-  final int activitiesCount;
-  final int currentStreak;
+// ── Attendance Row ────────────────────────────────────────────────────────────
+class _AttendanceRow extends StatelessWidget {
+  final AttendanceHistory record;
 
-  MetricsSummary({
-    required this.attendancePercentage,
-    required this.present,
-    required this.totalSessions,
-    required this.totalEvents,
-    required this.activitiesCount,
-    required this.currentStreak,
-  });
+  const _AttendanceRow({required this.record});
 
-  factory MetricsSummary.empty() => MetricsSummary(
-    attendancePercentage: 0,
-    present: 0,
-    totalSessions: 0,
-    totalEvents: 0,
-    activitiesCount: 0,
-    currentStreak: 0,
-  );
+  @override
+  Widget build(BuildContext context) {
+    final isPresent = record.status.toUpperCase() == 'PRESENT' ||
+        record.status.toUpperCase() == 'ATTENDED';
+    final color = isPresent ? accentGreen : Colors.red;
+
+    return Row(
+      children: [
+        Icon(
+          isPresent ? Icons.check_circle_rounded : Icons.cancel_rounded,
+          color: color,
+          size: 20.sp,
+        ),
+        10.width,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                record.eventName,
+                style: GoogleFonts.poppins(
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+              2.height,
+              Text(
+                record.eventDate,
+                style: GoogleFonts.poppins(
+                    fontSize: 11.sp, color: Colors.grey.shade500),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8.r),
+          ),
+          child: Text(
+            record.status,
+            style: GoogleFonts.poppins(
+              fontSize: 10.sp,
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
-class CoachNote {
-  final DateTime date;
-  final String note;
-  final String category;
+// ── Coach Feedback Card ───────────────────────────────────────────────────────
+class _CoachFeedbackCard extends StatelessWidget {
+  final CoachFeedback feedback;
 
-  CoachNote({
-    required this.date,
-    required this.note,
-    required this.category,
-  });
+  const _CoachFeedbackCard({required this.feedback});
+
+  @override
+  Widget build(BuildContext context) {
+    String formattedDate = feedback.date;
+    try {
+      final parsed = DateTime.parse(feedback.date);
+      formattedDate = DateFormat('MMM d, yyyy').format(parsed);
+    } catch (_) {}
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: cardDark,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: accentGreen.withOpacity(0.3), width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 18.r,
+                backgroundColor: accentGreen.withOpacity(0.12),
+                child: Icon(Icons.person_rounded,
+                    color: accentGreen, size: 18.sp),
+              ),
+              10.width,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      feedback.coachName,
+                      style: GoogleFonts.montserrat(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                      ),
+                    ),
+                    Text(
+                      formattedDate,
+                      style: GoogleFonts.poppins(
+                          fontSize: 11.sp, color: Colors.grey.shade500),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.format_quote_rounded,
+                  color: accentGreen.withOpacity(0.4), size: 20.sp),
+            ],
+          ),
+          12.height,
+          Text(
+            feedback.comment,
+            style: GoogleFonts.poppins(
+              fontSize: 12.sp,
+              color: Colors.grey.shade700,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

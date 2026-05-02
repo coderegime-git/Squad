@@ -31,7 +31,9 @@ import '../model/coach/coach_dashboard_data.dart';
 import '../model/coach/coach_event.dart';
 import '../model/coach/event_performance_data.dart';
 import '../model/guardian/getGuardianEvents.dart';
+import '../model/guardian/get_member_dashboard_data.dart';
 import '../model/member/get_events_members.dart';
+import '../model/member/get_guardian_for_members.dart';
 import '../model/member/get_member_dashboard.dart';
 import '../model/notification_data.dart';
 
@@ -1728,7 +1730,7 @@ class ParentApiService {
       final myId = SharedPreferenceHelper.getId();
       print("Guardian userId from SharedPrefs: $myId");
 
-      final fullResponse = await _helper.get("api/members/10/members");
+      final fullResponse = await _helper.get("api/guardians/members");
       print("getYourMembers response: $fullResponse");
       print("getYourMembers success: ${fullResponse['success']}");
       print("getYourMembers data: ${fullResponse['data']}");
@@ -1752,6 +1754,44 @@ class ParentApiService {
       rethrow;
     }
   }
+// ─────────────────────────────────────────────────────────────────────────────
+// ADD THESE METHODS TO ParentApiService in api_service.dart
+// ─────────────────────────────────────────────────────────────────────────────
+
+  /// GET /api/guardian/events/{memberId}
+  /// Get all events for a member (Guardian only)
+  Future<dynamic> getGuardianMemberEvents(int memberId) async {
+    try {
+      print("getGuardianMemberEvents memberId: $memberId");
+      final fullResponse = await _helper.get("api/guardian/events/$memberId");
+      print("getGuardianMemberEvents response: $fullResponse");
+      // Return the data array directly
+      return fullResponse['data'];
+    } catch (e) {
+      print("getGuardianMemberEvents failed: $e");
+      rethrow;
+    }
+  }
+
+  Future<GuardianDashboardData> getGuardianDashboard({int? memberId}) async {
+    try {
+      final url =
+          "api/dashboard/guardian?memberId=$memberId";
+      print("getGuardianDashboard url: $url");
+      final fullResponse = await _helper.get(url);
+      print("getGuardianDashboard response: $fullResponse");
+      return guardianDashboardDataFromJson(fullResponse);
+    } catch (e) {
+      print("getGuardianDashboard failed: $e");
+      rethrow;
+    }
+  }
+// ─────────────────────────────────────────────────────────────────────────────
+// ADD THIS METHOD TO MemberApiService in api_service.dart
+// ─────────────────────────────────────────────────────────────────────────────
+
+  /// GET /api/members/{memberId}/metrics
+  /// Get metrics for a specific member by ID (Guardian & Admin access)
 
   // Future<GetYourMember> getYourMembers() async {
   //   try {
@@ -1864,6 +1904,18 @@ class MemberApiService {
       return GetMemberDashboard.empty();
     }
   }
+  Future<GetMetrics> getMemberMetricsById(int memberId) async {
+    try {
+      print("getMemberMetricsById memberId: $memberId");
+      final fullResponse = await _helper.get("api/members/$memberId/metrics");
+      print("getMemberMetricsById success: ${fullResponse['success']}");
+      final jsonResponse = jsonEncode(fullResponse);
+      return getMemberMetricsFromJson(jsonResponse);
+    } catch (e) {
+      print("getMemberMetricsById failed: $e");
+      rethrow;
+    }
+  }
 
   Future<MemberProfileData> getMemberProfile() async {
     try {
@@ -1889,8 +1941,6 @@ class MemberApiService {
     }
   }
 
-  /// PUT /api/member/events/status — update event status
-  /// status values: "ACCEPTED" or "REJECTED"
   Future<bool> updateMemberEventStatus(int eventId, String status) async {
     try {
       print("updateMemberEventStatus eventId: $eventId status: $status");
@@ -1923,6 +1973,19 @@ class MemberApiService {
       return false;
     }
 
+  }
+  Future<GetGuardianForMembers> getMembersGuardian({int? memberId}) async {
+    try {
+      final url =
+          "/api/members/guardians";
+      print("getMembersGuardian url: $url");
+      final fullResponse = await _helper.get(url);
+      print("getMembersGuardian response: $fullResponse");
+      return getGuardianForMembersFromJson(fullResponse);
+    } catch (e) {
+      print("getMembersGuardian failed: $e");
+      rethrow;
+    }
   }
 }
 

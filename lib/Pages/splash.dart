@@ -17,8 +17,8 @@ class _SplashState extends State<Splash> {
   @override
   void initState() {
     super.initState();
+    SharedPreferenceHelper.clear();
     _navigate();
-    //SharedPreferenceHelper.clear();
   }
 
   void _navigate() {
@@ -29,6 +29,7 @@ class _SplashState extends State<Splash> {
 
     Future.delayed(const Duration(seconds: 1), () {
       if (!mounted) return;
+
 
       if (token != null && token.isNotEmpty) {
         context.read<NotificationProvider>().loadUnreadCount();

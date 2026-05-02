@@ -1,10 +1,11 @@
 // screens/coach/coach_invite_groups_screen.dart
 // Coach: Invite Groups to an event
-// Same as ClubAdmin InviteGroupsScreen but for coach role
-// - Expand group → see subgroups + direct members
-// - Expand subgroup → see members with checkboxes
-// - Uncheck to exclude
-// - "Send Invites" calls POST /api/events/{eventId}/members
+// - All members start UNCHECKED by default
+// - Tap checkbox to select individual members
+// - "Select All" / "Deselect All" button per group and subgroup
+// - Floating badge shows how many members are currently selected
+// - "Send Invites" shows a confirmation dialog listing selected members
+// - Confirm → calls POST /api/events/{eventId}/members
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -37,16 +38,12 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
   List<GroupData> _groups = [];
   bool _loading = true;
   bool _submitting = false;
-
-  // Group-level direct members
   final Map<int, List<memberModel.Data>?> _groupMembers = {};
   final Set<int> _loadingGroupMembers = {};
-  final Map<int, Set<int>> _uncheckedGroupMembers = {};
-
-  // Subgroup members
+  final Map<int, Set<int>> _checkedGroupMembers = {};
   final Map<int, List<subMemberModel.SubMemData>?> _subMembers = {};
   final Set<int> _loadingSubMembers = {};
-  final Map<int, Set<int>> _uncheckedSubMembers = {};
+  final Map<int, Set<int>> _checkedSubMembers = {};
 
   // Subgroups per group
   final Map<int, List<SubGroupData>?> _subGroups = {};
@@ -54,6 +51,39 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
 
   final Set<int> _expandedGroups = {};
   final Set<int> _expandedSubGroups = {};
+
+  int get _totalSelected {
+    final Set<int> all = {};
+    _checkedGroupMembers.forEach((_, ids) => all.addAll(ids));
+    _checkedSubMembers.forEach((_, ids) => all.addAll(ids));
+    return all.length;
+  }
+
+  List<Map<String, String>> get _selectedMemberDetails {
+    final Map<int, Map<String, String>> details = {};
+
+    _checkedGroupMembers.forEach((gId, ids) {
+      final members = _groupMembers[gId];
+      if (members == null) return;
+      for (final m in members) {
+        if (ids.contains(m.memberId)) {
+          details[m.memberId] = {'name': m.username, 'email': m.email};
+        }
+      }
+    });
+
+    _checkedSubMembers.forEach((sgId, ids) {
+      final members = _subMembers[sgId];
+      if (members == null) return;
+      for (final m in members) {
+        if (ids.contains(m.memberId)) {
+          details[m.memberId] = {'name': m.name, 'email': m.email};
+        }
+      }
+    });
+
+    return details.values.toList();
+  }
 
   @override
   void initState() {
@@ -91,7 +121,7 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
       final result = await _api.getGroupDirectMembers(groupId);
       if (mounted) setState(() {
         _groupMembers[groupId] = result;
-        _uncheckedGroupMembers[groupId] = {};
+        _checkedGroupMembers[groupId] = {}; // starts empty = all unchecked
       });
     } catch (_) {
       if (mounted) setState(() => _groupMembers[groupId] = []);
@@ -107,7 +137,7 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
       final result = await _api.getSubGroupMembers(subGroupId);
       if (mounted) setState(() {
         _subMembers[subGroupId] = result.data;
-        _uncheckedSubMembers[subGroupId] = {};
+        _checkedSubMembers[subGroupId] = {}; // starts empty = all unchecked
       });
     } catch (_) {
       if (mounted) setState(() => _subMembers[subGroupId] = []);
@@ -138,47 +168,214 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
     });
   }
 
+  // CHANGED: toggle adds/removes from CHECKED set
   void _toggleGroupMember(int groupId, int memberId) {
     setState(() {
-      final s = _uncheckedGroupMembers[groupId] ?? {};
+      final s = _checkedGroupMembers[groupId] ?? {};
       s.contains(memberId) ? s.remove(memberId) : s.add(memberId);
-      _uncheckedGroupMembers[groupId] = s;
+      _checkedGroupMembers[groupId] = s;
     });
   }
 
   void _toggleSubMember(int subGroupId, int memberId) {
     setState(() {
-      final s = _uncheckedSubMembers[subGroupId] ?? {};
+      final s = _checkedSubMembers[subGroupId] ?? {};
       s.contains(memberId) ? s.remove(memberId) : s.add(memberId);
-      _uncheckedSubMembers[subGroupId] = s;
+      _checkedSubMembers[subGroupId] = s;
     });
+  }
+
+  // ── Select All / Deselect All for a group's direct members ─────────────────
+  void _selectAllGroupMembers(int groupId) {
+    final members = _groupMembers[groupId];
+    if (members == null) return;
+    final allIds = members.map((m) => m.memberId).toSet();
+    final checked = _checkedGroupMembers[groupId] ?? {};
+    final allSelected = allIds.every((id) => checked.contains(id));
+    setState(() {
+      _checkedGroupMembers[groupId] = allSelected ? {} : Set.from(allIds);
+    });
+  }
+
+  // ── Select All / Deselect All for a subgroup ───────────────────────────────
+  void _selectAllSubMembers(int subGroupId) {
+    final members = _subMembers[subGroupId];
+    if (members == null) return;
+    final allIds = members.map((m) => m.memberId).toSet();
+    final checked = _checkedSubMembers[subGroupId] ?? {};
+    final allSelected = allIds.every((id) => checked.contains(id));
+    setState(() {
+      _checkedSubMembers[subGroupId] = allSelected ? {} : Set.from(allIds);
+    });
+  }
+
+  // ── Show confirmation dialog before sending ────────────────────────────────
+  Future<void> _showConfirmDialog() async {
+    final memberDetails = _selectedMemberDetails;
+    if (memberDetails.isEmpty) {
+      toast('Please select at least one member to invite');
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(20.w),
+              decoration: BoxDecoration(
+                color: accentGreen,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20.r),
+                  topRight: Radius.circular(20.r),
+                ),
+              ),
+              child: Column(children: [
+                Container(
+                  padding: EdgeInsets.all(10.w),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.send_rounded, color: Colors.white, size: 26.sp),
+                ),
+                10.height,
+                Text(
+                  'Confirm Invites',
+                  style: GoogleFonts.montserrat(
+                    color: Colors.white,
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                6.height,
+                Text(
+                  '${memberDetails.length} member${memberDetails.length > 1 ? 's' : ''} will be invited to',
+                  style: GoogleFonts.poppins(color: Colors.white.withOpacity(0.85), fontSize: 12.sp),
+                  textAlign: TextAlign.center,
+                ),
+                4.height,
+                Text(
+                  widget.event.eventName,
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ]),
+            ),
+
+            // Member list
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: 300.h),
+              child: Scrollbar(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                  itemCount: memberDetails.length,
+                  separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade100),
+                  itemBuilder: (_, i) {
+                    final m = memberDetails[i];
+                    final name = m['name'] ?? '';
+                    return Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8.h),
+                      child: Row(children: [
+                        CircleAvatar(
+                          radius: 16.r,
+                          backgroundColor: accentGreen.withOpacity(0.12),
+                          child: Text(
+                            name.isNotEmpty ? name[0].toUpperCase() : '?',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 11.sp,
+                              fontWeight: FontWeight.w700,
+                              color: accentGreen,
+                            ),
+                          ),
+                        ),
+                        10.width,
+                        Expanded(child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(name,
+                                style: GoogleFonts.poppins(
+                                    fontSize: 13.sp, fontWeight: FontWeight.w600)),
+                            Text(m['email'] ?? '',
+                                style: GoogleFonts.poppins(
+                                    fontSize: 11.sp, color: textSecondary)),
+                          ],
+                        )),
+                        Icon(Icons.check_circle_rounded, color: accentGreen, size: 16.sp),
+                      ]),
+                    );
+                  },
+                ),
+              ),
+            ),
+
+            // Action buttons
+            Padding(
+              padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 16.h),
+              child: Row(children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.grey.shade600,
+                      side: BorderSide(color: Colors.grey.shade300),
+                      padding: EdgeInsets.symmetric(vertical: 12.h),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.r)),
+                    ),
+                    child: Text('Cancel',
+                        style: GoogleFonts.poppins(
+                            fontSize: 13.sp, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                12.width,
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accentGreen,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: EdgeInsets.symmetric(vertical: 12.h),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.r)),
+                    ),
+                    child: Text('Confirm',
+                        style: GoogleFonts.poppins(
+                            fontSize: 13.sp, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ]),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed == true) {
+      _sendInvites();
+    }
   }
 
   Future<void> _sendInvites() async {
     setState(() => _submitting = true);
     final Set<int> invited = {};
 
-    _groupMembers.forEach((gId, members) {
-      if (members == null) return;
-      final unchecked = _uncheckedGroupMembers[gId] ?? {};
-      for (final m in members) {
-        if (!unchecked.contains(m.memberId)) invited.add(m.memberId);
-      }
-    });
-
-    _subMembers.forEach((sgId, members) {
-      if (members == null) return;
-      final unchecked = _uncheckedSubMembers[sgId] ?? {};
-      for (final m in members) {
-        if (!unchecked.contains(m.memberId)) invited.add(m.memberId);
-      }
-    });
-
-    if (invited.isEmpty) {
-      setState(() => _submitting = false);
-      toast('No members selected to invite');
-      return;
-    }
+    _checkedGroupMembers.forEach((_, ids) => invited.addAll(ids));
+    _checkedSubMembers.forEach((_, ids) => invited.addAll(ids));
 
     try {
       final success = await _api.addMembersToEvent(
@@ -202,6 +399,8 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final selected = _totalSelected;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
@@ -220,13 +419,12 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
                   child: Text('No groups found',
                       style: GoogleFonts.poppins(color: textSecondary)))
                   : ListView.builder(
-                padding: EdgeInsets.symmetric(
-                    horizontal: 16.w, vertical: 12.h),
+                padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 100.h),
                 itemCount: _groups.length,
                 itemBuilder: (_, i) => _groupTile(_groups[i]),
               ),
             ),
-            _buildSendButton(),
+            _buildSendButton(selected),
           ],
         ),
       ),
@@ -265,6 +463,23 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
                   overflow: TextOverflow.ellipsis),
             ],
           )),
+          // Live selected count badge in header
+          if (_totalSelected > 0)
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+              decoration: BoxDecoration(
+                color: accentGreen,
+                borderRadius: BorderRadius.circular(20.r),
+              ),
+              child: Row(children: [
+                Icon(Icons.people_rounded, color: Colors.white, size: 13.sp),
+                4.width,
+                Text('$_totalSelected',
+                    style: GoogleFonts.poppins(
+                        color: Colors.white, fontSize: 12.sp,
+                        fontWeight: FontWeight.w700)),
+              ]),
+            ),
         ]),
       ),
     ),
@@ -274,22 +489,22 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
     margin: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 0),
     padding: EdgeInsets.all(11.w),
     decoration: BoxDecoration(
-        color: accentGreen.withOpacity(0.07),
+        color: Colors.blue.withOpacity(0.07),
         borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: accentGreen.withOpacity(0.2))),
+        border: Border.all(color: Colors.blue.withOpacity(0.2))),
     child: Row(children: [
-      Icon(Icons.info_outline_rounded, color: accentGreen, size: 15.sp),
+      Icon(Icons.info_outline_rounded, color: Colors.blue, size: 15.sp),
       8.width,
       Expanded(
         child: Text(
-          'Expand a group to see members. Uncheck anyone you want to exclude.',
+          'Expand a group → check the members you want to invite. Use "Select All" to quickly pick everyone.',
           style: GoogleFonts.poppins(fontSize: 11.sp, color: Colors.black87),
         ),
       ),
     ]),
   );
 
-  Widget _buildSendButton() => Container(
+  Widget _buildSendButton(int selected) => Container(
     padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 20.h),
     decoration: BoxDecoration(
         color: Colors.white,
@@ -300,7 +515,7 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
     child: SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: _submitting ? null : _sendInvites,
+        onPressed: (_submitting || selected == 0) ? null : _showConfirmDialog,
         style: ElevatedButton.styleFrom(
             backgroundColor: accentGreen,
             foregroundColor: Colors.white,
@@ -313,9 +528,17 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
             ? SizedBox(height: 20.h, width: 20.h,
             child: const CircularProgressIndicator(
                 color: Colors.white, strokeWidth: 2))
-            : Text('Send Invites',
+            : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(Icons.send_rounded, size: 16.sp, color: Colors.white),
+          8.width,
+          Text(
+            selected == 0
+                ? 'Select members to invite'
+                : 'Send Invites ($selected)',
             style: GoogleFonts.poppins(
-                fontSize: 14.sp, fontWeight: FontWeight.w700)),
+                fontSize: 14.sp, fontWeight: FontWeight.w700),
+          ),
+        ]),
       ),
     ),
   );
@@ -325,12 +548,23 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
     final isLoading = _loadingSubGroups.contains(group.groupId);
     final subGroups = _subGroups[group.groupId];
 
+    // Count selected in this group (direct + all subgroups)
+    int groupSelectedCount = (_checkedGroupMembers[group.groupId] ?? {}).length;
+    if (subGroups != null) {
+      for (final sg in subGroups) {
+        groupSelectedCount += (_checkedSubMembers[sg.subGroupId] ?? {}).length;
+      }
+    }
+
     return Container(
       margin: EdgeInsets.only(bottom: 10.h),
       decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: accentGreen.withOpacity(0.25)),
+          border: Border.all(
+              color: groupSelectedCount > 0
+                  ? accentGreen.withOpacity(0.4)
+                  : accentGreen.withOpacity(0.15)),
           boxShadow: [
             BoxShadow(color: Colors.black.withOpacity(0.03),
                 blurRadius: 6, offset: const Offset(0, 2))
@@ -378,6 +612,21 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
                   ),
                 ],
               )),
+              // Selected badge for group
+              if (groupSelectedCount > 0) ...[
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                  decoration: BoxDecoration(
+                    color: accentGreen,
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                  child: Text('$groupSelectedCount selected',
+                      style: GoogleFonts.poppins(
+                          color: Colors.white, fontSize: 10.sp,
+                          fontWeight: FontWeight.w600)),
+                ),
+                8.width,
+              ],
               isLoading
                   ? SizedBox(width: 18.w, height: 18.w,
                   child: CircularProgressIndicator(
@@ -441,7 +690,7 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
   Widget _buildDirectMembers(int groupId) {
     final isLoading = _loadingGroupMembers.contains(groupId);
     final members = _groupMembers[groupId];
-    final unchecked = _uncheckedGroupMembers[groupId] ?? {};
+    final checked = _checkedGroupMembers[groupId] ?? {};
 
     if (isLoading) {
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -458,38 +707,69 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
 
     if (members == null || members.isEmpty) return const SizedBox.shrink();
 
+    final allSelected = members.every((m) => checked.contains(m.memberId));
+
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      // Header row with Select All button
       Padding(
         padding: EdgeInsets.fromLTRB(14.w, 8.h, 14.w, 4.h),
         child: Row(children: [
           Icon(Icons.person_rounded, size: 13.sp, color: accentGreen),
           6.width,
-          Text('Direct Members (${members.length})',
-              style: GoogleFonts.poppins(
-                  fontSize: 11.sp, fontWeight: FontWeight.w600,
-                  color: accentGreen)),
+          Expanded(
+            child: Text('Direct Members (${members.length})',
+                style: GoogleFonts.poppins(
+                    fontSize: 11.sp, fontWeight: FontWeight.w600,
+                    color: accentGreen)),
+          ),
+          // Select All / Deselect All
+          GestureDetector(
+            onTap: () => _selectAllGroupMembers(groupId),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+              decoration: BoxDecoration(
+                color: allSelected
+                    ? Colors.red.withOpacity(0.08)
+                    : accentGreen.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(8.r),
+                border: Border.all(
+                    color: allSelected
+                        ? Colors.red.withOpacity(0.3)
+                        : accentGreen.withOpacity(0.3)),
+              ),
+              child: Text(
+                allSelected ? 'Deselect All' : 'Select All',
+                style: GoogleFonts.poppins(
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.w600,
+                    color: allSelected ? Colors.red : accentGreen),
+              ),
+            ),
+          ),
         ]),
       ),
       ...members.map((m) {
-        final checked = !unchecked.contains(m.memberId);
+        final isChecked = checked.contains(m.memberId);
         return CheckboxListTile(
           dense: true,
-          value: checked,
+          value: isChecked,
           activeColor: accentGreen,
           onChanged: (_) => _toggleGroupMember(groupId, m.memberId),
           title: Text(m.username,
-              style: GoogleFonts.poppins(fontSize: 12.sp, color: Colors.black87)),
+              style: GoogleFonts.poppins(
+                  fontSize: 12.sp,
+                  color: isChecked ? Colors.black87 : Colors.grey.shade500)),
           subtitle: Text(m.email,
               style: GoogleFonts.poppins(fontSize: 10.sp, color: textSecondary)),
           controlAffinity: ListTileControlAffinity.leading,
           secondary: CircleAvatar(
             radius: 14.r,
-            backgroundColor: (checked ? accentGreen : Colors.grey).withOpacity(0.12),
+            backgroundColor: (isChecked ? accentGreen : Colors.grey).withOpacity(0.12),
             child: Text(
               m.username.isNotEmpty ? m.username[0].toUpperCase() : '?',
               style: GoogleFonts.montserrat(
                   fontSize: 10.sp, fontWeight: FontWeight.w700,
-                  color: checked ? accentGreen : Colors.grey),
+                  color: isChecked ? accentGreen : Colors.grey),
             ),
           ),
         );
@@ -502,15 +782,20 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
     final isExpanded = _expandedSubGroups.contains(sg.subGroupId);
     final isLoading = _loadingSubMembers.contains(sg.subGroupId);
     final members = _subMembers[sg.subGroupId];
-    final unchecked = _uncheckedSubMembers[sg.subGroupId] ?? {};
-    final checkedCount = (members?.length ?? 0) - unchecked.length;
+    final checked = _checkedSubMembers[sg.subGroupId] ?? {};
+    final checkedCount = checked.length;
+    final totalCount = members?.length ?? 0;
+    final allSelected = totalCount > 0 && members!.every((m) => checked.contains(m.memberId));
 
     return Container(
       margin: EdgeInsets.fromLTRB(12.w, 6.h, 12.w, 0),
       decoration: BoxDecoration(
           color: Colors.grey.shade50,
           borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: Colors.blue.withOpacity(0.2))),
+          border: Border.all(
+              color: checkedCount > 0
+                  ? Colors.blue.withOpacity(0.35)
+                  : Colors.blue.withOpacity(0.15))),
       child: Column(children: [
         InkWell(
           onTap: () => _toggleSubGroup(sg.subGroupId),
@@ -541,15 +826,33 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
                     isExpanded
                         ? isLoading ? 'Loading members...'
                         : members == null || members.isEmpty ? 'No members'
-                        : '$checkedCount of ${members.length} will be invited'
+                        : checkedCount == 0
+                        ? 'None selected · tap to choose'
+                        : '$checkedCount of $totalCount selected'
                         : sg.ageCategory != null
                         ? 'Age: ${sg.ageCategory} · Tap to manage'
-                        : 'Tap to manage members',
+                        : 'Tap to select members',
                     style: GoogleFonts.poppins(
-                        fontSize: 10.sp, color: textSecondary),
+                        fontSize: 10.sp,
+                        color: checkedCount > 0 ? accentGreen : textSecondary),
                   ),
                 ],
               )),
+              // Selected badge
+              if (checkedCount > 0) ...[
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                  decoration: BoxDecoration(
+                    color: accentGreen,
+                    borderRadius: BorderRadius.circular(10.r),
+                  ),
+                  child: Text('$checkedCount',
+                      style: GoogleFonts.poppins(
+                          color: Colors.white, fontSize: 10.sp,
+                          fontWeight: FontWeight.w700)),
+                ),
+                6.width,
+              ],
               isLoading
                   ? SizedBox(width: 16.w, height: 16.w,
                   child: CircularProgressIndicator(
@@ -579,33 +882,69 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
             )
           else
             Column(
-              children: members.map((m) {
-                final checked = !unchecked.contains(m.memberId);
-                return CheckboxListTile(
-                  dense: true,
-                  value: checked,
-                  activeColor: accentGreen,
-                  onChanged: (_) => _toggleSubMember(sg.subGroupId, m.memberId),
-                  title: Text(m.name,
-                      style: GoogleFonts.poppins(
-                          fontSize: 12.sp, color: Colors.black87)),
-                  subtitle: Text(m.email,
-                      style: GoogleFonts.poppins(
-                          fontSize: 10.sp, color: textSecondary)),
-                  controlAffinity: ListTileControlAffinity.leading,
-                  secondary: CircleAvatar(
-                    radius: 14.r,
-                    backgroundColor:
-                    (checked ? accentGreen : Colors.grey).withOpacity(0.12),
-                    child: Text(
-                      m.name.isNotEmpty ? m.name[0].toUpperCase() : '?',
-                      style: GoogleFonts.montserrat(
-                          fontSize: 10.sp, fontWeight: FontWeight.w700,
-                          color: checked ? accentGreen : Colors.grey),
+              children: [
+                // Select All bar for subgroup
+                Padding(
+                  padding: EdgeInsets.fromLTRB(12.w, 8.h, 12.w, 4.h),
+                  child: Row(children: [
+                    Text('${members.length} member${members.length > 1 ? 's' : ''}',
+                        style: GoogleFonts.poppins(
+                            fontSize: 11.sp, color: textSecondary)),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () => _selectAllSubMembers(sg.subGroupId),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                        decoration: BoxDecoration(
+                          color: allSelected
+                              ? Colors.red.withOpacity(0.08)
+                              : Colors.blue.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(8.r),
+                          border: Border.all(
+                              color: allSelected
+                                  ? Colors.red.withOpacity(0.3)
+                                  : Colors.blue.withOpacity(0.3)),
+                        ),
+                        child: Text(
+                          allSelected ? 'Deselect All' : 'Select All',
+                          style: GoogleFonts.poppins(
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.w600,
+                              color: allSelected ? Colors.red : Colors.blue),
+                        ),
+                      ),
                     ),
-                  ),
-                );
-              }).toList(),
+                  ]),
+                ),
+                ...members.map((m) {
+                  final isChecked = checked.contains(m.memberId);
+                  return CheckboxListTile(
+                    dense: true,
+                    value: isChecked,
+                    activeColor: accentGreen,
+                    onChanged: (_) => _toggleSubMember(sg.subGroupId, m.memberId),
+                    title: Text(m.name,
+                        style: GoogleFonts.poppins(
+                            fontSize: 12.sp,
+                            color: isChecked ? Colors.black87 : Colors.grey.shade500)),
+                    subtitle: Text(m.email,
+                        style: GoogleFonts.poppins(
+                            fontSize: 10.sp, color: textSecondary)),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    secondary: CircleAvatar(
+                      radius: 14.r,
+                      backgroundColor:
+                      (isChecked ? accentGreen : Colors.grey).withOpacity(0.12),
+                      child: Text(
+                        m.name.isNotEmpty ? m.name[0].toUpperCase() : '?',
+                        style: GoogleFonts.montserrat(
+                            fontSize: 10.sp, fontWeight: FontWeight.w700,
+                            color: isChecked ? accentGreen : Colors.grey),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ],
             ),
         ],
       ]),
