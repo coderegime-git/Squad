@@ -31,8 +31,7 @@ class _ClubAdminAddGuardianScreenState
   final _emergencyContactCtrl = TextEditingController();
   final _occupationCtrl = TextEditingController();
   String? _selectedRelation;
-
-  // Step 2 – Link Children
+  bool _isPasswordVisible = false;
   List<String> _selectedChildren = [];
 
   final List<String> _stepTitles = [
@@ -443,7 +442,8 @@ class _ClubAdminAddGuardianScreenState
           _passwordCtrl,
           Icons.lock_outline_rounded,
           hint: 'Create a password',
-          obscureText: true,
+          obscureText: !_isPasswordVisible,
+          customValidator: (v) => AppValidator.validatePassword(v),
         ),
         12.height,
         _formField(
@@ -716,6 +716,21 @@ class _ClubAdminAddGuardianScreenState
               color: textSecondary.withOpacity(0.5),
             ),
             prefixIcon: Icon(icon, color: textSecondary, size: 18.sp),
+            suffixIcon: label.contains("Password")
+                ? IconButton(
+              icon: Icon(
+                _isPasswordVisible
+                    ? Icons.visibility
+                    : Icons.visibility_off,
+                color: textSecondary,
+              ),
+              onPressed: () {
+                setState(() {
+                  _isPasswordVisible = !_isPasswordVisible;
+                });
+              },
+            )
+                : null,
             filled: true,
             fillColor: Colors.white,
             contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),

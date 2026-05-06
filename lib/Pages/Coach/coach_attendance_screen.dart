@@ -220,7 +220,7 @@ class _CoachAttendanceScreenState extends State<CoachAttendanceScreen> {
                   ),
                 ),
                 _members.isEmpty
-                    ? Expanded(child: Center(child: Text("No data found")))
+                    ? Expanded(child: Center(child: Text("No member found")))
                     : Expanded(
                         child: ListView.builder(
                           padding: EdgeInsets.symmetric(horizontal: 16.w),

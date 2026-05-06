@@ -6,6 +6,7 @@ import 'package:nb_utils/nb_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../config/colors.dart';
+import '../../model/get_clubs_data.dart';
 import '../../model/member/get_events_members.dart';
 import '../../model/member/get_member_dashboard.dart';
 import '../../routes/app_routes.dart';
@@ -22,9 +23,10 @@ class MemberDashboard extends StatefulWidget {
 
 class _MemberDashboardState extends State<MemberDashboard> {
   final MemberApiService _api = MemberApiService();
-
+  late Future<List<MemberEventData>> _upcomingEventsFuture;
   late Future<GetMemberEvents> _pendingFuture;
   late Future<GetMemberDashboard> _dashboardFuture;
+  late Future<GetClubsData?> _clubsFallbackFuture;
 
   String get _username => SharedPreferenceHelper.getUsername() ?? 'Member';
 
@@ -42,8 +44,43 @@ class _MemberDashboardState extends State<MemberDashboard> {
   void _loadAll() {
     _pendingFuture = _api.getMemberPendingEvents();
     _dashboardFuture = _api.getMemberDashboard(_clubId);
+    _clubsFallbackFuture = _fetchClubsFallback();
+    _upcomingEventsFuture = _fetchUpcomingEvents(); // ← add
   }
 
+  Future<GetClubsData?> _fetchClubsFallback() async {
+    try {
+      return await _api.getClubsDataForMember();
+    } catch (e) {
+      print("Member clubs fallback failed: $e");
+      return null;
+    }
+  }
+  Future<List<MemberEventData>> _fetchUpcomingEvents() async {
+    try {
+      final result = await _api.getMemberEvents();
+      final now = DateTime.now();
+      final oneMonthLater = now.add(const Duration(days: 30));
+      return result.data.where((e) {
+        try {
+          final parts = e.eventDate.split('-');
+          if (parts.length != 3) return false;
+          final date = DateTime(
+            int.parse(parts[0]),
+            int.parse(parts[1]),
+            int.parse(parts[2]),
+          );
+          return date.isAfter(now.subtract(const Duration(days: 1))) &&
+              date.isBefore(oneMonthLater);
+        } catch (_) {
+          return false;
+        }
+      }).toList();
+    } catch (e) {
+      print("fetchUpcomingEvents failed: $e");
+      return [];
+    }
+  }
   void _refresh() {
     setState(() => _loadAll());
   }
@@ -100,10 +137,10 @@ class _MemberDashboardState extends State<MemberDashboard> {
                         "Hello, $_username",
                         style: Theme.of(context).textTheme.headlineMedium
                             ?.copyWith(
-                              color: Colors.white,
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          color: Colors.white,
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const Spacer(),
                       NotificationBellIcon(
@@ -143,91 +180,34 @@ class _MemberDashboardState extends State<MemberDashboard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           24.height,
+
+                          // ── Club Card ──────────────────────────
                           if (isLoading)
                             _shimmerBox(height: 80.h)
                           else if (club != null)
-                            Container(
-                              width: double.infinity,
-                              padding: EdgeInsets.all(16.w),
-                              decoration: BoxDecoration(
-                                color: Colors.black,
-                                borderRadius: BorderRadius.circular(16.r),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 44.r,
-                                    height: 44.r,
-                                    decoration: BoxDecoration(
-                                      color: accentGreen.withOpacity(0.15),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      Icons.sports_rounded,
-                                      color: accentGreen,
-                                      size: 22.sp,
-                                    ),
-                                  ),
-                                  12.width,
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          club.clubName,
-                                          style: GoogleFonts.montserrat(
-                                            fontSize: 14.sp,
-                                            fontWeight: FontWeight.w700,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        4.height,
-                                        // Text(
-                                        //   '${club.activities.length} Activit${club.activities.length == 1 ? 'y' : 'ies'}  •  ${club.events.length} Event${club.events.length == 1 ? '' : 's'}',
-                                        //   style: GoogleFonts.poppins(
-                                        //     fontSize: 11.sp,
-                                        //     color: Colors.white60,
-                                        //   ),
-                                        // ),
-                                      ],
-                                    ),
-                                  ),
-                                  // Attendance pill
-                                  Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 12.w,
-                                      vertical: 8.h,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: accentGreen.withOpacity(0.15),
-                                      borderRadius: BorderRadius.circular(12.r),
-                                      border: Border.all(
-                                        color: accentGreen.withOpacity(0.4),
-                                      ),
-                                    ),
-                                    child: Column(
-                                      children: [
-                                        Text(
-                                          '${club.attendanceStats.percentage}%',
-                                          style: GoogleFonts.montserrat(
-                                            fontSize: 16.sp,
-                                            fontWeight: FontWeight.w800,
-                                            color: accentGreen,
-                                          ),
-                                        ),
-                                        Text(
-                                          'Attend.',
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 9.sp,
-                                            color: Colors.white54,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
+                          // Dashboard returned club — show with attendance
+                            _buildDashboardClubCard(club)
+                          else
+                          // Dashboard returned no club — fallback API
+                            FutureBuilder<GetClubsData?>(
+                              future: _clubsFallbackFuture,
+                              builder: (context, fallbackSnap) {
+                                if (fallbackSnap.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return _shimmerBox(height: 80.h);
+                                }
+                                final fallbackClubs =
+                                    fallbackSnap.data?.data ?? [];
+                                if (fallbackClubs.isEmpty) {
+                                  return const SizedBox();
+                                }
+                                // Show all fallback clubs
+                                return Column(
+                                  children: fallbackClubs
+                                      .map((c) => _buildFallbackClubCard(c))
+                                      .toList(),
+                                );
+                              },
                             ),
 
                           16.height,
@@ -251,29 +231,28 @@ class _MemberDashboardState extends State<MemberDashboard> {
                               children: club.activities
                                   .map(
                                     (a) => Container(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 12.w,
-                                        vertical: 6.h,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: cardDark,
-                                        borderRadius: BorderRadius.circular(
-                                          20.r,
-                                        ),
-                                        border: Border.all(
-                                          color: accentGreen.withOpacity(0.35),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        a.activityName,
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 11.sp,
-                                          color: Colors.black87,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 12.w,
+                                    vertical: 6.h,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: cardDark,
+                                    borderRadius:
+                                    BorderRadius.circular(20.r),
+                                    border: Border.all(
+                                      color: accentGreen.withOpacity(0.35),
                                     ),
-                                  )
+                                  ),
+                                  child: Text(
+                                    a.activityName,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11.sp,
+                                      color: Colors.black87,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              )
                                   .toList(),
                             ),
                             16.height,
@@ -294,7 +273,7 @@ class _MemberDashboardState extends State<MemberDashboard> {
                                   icon: Icons.pending_actions_rounded,
                                   label: "Sessions",
                                   value:
-                                      '${club.attendanceStats.totalSessions}',
+                                  '${club.attendanceStats.totalSessions}',
                                   color: accentOrange,
                                   subtitle: "Attended",
                                 ),
@@ -334,10 +313,10 @@ class _MemberDashboardState extends State<MemberDashboard> {
                                           vertical: 2.h,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: accentOrange.withOpacity(0.15),
-                                          borderRadius: BorderRadius.circular(
-                                            20.r,
-                                          ),
+                                          color:
+                                          accentOrange.withOpacity(0.15),
+                                          borderRadius:
+                                          BorderRadius.circular(20.r),
                                         ),
                                         child: Text(
                                           '${pending.length}',
@@ -352,7 +331,7 @@ class _MemberDashboardState extends State<MemberDashboard> {
                                   ),
                                   12.height,
                                   ...pending.map(
-                                    (e) => _PendingEventCard(
+                                        (e) => _PendingEventCard(
                                       event: e,
                                       onAccept: () =>
                                           _updateStatus(e.eventId, 'ACCEPT'),
@@ -366,7 +345,7 @@ class _MemberDashboardState extends State<MemberDashboard> {
                             },
                           ),
 
-                          // ── All Events (dashboard API only) ─────
+                          // ── All Events ──────────────────────────
                           Text(
                             "All Events",
                             style: GoogleFonts.montserrat(
@@ -387,7 +366,8 @@ class _MemberDashboardState extends State<MemberDashboard> {
                               decoration: BoxDecoration(
                                 color: cardDark,
                                 borderRadius: BorderRadius.circular(16.r),
-                                border: Border.all(color: Colors.grey.shade300),
+                                border:
+                                Border.all(color: Colors.grey.shade300),
                               ),
                               child: Center(
                                 child: Text(
@@ -404,7 +384,45 @@ class _MemberDashboardState extends State<MemberDashboard> {
                                   .map((e) => _DashboardEventCard(event: e))
                                   .toList(),
                             ),
-
+// ── Upcoming Events ─────────────────────────────
+                          Text(
+                            "Upcoming Events",
+                            style: GoogleFonts.montserrat(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                          8.height,
+                          FutureBuilder<List<MemberEventData>>(
+                            future: _upcomingEventsFuture,
+                            builder: (context, snap) {
+                              if (snap.connectionState == ConnectionState.waiting) {
+                                return _shimmerBox(height: 80.h);
+                              }
+                              final events = snap.data ?? [];
+                              if (events.isEmpty) {
+                                return Container(
+                                  padding: EdgeInsets.all(20.w),
+                                  decoration: BoxDecoration(
+                                    color: cardDark,
+                                    borderRadius: BorderRadius.circular(16.r),
+                                    border: Border.all(color: Colors.grey.shade300),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      "No upcoming events",
+                                      style: GoogleFonts.poppins(color: textSecondary),
+                                    ),
+                                  ),
+                                );
+                              }
+                              return Column(
+                                children: events.map((e) => _MemberUpcomingEventCard(event: e)).toList(),
+                              );
+                            },
+                          ),
+                          16.height,
                           100.height,
                         ],
                       ),
@@ -415,6 +433,124 @@ class _MemberDashboardState extends State<MemberDashboard> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // ── Club card from dashboard (has attendance) ─────────────────────────────
+  Widget _buildDashboardClubCard(club) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(16.r),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44.r,
+            height: 44.r,
+            decoration: BoxDecoration(
+              color: accentGreen.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.sports_rounded, color: accentGreen, size: 22.sp),
+          ),
+          12.width,
+          Expanded(
+            child: Text(
+              club.clubName,
+              style: GoogleFonts.montserrat(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          // Attendance pill
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+            decoration: BoxDecoration(
+              color: accentGreen.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12.r),
+              border: Border.all(color: accentGreen.withOpacity(0.4)),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  '${club.attendanceStats.percentage}%',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w800,
+                    color: accentGreen,
+                  ),
+                ),
+                Text(
+                  'Attend.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 9.sp,
+                    color: Colors.white54,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Club card from fallback API (no attendance) ───────────────────────────
+  Widget _buildFallbackClubCard(GetClubsForRoles club) {
+    return Container(
+      width: double.infinity,
+      margin: EdgeInsets.only(bottom: 8.h),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(16.r),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44.r,
+            height: 44.r,
+            decoration: BoxDecoration(
+              color: accentGreen.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.sports_rounded, color: accentGreen, size: 22.sp),
+          ),
+          12.width,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  club.clubName,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                if (club.description.isNotEmpty) ...[
+                  4.height,
+                  Text(
+                    club.description,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11.sp,
+                      color: Colors.white60,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -483,7 +619,7 @@ class _MemberDashboardState extends State<MemberDashboard> {
   }
 }
 
-// ── Dashboard Event Card (from /api/dashboard/member/{clubId}) ──────────────
+// ── Dashboard Event Card ──────────────────────────────────────────────────────
 class _DashboardEventCard extends StatelessWidget {
   final MemberEvent event;
 
@@ -526,47 +662,26 @@ class _DashboardEventCard extends StatelessWidget {
                 4.height,
                 Row(
                   children: [
-                    Icon(
-                      Icons.calendar_today_rounded,
-                      size: 11.sp,
-                      color: textSecondary,
-                    ),
+                    Icon(Icons.calendar_today_rounded,
+                        size: 11.sp, color: textSecondary),
                     4.width,
                     Text(
                       event.eventDate,
                       style: GoogleFonts.poppins(
-                        fontSize: 11.sp,
-                        color: textSecondary,
-                      ),
+                          fontSize: 11.sp, color: textSecondary),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-          // Container(
-          //   padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-          //   decoration: BoxDecoration(
-          //     color: accentGreen.withOpacity(0.1),
-          //     borderRadius: BorderRadius.circular(8.r),
-          //   ),
-          //   child: Text(
-          //     '#${event.eventId}',
-          //     style: GoogleFonts.poppins(
-          //       fontSize: 10.sp,
-          //       color: accentGreen,
-          //       fontWeight: FontWeight.w600,
-          //     ),
-          //   ),
-          // ),
         ],
       ),
     );
   }
 }
 
-// ── Pending Event Card ───────────────────────────────────────────────────────
-class _PendingEventCard extends StatelessWidget {
+class _PendingEventCard extends StatefulWidget {
   final MemberEventData event;
   final VoidCallback onAccept;
   final VoidCallback onDecline;
@@ -576,6 +691,14 @@ class _PendingEventCard extends StatelessWidget {
     required this.onAccept,
     required this.onDecline,
   });
+
+  @override
+  State<_PendingEventCard> createState() => _PendingEventCardState();
+}
+
+class _PendingEventCardState extends State<_PendingEventCard> {
+  bool _isAccepting = false;
+  bool _isDeclined = false;
 
   @override
   Widget build(BuildContext context) {
@@ -594,7 +717,7 @@ class _PendingEventCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  event.eventName,
+                  widget.event.eventName,
                   style: GoogleFonts.montserrat(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w700,
@@ -624,44 +747,46 @@ class _PendingEventCard extends StatelessWidget {
             children: [
               Icon(Icons.sports_rounded, size: 13.sp, color: textSecondary),
               5.width,
-              Text(
-                event.teamName,
-                style: GoogleFonts.poppins(
-                  fontSize: 12.sp,
-                  color: textSecondary,
-                ),
-              ),
+              Text(widget.event.teamName,
+                  style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary)),
               16.width,
-              Icon(
-                Icons.calendar_today_rounded,
-                size: 13.sp,
-                color: textSecondary,
-              ),
+              Icon(Icons.calendar_today_rounded, size: 13.sp, color: textSecondary),
               5.width,
-              Text(
-                event.eventDate,
-                style: GoogleFonts.poppins(
-                  fontSize: 12.sp,
-                  color: textSecondary,
-                ),
-              ),
+              Text(widget.event.eventDate,
+                  style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary)),
             ],
           ),
           12.height,
           Row(
             children: [
+              // ── Accept button with loader ──
               Expanded(
                 child: ElevatedButton(
-                  onPressed: onAccept,
+                  onPressed: (_isAccepting || _isDeclined)
+                      ? null
+                      : () async {
+                    setState(() => _isAccepting = true);
+                    await Future.microtask(() => widget.onAccept());
+                    if (mounted) setState(() => _isAccepting = false);
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: accentGreen,
+                    disabledBackgroundColor: accentGreen.withOpacity(0.6),
                     padding: EdgeInsets.symmetric(vertical: 10.h),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10.r),
-                    ),
+                        borderRadius: BorderRadius.circular(10.r)),
                     elevation: 0,
                   ),
-                  child: Text(
+                  child: _isAccepting
+                      ? SizedBox(
+                    height: 18.h,
+                    width: 18.h,
+                    child: const CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                      : Text(
                     'Accept',
                     style: GoogleFonts.poppins(
                       fontSize: 13.sp,
@@ -672,17 +797,37 @@ class _PendingEventCard extends StatelessWidget {
                 ),
               ),
               12.width,
+              // ── Decline button with loader ──
               Expanded(
                 child: OutlinedButton(
-                  onPressed: onDecline,
+                  onPressed: (_isAccepting || _isDeclined)
+                      ? null
+                      : () async {
+                    setState(() => _isDeclined = true);
+                    await Future.microtask(() => widget.onDecline());
+                    if (mounted) setState(() => _isDeclined = false);
+                  },
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.red, width: 1.5),
+                    side: BorderSide(
+                      color: _isDeclined
+                          ? Colors.red.withOpacity(0.4)
+                          : Colors.red,
+                      width: 1.5,
+                    ),
                     padding: EdgeInsets.symmetric(vertical: 10.h),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10.r),
-                    ),
+                        borderRadius: BorderRadius.circular(10.r)),
                   ),
-                  child: Text(
+                  child: _isDeclined
+                      ? SizedBox(
+                    height: 18.h,
+                    width: 18.h,
+                    child: const CircularProgressIndicator(
+                      color: Colors.red,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                      : Text(
                     'Decline',
                     style: GoogleFonts.poppins(
                       fontSize: 13.sp,
@@ -693,6 +838,101 @@ class _PendingEventCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+class _MemberUpcomingEventCard extends StatelessWidget {
+  final MemberEventData event;
+  const _MemberUpcomingEventCard({required this.event});
+
+  Color _statusColor(String status) {
+    switch (status.toUpperCase()) {
+      case 'ACCEPTED': return accentGreen;
+      case 'REJECTED': return Colors.red;
+      case 'PENDING': return accentOrange;
+      default: return Colors.grey;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _statusColor(event.status);
+    return Container(
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: cardDark,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: color.withOpacity(0.3), width: 1.2),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42.r,
+            height: 42.r,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+            child: Icon(Icons.event_rounded, color: color, size: 20.sp),
+          ),
+          12.width,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  event.eventName,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
+                ),
+                4.height,
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today_rounded,
+                        size: 11.sp, color: textSecondary),
+                    4.width,
+                    Text(
+                      event.eventDate,
+                      style: GoogleFonts.poppins(
+                          fontSize: 11.sp, color: textSecondary),
+                    ),
+                    12.width,
+                    Icon(Icons.sports_rounded,
+                        size: 11.sp, color: textSecondary),
+                    4.width,
+                    Expanded(
+                      child: Text(
+                        event.teamName,
+                        style: GoogleFonts.poppins(
+                            fontSize: 11.sp, color: textSecondary),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            child: Text(
+              event.status,
+              style: GoogleFonts.poppins(
+                  fontSize: 10.sp,
+                  color: color,
+                  fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),

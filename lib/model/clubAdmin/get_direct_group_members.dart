@@ -1,10 +1,10 @@
 
 import 'dart:convert';
 
-SubGroupMembers SubGroupMembersFromJson(String data) =>
-    SubGroupMembers.fromJson(json.decode(data));
-class SubGroupMembers {
-  SubGroupMembers({
+GetDirectGroupMembers GetDirectGroupMembersFromJson(String data) =>
+    GetDirectGroupMembers.fromJson(json.decode(data));
+class GetDirectGroupMembers {
+  GetDirectGroupMembers({
     required this.success,
     required this.message,
     required this.data,
@@ -13,14 +13,14 @@ class SubGroupMembers {
   });
   late final bool success;
   late final String message;
-  late final List<SubMemData> data;
+  late final List<GetDirectGroupMembersData> data;
   late final Null errorCode;
   late final String timestamp;
 
-  SubGroupMembers.fromJson(Map<String, dynamic> json){
+  GetDirectGroupMembers.fromJson(Map<String, dynamic> json){
     success = json['success'];
     message = json['message'];
-    data = List.from(json['data']).map((e)=>SubMemData.fromJson(e)).toList();
+    data = List.from(json['data']).map((e)=>GetDirectGroupMembersData.fromJson(e)).toList();
     errorCode = null;
     timestamp = json['timestamp'];
   }
@@ -36,29 +36,35 @@ class SubGroupMembers {
   }
 }
 
-class SubMemData {
-  SubMemData({
+class GetDirectGroupMembersData {
+  GetDirectGroupMembersData({
     required this.memberId,
     required this.name,
     required this.email,
     required this.phone,
-    this.dateOfBirth,
-    required this.addedAt,
+    required this.dateOfBirth,
+    required this.directMember,
+    this.subGroupId,
+    this.subGroupName,
   });
   late final int memberId;
   late final String name;
   late final String email;
   late final String phone;
-  late final String? dateOfBirth;
-  late final String addedAt;
+  late final String dateOfBirth;
+  late final bool directMember;
+  late final Null subGroupId;
+  late final Null subGroupName;
 
-  SubMemData.fromJson(Map<String, dynamic> json){
-    memberId = json['memberId']??0;
-    name = json['name']??"";
-    email = json['email']??"";
-    phone = json['phone']??"";
-    dateOfBirth = json['dateOfBirth']??"";
-    addedAt = json['addedAt'];
+  GetDirectGroupMembersData.fromJson(Map<String, dynamic> json){
+    memberId = json['memberId'];
+    name = json['name'];
+    email = json['email'];
+    phone = json['phone'];
+    dateOfBirth = json['dateOfBirth'];
+    directMember = json['directMember'];
+    subGroupId = null;
+    subGroupName = null;
   }
 
   Map<String, dynamic> toJson() {
@@ -68,7 +74,9 @@ class SubMemData {
     _data['email'] = email;
     _data['phone'] = phone;
     _data['dateOfBirth'] = dateOfBirth;
-    _data['addedAt'] = addedAt;
+    _data['directMember'] = directMember;
+    _data['subGroupId'] = subGroupId;
+    _data['subGroupName'] = subGroupName;
     return _data;
   }
 }

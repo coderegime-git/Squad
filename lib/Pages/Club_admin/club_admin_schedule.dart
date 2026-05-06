@@ -41,6 +41,8 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen>
   final ClubApiService _apiService = ClubApiService();
   List<Data> _allEvents = [];
   bool _loadingEvents = true;
+  List<Data> _scheduledEventsList = [];
+  List<Data> _completedEventsList = [];
 
   @override
   void initState() {
@@ -59,10 +61,12 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen>
   Future<void> _fetchEvents() async {
     setState(() => _loadingEvents = true);
     try {
-      final result = await _apiService.getEvents();
+      final scheduledResult = await _apiService.getEvents();
+      final completedResult = await _apiService.getCompletedEvents();
       if (!mounted) return;
       setState(() {
-        _allEvents = result.data;
+        _scheduledEventsList = scheduledResult.data;
+        _completedEventsList = completedResult.data;
         _loadingEvents = false;
       });
     } catch (e) {
@@ -72,13 +76,10 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen>
   }
 
   List<Data> _getEventsForDay(DateTime day) {
-    final now = DateTime.now();
-    return _allEvents.where((event) {
+    return _scheduledEventsList.where((event) {
       try {
         final eventDate = DateTime.parse(event.eventDate);
-        final isScheduled = !eventDate.isBefore(DateTime(now.year, now.month, now.day));
-        return isScheduled &&
-            eventDate.year == day.year &&
+        return eventDate.year == day.year &&
             eventDate.month == day.month &&
             eventDate.day == day.day;
       } catch (_) {
@@ -87,33 +88,8 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen>
     }).toList();
   }
 
-  List<Data> get _scheduledEvents {
-    final now = DateTime.now();
-    return _allEvents.where((e) {
-      try {
-        final d = DateTime.parse(e.eventDate);
-        return !d.isBefore(DateTime(now.year, now.month, now.day));
-      } catch (_) {
-        return true;
-      }
-    }).toList()
-      ..sort((a, b) => a.eventDate.compareTo(b.eventDate));
-  }
-
-  List<Data> get _completedEvents {
-    final now = DateTime.now();
-    final sixMonthsAgo = now.subtract(const Duration(days: 180));
-    return _allEvents.where((e) {
-      try {
-        final d = DateTime.parse(e.eventDate);
-        return d.isBefore(DateTime(now.year, now.month, now.day)) &&
-            d.isAfter(sixMonthsAgo);
-      } catch (_) {
-        return false;
-      }
-    }).toList()
-      ..sort((a, b) => b.eventDate.compareTo(a.eventDate));
-  }
+  List<Data> get _scheduledEvents => _scheduledEventsList;
+  List<Data> get _completedEvents => _completedEventsList;
 
   @override
   Widget build(BuildContext context) {
@@ -207,14 +183,7 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen>
 
   Widget _scheduledTab() {
     final now = DateTime.now();
-    final dayEvents = _getEventsForDay(_selectedDay ?? _focusedDay).where((event) {
-      try {
-        final d = DateTime.parse(event.eventDate);
-        return !d.isBefore(DateTime(now.year, now.month, now.day));
-      } catch (_) {
-        return true;
-      }
-    }).toList();
+    final dayEvents = _getEventsForDay(_selectedDay ?? _focusedDay);
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: EdgeInsets.symmetric(horizontal: 16.w),
@@ -230,7 +199,7 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen>
             ),
             child: TableCalendar<Data>(
               firstDay: DateTime(2024),
-              lastDay: DateTime(2027),
+              lastDay: DateTime(2028),
               focusedDay: _focusedDay,
               calendarFormat: _calendarFormat,
               selectedDayPredicate: (d) => isSameDay(_selectedDay, d),
@@ -446,14 +415,19 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen>
             _eRow(Icons.person_rounded, e.createdByUsername),
             4.height,
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(Icons.group_rounded, size: 14.sp, color: textSecondary),
                 6.width,
-                Text(
-                    '${e.coachIds.length} coach${e.coachIds.length != 1 ? 'es' : ''}',
-                    style: GoogleFonts.poppins(
-                        fontSize: 12.sp, color: textSecondary)),
-                const Spacer(),
+                Expanded(
+                  child: Text(
+                    e.coachNamesDisplay,
+                    style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                8.width,
                 Text(isCompleted ? 'COMPLETED' : e.status,
                     style: GoogleFonts.poppins(
                         fontSize: 11.sp,
@@ -517,13 +491,22 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen>
 
 // Replace _showEventDetailSheet() in _ClubAdminScheduleScreenState:
   void _showEventDetailSheet(Data event) {
+    final isCompleted = () {
+      try {
+        final d = DateTime.parse(event.eventDate);
+        return d.isBefore(DateTime.now().subtract(const Duration(days: 1)));
+      } catch (_) {
+        return false;
+      }
+    }();
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => EventDetailFullScreen(
           event: event,
-          canEdit: true,
-          onRefresh: _fetchEvents, // pass callback
+          canEdit: !isCompleted,
+          onRefresh: _fetchEvents,
         ),
       ),
     ).then((_) => _fetchEvents());
@@ -1382,8 +1365,7 @@ class _EventDetailFullScreenState extends State<EventDetailFullScreen>
           _infoRow(Icons.person_rounded, 'Created by',
               _event.createdByUsername), // uses _event
           _divider(),
-          _infoRow(Icons.group_rounded, 'Coaches',
-              '${_event.coachIds.length} assigned'), // uses _event
+          _infoRow(Icons.group_rounded, 'Coaches', _event.coachNamesDisplay), // uses _event
         ],
       ),
     );
@@ -1915,8 +1897,6 @@ class _EditEventSheetState extends State<_EditEventSheet> {
 
     final success = await _apiService.updateEvent(widget.event.eventId, data);
     setState(() => _submitting = false);
-
-    // Replace the success block inside _submit():
     if (success) {
       final updatedEvent = Data(
         eventId: widget.event.eventId,
@@ -1929,12 +1909,27 @@ class _EditEventSheetState extends State<_EditEventSheet> {
         status: widget.event.status,
         clubId: widget.event.clubId,
         activityId: _selectedActivityId ?? widget.event.activityId,
-        coachIds: _selectedCoachIds.toList(),
-        createdByUsername: widget.event.createdByUsername, createdByUserId: widget.event.createdByUserId, createdAt: widget.event.createdAt,
+        activityName: widget.event.activityName,
+        createdByUserId: widget.event.createdByUserId,
+        createdByUsername: widget.event.createdByUsername,
+        createdAt: widget.event.createdAt,
+        coaches: _selectedCoachIds.map((id) {
+          final existingCoach = widget.event.coaches
+              .where((c) => c.coachId == id)
+              .firstOrNull;
+          if (existingCoach != null) return existingCoach;
+          final fetchedCoach = _coaches
+              .where((c) => c.coachId == id)
+              .firstOrNull;
+          return EventCoach(
+            coachId: id,
+            coachName: fetchedCoach?.username ?? '',
+          );
+        }).toList(),
       );
       Navigator.pop(context);
       toast('Event updated successfully!', bgColor: accentGreen);
-      widget.onUpdated(updatedEvent); // pass updated event back
+      widget.onUpdated(updatedEvent);
     } else {
       toast('Failed to update event');
     }

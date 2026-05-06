@@ -50,6 +50,8 @@ class _CoachCreateEventSheetState extends State<CoachCreateEventSheet> {
   List<ActivityData1> _activities = [];
   int? _selectedActivityId;
   bool loadingActivity = false;
+  String _selectedEventType = 'SINGLE_EVENT';
+  final List<String> _eventTypes = ['SINGLE_EVENT', 'TOURNAMENT'];
 
   @override
   void initState() {
@@ -83,6 +85,9 @@ class _CoachCreateEventSheetState extends State<CoachCreateEventSheet> {
 
 
   Future<void> _pickDate() async {
+    FocusScope.of(context).unfocus();
+    FocusManager.instance.primaryFocus?.unfocus();
+    await Future.delayed(const Duration(milliseconds: 100));
     final picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -98,9 +103,19 @@ class _CoachCreateEventSheetState extends State<CoachCreateEventSheet> {
   }
 
   Future<void> _pickTime(bool isStart) async {
+    FocusScope.of(context).unfocus();
+    FocusManager.instance.primaryFocus?.unfocus();
+    await Future.delayed(const Duration(milliseconds: 100));
     final picked = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.now(),
+      initialTime: isStart
+          ? TimeOfDay.now()
+          : (_startTime != null
+          ? TimeOfDay(
+        hour: _startTime!.hour + 1,
+        minute: _startTime!.minute,
+      )
+          : TimeOfDay.now()),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
             colorScheme: const ColorScheme.light(primary: accentGreen)),
@@ -108,13 +123,32 @@ class _CoachCreateEventSheetState extends State<CoachCreateEventSheet> {
       ),
     );
     if (picked != null) {
+      // If picking end time, validate immediately
+      if (!isStart && _startTime != null) {
+        final startMinutes = _startTime!.hour * 60 + _startTime!.minute;
+        final endMinutes = picked.hour * 60 + picked.minute;
+        if (endMinutes <= startMinutes) {
+          toast('End time must be after start time');
+          return;
+        }
+      }
       setState(() {
-        if (isStart) _startTime = picked;
-        else _endTime = picked;
+        if (isStart) {
+          _startTime = picked;
+          if (_endTime != null) {
+            final startMinutes = picked.hour * 60 + picked.minute;
+            final endMinutes = _endTime!.hour * 60 + _endTime!.minute;
+            if (endMinutes <= startMinutes) {
+              _endTime = null;
+              toast('End time cleared — please re-select');
+            }
+          }
+        } else {
+          _endTime = picked;
+        }
       });
     }
   }
-
   String _fmtTime(TimeOfDay t) =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}:00';
 
@@ -125,6 +159,14 @@ class _CoachCreateEventSheetState extends State<CoachCreateEventSheet> {
     if (_startTime == null) { toast('Select start time'); return; }
     if (_endTime == null) { toast('Select end time'); return; }
 
+    // ── Validate start time is before end time ──
+    final startMinutes = _startTime!.hour * 60 + _startTime!.minute;
+    final endMinutes = _endTime!.hour * 60 + _endTime!.minute;
+    if (endMinutes <= startMinutes) {
+      toast('End time must be after start time');
+      return;
+    }
+
     setState(() => _submitting = true);
 
     final data = {
@@ -133,7 +175,8 @@ class _CoachCreateEventSheetState extends State<CoachCreateEventSheet> {
       "startTime": _fmtTime(_startTime!),
       "endTime": _fmtTime(_endTime!),
       "location": _locationCtrl.text.trim(),
-      "eventType": "SINGLE_EVENT",
+      "eventType": _selectedEventType,
+      "activityId": _selectedActivityId,
       "status": "SCHEDULED",
       "coachIds": [],
       if (_descCtrl.text.trim().isNotEmpty) "description": _descCtrl.text.trim(),
@@ -150,8 +193,7 @@ class _CoachCreateEventSheetState extends State<CoachCreateEventSheet> {
     } else {
       toast('Failed to create event. Try again.');
     }
-  }
-  Widget _activityField() {
+  }  Widget _activityField() {
     if (_activities.length == 1) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,11 +324,95 @@ class _CoachCreateEventSheetState extends State<CoachCreateEventSheet> {
             // Location
             _label('Location / Google Maps Link'),
             6.height,
-            _input('Address or paste a Google Maps link', _locationCtrl),
+            _input(
+              'Address or paste a Google Maps link',
+              _locationCtrl,
+              textInputAction: TextInputAction.done, // ← closes keyboard
+            ),
             12.height,
-
-            // Date
-            _label('Event Date'),
+// Add after location _input and before Date section:
+            _label('Event Type'),
+            6.height,
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedEventType = 'SINGLE_EVENT'),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(vertical: 12.h),
+                      decoration: BoxDecoration(
+                        color: _selectedEventType == 'SINGLE_EVENT'
+                            ? accentGreen.withOpacity(0.1)
+                            : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(10.r),
+                        border: Border.all(
+                          color: _selectedEventType == 'SINGLE_EVENT'
+                              ? accentGreen
+                              : Colors.grey.shade200,
+                          width: _selectedEventType == 'SINGLE_EVENT' ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Column(children: [
+                        Icon(Icons.event_rounded,
+                            color: _selectedEventType == 'SINGLE_EVENT'
+                                ? accentGreen
+                                : Colors.grey,
+                            size: 20.sp),
+                        4.height,
+                        Text('Single Event',
+                            style: GoogleFonts.poppins(
+                                fontSize: 12.sp,
+                                color: _selectedEventType == 'SINGLE_EVENT'
+                                    ? accentGreen
+                                    : Colors.grey,
+                                fontWeight: _selectedEventType == 'SINGLE_EVENT'
+                                    ? FontWeight.w600
+                                    : FontWeight.normal)),
+                      ]),
+                    ),
+                  ),
+                ),
+                12.width,
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedEventType = 'TOURNAMENT'),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(vertical: 12.h),
+                      decoration: BoxDecoration(
+                        color: _selectedEventType == 'TOURNAMENT'
+                            ? accentGreen.withOpacity(0.1)
+                            : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(10.r),
+                        border: Border.all(
+                          color: _selectedEventType == 'TOURNAMENT'
+                              ? accentGreen
+                              : Colors.grey.shade200,
+                          width: _selectedEventType == 'TOURNAMENT' ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Column(children: [
+                        Icon(Icons.emoji_events_rounded,
+                            color: _selectedEventType == 'TOURNAMENT'
+                                ? accentGreen
+                                : Colors.grey,
+                            size: 20.sp),
+                        4.height,
+                        Text('Tournament',
+                            style: GoogleFonts.poppins(
+                                fontSize: 12.sp,
+                                color: _selectedEventType == 'TOURNAMENT'
+                                    ? accentGreen
+                                    : Colors.grey,
+                                fontWeight: _selectedEventType == 'TOURNAMENT'
+                                    ? FontWeight.w600
+                                    : FontWeight.normal)),
+                      ]),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            12.height,            _label('Event Date'),
             6.height,
             _tappable(Icons.calendar_today_rounded,
                 _eventDate != null ? DateFormat('EEE, MMM d yyyy').format(_eventDate!) : 'Select date',
@@ -440,10 +566,13 @@ class _CoachCreateEventSheetState extends State<CoachCreateEventSheet> {
       style: GoogleFonts.poppins(
           fontSize: 12.sp, fontWeight: FontWeight.w600, color: Colors.grey.shade700));
 
-  Widget _input(String hint, TextEditingController ctrl, {int maxLines = 1}) =>
+  Widget _input(String hint, TextEditingController ctrl,
+      {int maxLines = 1, TextInputAction textInputAction = TextInputAction.next}) =>
       TextField(
         controller: ctrl,
         maxLines: maxLines,
+        textInputAction: textInputAction,
+        onSubmitted: (_) => FocusScope.of(context).unfocus(),
         style: GoogleFonts.poppins(fontSize: 13.sp),
         decoration: InputDecoration(
           hintText: hint,

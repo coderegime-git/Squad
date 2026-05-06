@@ -71,36 +71,42 @@ class _CoachDashboardState extends State<CoachDashboard> {
 
   Future<List<CoachEvent>> _fetchUpcomingEvents() async {
     try {
-      final clubs = await _coachApiService.getCoachClubs();
-      if (clubs.isEmpty) return [];
-      final events = await _coachApiService.getClubEvents(clubs.first.clubId);
-      final oneMonthLater = DateTime.now().add(const Duration(days: 30));
-      return events
-          .where((e) =>
-      e.eventDate.isAfter(DateTime.now().subtract(const Duration(days: 1))) &&
-          e.eventDate.isBefore(oneMonthLater))
+      final result = await _coachApiService.getCoachScheduledEvents();
+      final now = DateTime.now();
+      final oneMonthLater = now.add(const Duration(days: 30));
+
+      return result.data
+          .where((e) {
+        if (e.eventDate == null) return false;
+        try {
+          final date = DateTime.parse(e.eventDate!);
+          return date.isAfter(now.subtract(const Duration(days: 1))) &&
+              date.isBefore(oneMonthLater);
+        } catch (_) {
+          return false;
+        }
+      })
           .take(3)
           .map((e) => CoachEvent(
         eventId: e.eventId,
         title: e.eventName,
-        date: e.eventDate,
+        date: DateTime.tryParse(e.eventDate ?? '') ?? now,
         location: e.location,
-        type: e.eventType,
+        type: e.eventType ?? '',
         clubId: e.clubId,
         startTime: e.startTime,
         endTime: e.endTime,
-        status: e.status,
+        status: e.status ?? 'SCHEDULED',
         createdByUserId: e.createdByUserId,
         createdByUsername: e.createdByUsername,
-        coachIds: e.coachIds,
+        coachIds: e.coaches?.map((c) => c.coachId).toList(),
       ))
           .toList();
     } catch (e) {
       print("Error fetching upcoming events: $e");
       return [];
     }
-  }
-  void _refreshAll() {
+  }  void _refreshAll() {
     setState(() {
       _clubsFuture = _fetchClubs();
       _upcomingEventsFuture = _fetchUpcomingEvents();
@@ -108,7 +114,6 @@ class _CoachDashboardState extends State<CoachDashboard> {
     });
   }
 
-  // ── Navigation helpers ─────────────────────────────────────────────────────
   void _navigateToMembersList() async {
     final clubs = await _coachApiService.getCoachClubs();
     if (clubs.isEmpty) {
@@ -266,7 +271,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
               status: fullEvent.status,
               clubId: fullEvent.clubId,
               activityId: fullEvent.activityId,
-              coachIds: fullEvent.coachIds ?? [],
+              coaches: (fullEvent.coachIds ?? []).map((id) => EventCoach(coachId: id, coachName: fullEvent.coachNamesDisplay)).toList(),
               createdByUsername: fullEvent.createdByUsername ?? '',
               createdByUserId: fullEvent.createdByUserId, createdAt: '',
             ),
@@ -304,6 +309,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
         return;
       }
 
+      // Replace the eventModel construction inside _handleEventEdit():
       final eventModel = CoachEventModel(
         eventId: fullEvent.eventId,
         eventName: fullEvent.eventName,
@@ -314,11 +320,13 @@ class _CoachDashboardState extends State<CoachDashboard> {
         eventType: fullEvent.eventType,
         status: fullEvent.status,
         clubId: fullEvent.clubId,
+        activityId: fullEvent.activityId,
+        activityName: fullEvent.activityName,
         createdByUserId: fullEvent.createdByUserId,
         createdByUsername: fullEvent.createdByUsername,
-        coachIds: fullEvent.coachIds,
-        createdAt: fullEvent.createdAt, activityId: fullEvent.activityId,
-      );
+        coaches: fullEvent.coaches, // ← pass coaches directly
+        createdAt: fullEvent.createdAt,
+      );;
 
       showModalBottomSheet(
         context: context,
@@ -616,7 +624,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: StatCard(
-                    title: 'Upcoming Events',
+                    title: 'Assigned Events',
                     value: isLoading ? '...' : '${data.events.upcoming}',
                     icon: Icons.event_rounded,
                     color: Colors.deepPurple,
@@ -629,7 +637,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
               children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: _navigateToMembersList,
+                    // onTap: _navigateToMembersList,
                     child: StatCard(
                       title: 'Total Members',
                       value: isLoading ? '...' : '${data.stats.totalMembers}',
@@ -641,7 +649,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: GestureDetector(
-                    onTap: _navigateToGroupsList,
+                    // onTap: _navigateToGroupsList,
                     child: StatCard(
                       title: 'Groups',
                       value: isLoading ? '...' : '${data.stats.totalGroups}',
@@ -657,7 +665,6 @@ class _CoachDashboardState extends State<CoachDashboard> {
       },
     );
   }
-  // ── Today's Sessions (from dashboard API) ─────────────────────────────────
   Widget _buildTodaySessionsSection() {
     return FutureBuilder<CoachDashboardData>(
       future: _dashboardFuture,
@@ -1288,164 +1295,47 @@ class _UpcomingEventCard extends StatelessWidget {
     required this.onEdit,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    final daysDiff = event.date.difference(DateTime.now()).inDays;
-    final daysText = daysDiff == 0
-        ? "Today"
-        : daysDiff == 1
-        ? "Tomorrow"
-        : "In $daysDiff days";
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: EdgeInsets.only(bottom: 12.h),
-        padding: EdgeInsets.all(16.w),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: accentGreen.withOpacity(0.3), width: 1.5),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    event.title,
-                    style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 10.w,
-                    vertical: 5.h,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _statusColor(event.status).withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(20.r),
-                  ),
-                  child: Text(
-                    event.status,
-                    style: GoogleFonts.poppins(
-                      fontSize: 11.sp,
-                      color: _statusColor(event.status),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            8.height,
-            Row(
-              children: [
-                Icon(
-                  Icons.location_on_outlined,
-                  size: 13.sp,
-                  color: Colors.grey.shade500,
-                ),
-                4.width,
-                Expanded(
-                  child: Text(
-                    event.location,
-                    style: GoogleFonts.poppins(
-                      fontSize: 12.sp,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            6.height,
-            Row(
-              children: [
-                Icon(
-                  Icons.calendar_today_rounded,
-                  size: 13.sp,
-                  color: Colors.grey.shade500,
-                ),
-                4.width,
-                Text(
-                  daysText,
-                  style: GoogleFonts.poppins(
-                    fontSize: 11.sp,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-                if (event.startTime.isNotEmpty) ...[
-                  12.width,
-                  Icon(
-                    Icons.access_time,
-                    size: 13.sp,
-                    color: Colors.grey.shade500,
-                  ),
-                  4.width,
-                  Text(
-                    _formatTime(event.startTime),
-                    style: GoogleFonts.poppins(
-                      fontSize: 11.sp,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            8.height,
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                GestureDetector(
-                  onTap: onEdit, // → CoachCreateEditEventSheet
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.edit_outlined,
-                        size: 12.sp,
-                        color: Colors.grey.shade500,
-                      ),
-                      4.width,
-                      Text(
-                        "Edit",
-                        style: GoogleFonts.poppins(
-                          fontSize: 10.sp,
-                          color: Colors.grey.shade500,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      4.width,
-                      Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 10.sp,
-                        color: Colors.grey.shade500,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+  Color _statusColor(String s) {
+    switch (s.toUpperCase()) {
+      case 'SCHEDULED': return const Color(0xFF185FA5);
+      case 'ONGOING':   return const Color(0xFF3B6D11);
+      case 'COMPLETED': return const Color(0xFF5F5E5A);
+      case 'CANCELLED': return const Color(0xFFA32D2D);
+      default:          return const Color(0xFF185FA5);
+    }
   }
 
-  Color _statusColor(String s) {
-    switch (s) {
-      case 'SCHEDULED':
-        return Colors.blue;
-      case 'ONGOING':
-        return Colors.green;
-      case 'COMPLETED':
-        return Colors.grey;
-      case 'CANCELLED':
-        return Colors.red;
-      default:
-        return accentGreen;
+  Color _statusBg(String s) {
+    switch (s.toUpperCase()) {
+      case 'SCHEDULED': return const Color(0xFFE6F1FB);
+      case 'ONGOING':   return const Color(0xFFEAF3DE);
+      case 'COMPLETED': return const Color(0xFFF1EFE8);
+      case 'CANCELLED': return const Color(0xFFFCEBEB);
+      default:          return const Color(0xFFE6F1FB);
+    }
+  }
+
+  Color _typeBg(String t) {
+    switch (t.toUpperCase()) {
+      case 'TOURNAMENT':   return const Color(0xFFEEEDFE);
+      case 'SINGLE_EVENT': return const Color(0xFFE1F5EE);
+      default:             return const Color(0xFFF1EFE8);
+    }
+  }
+
+  Color _typeColor(String t) {
+    switch (t.toUpperCase()) {
+      case 'TOURNAMENT':   return const Color(0xFF3C3489);
+      case 'SINGLE_EVENT': return const Color(0xFF085041);
+      default:             return const Color(0xFF5F5E5A);
+    }
+  }
+
+  IconData _typeIcon(String t) {
+    switch (t.toUpperCase()) {
+      case 'TOURNAMENT':   return Icons.emoji_events_rounded;
+      case 'SINGLE_EVENT': return Icons.sports_rounded;
+      default:             return Icons.event_rounded;
     }
   }
 
@@ -1456,15 +1346,277 @@ class _UpcomingEventCard extends StatelessWidget {
       final h = int.parse(parts[0]);
       final m = parts[1];
       final period = h >= 12 ? 'PM' : 'AM';
-      final dh = h > 12
-          ? h - 12
-          : h == 0
-          ? 12
-          : h;
+      final dh = h > 12 ? h - 12 : h == 0 ? 12 : h;
       return '$dh:$m $period';
     } catch (_) {
       return time.length >= 5 ? time.substring(0, 5) : time;
     }
+  }
+
+  String _formatDate(DateTime date) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun',
+      'Jul','Aug','Sep','Oct','Nov','Dec'];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+
+  String _daysLabel(DateTime date) {
+    final diff = date.difference(DateTime.now()).inDays;
+    if (diff == 0) return 'Today';
+    if (diff == 1) return 'Tomorrow';
+    if (diff < 0)  return '${diff.abs()}d ago';
+    return 'In $diff days';
+  }
+
+  bool _isMapLink(String loc) =>
+      loc.startsWith('http://') || loc.startsWith('https://');
+
+  @override
+  Widget build(BuildContext context) {
+    final daysLabel = _daysLabel(event.date);
+    final isToday   = daysLabel == 'Today';
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: EdgeInsets.only(bottom: 12.h),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ── Left accent bar ──────────────────────────────────────
+              Container(
+                width: 4.w,
+                decoration: BoxDecoration(
+                  color: _statusColor(event.status),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(16.r),
+                    bottomLeft: Radius.circular(16.r),
+                  ),
+                ),
+              ),
+          
+              // ── Content ──────────────────────────────────────────────
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(14.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+          
+                      // ── Title row ──
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              event.title,
+                              style: GoogleFonts.montserrat(
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 8.w),
+                          // Status badge
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 8.w, vertical: 3.h),
+                            decoration: BoxDecoration(
+                              color: _statusBg(event.status),
+                              borderRadius: BorderRadius.circular(20.r),
+                            ),
+                            child: Text(
+                              event.status,
+                              style: GoogleFonts.poppins(
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.w600,
+                                color: _statusColor(event.status),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+          
+                      SizedBox(height: 8.h),
+          
+                      // ── Type + Days chip row ──
+                      Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 8.w, vertical: 3.h),
+                            decoration: BoxDecoration(
+                              color: _typeBg(event.type),
+                              borderRadius: BorderRadius.circular(20.r),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(_typeIcon(event.type),
+                                    size: 12.sp,
+                                    color: _typeColor(event.type)),
+                                SizedBox(width: 4.w),
+                                Text(
+                                  event.type,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 10.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: _typeColor(event.type),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(width: 8.w),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 8.w, vertical: 3.h),
+                            decoration: BoxDecoration(
+                              color: isToday
+                                  ? const Color(0xFFFAEEDA)
+                                  : Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(20.r),
+                            ),
+                            child: Text(
+                              daysLabel,
+                              style: GoogleFonts.poppins(
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.w600,
+                                color: isToday
+                                    ? const Color(0xFF633806)
+                                    : Colors.grey.shade600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+          
+                      SizedBox(height: 10.h),
+                      Divider(height: 1, color: Colors.grey.shade100),
+                      SizedBox(height: 10.h),
+          
+                      // ── Date & Time ──
+                      Row(
+                        children: [
+                          Icon(Icons.calendar_today_rounded,
+                              size: 13.sp, color: Colors.grey.shade500),
+                          SizedBox(width: 5.w),
+                          Text(
+                            _formatDate(event.date),
+                            style: GoogleFonts.poppins(
+                                fontSize: 12.sp,
+                                color: Colors.grey.shade700),
+                          ),
+                          if (event.startTime.isNotEmpty) ...[
+                            SizedBox(width: 12.w),
+                            Icon(Icons.access_time_rounded,
+                                size: 13.sp, color: Colors.grey.shade500),
+                            SizedBox(width: 5.w),
+                            Text(
+                              '${_formatTime(event.startTime)} – ${_formatTime(event.endTime)}',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 12.sp,
+                                  color: Colors.grey.shade700),
+                            ),
+                          ],
+                        ],
+                      ),
+          
+                      SizedBox(height: 6.h),
+          
+                      // ── Location ──
+                      Row(
+                        children: [
+                          Icon(Icons.location_on_outlined,
+                              size: 13.sp, color: Colors.grey.shade500),
+                          SizedBox(width: 5.w),
+                          Expanded(
+                            child: _isMapLink(event.location)
+                                ? Text(
+                              'View on Maps',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12.sp,
+                                color: const Color(0xFF185FA5),
+                                decoration: TextDecoration.underline,
+                              ),
+                            )
+                                : Text(
+                              event.location,
+                              style: GoogleFonts.poppins(
+                                  fontSize: 12.sp,
+                                  color: Colors.grey.shade700),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+          
+
+          
+                      // ── Footer: coach name + edit button ──
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.person_outline_rounded,
+                                  size: 13.sp, color: Colors.grey.shade500),
+                              SizedBox(width: 4.w),
+                              Text(
+                                event.createdByUsername ?? 'Coach',
+                                style: GoogleFonts.poppins(
+                                    fontSize: 11.sp,
+                                    color: Colors.grey.shade600),
+                              ),
+                            ],
+                          ),
+                          GestureDetector(
+                            onTap: onEdit,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 10.w, vertical: 5.h),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(8.r),
+                                border: Border.all(
+                                    color: Colors.grey.shade300),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.edit_outlined,
+                                      size: 12.sp,
+                                      color: Colors.grey.shade600),
+                                  SizedBox(width: 4.w),
+                                  Text(
+                                    'Edit',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

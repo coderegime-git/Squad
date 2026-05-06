@@ -23,19 +23,13 @@ class ChildScheduleScreen extends StatefulWidget {
 class _ChildScheduleScreenState extends State<ChildScheduleScreen>
     with SingleTickerProviderStateMixin {
   final ParentApiService _api = ParentApiService();
-
-  // ── Children state ──────────────────────────────────────────────
   List<Data> _children = [];
   bool _isLoadingChildren = true;
   int? _selectedMemberId;
   String _selectedMemberName = '';
-
-  // ── Events state ─────────────────────────────────────────────────
   Map<DateTime, List<MemberEvent>> _eventMap = {};
   bool _isLoadingEvents = false;
   String? _eventsError;
-
-  // ── Calendar state ───────────────────────────────────────────────
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
@@ -62,8 +56,6 @@ class _ChildScheduleScreenState extends State<ChildScheduleScreen>
     _fadeController.dispose();
     super.dispose();
   }
-
-  // ── Load guardian's children ─────────────────────────────────────
   Future<void> _loadChildren() async {
     setState(() => _isLoadingChildren = true);
     try {
@@ -80,8 +72,6 @@ class _ChildScheduleScreenState extends State<ChildScheduleScreen>
       if (mounted) toast('Failed to load children');
     }
   }
-
-  // ── Select a child and load their events ─────────────────────────
   void _selectChild(Data child) {
     setState(() {
       _selectedMemberId = child.memberId;
@@ -92,7 +82,6 @@ class _ChildScheduleScreenState extends State<ChildScheduleScreen>
     _loadMemberEvents(child.memberId);
   }
 
-  // ── Fetch events for selected member ─────────────────────────────
   Future<void> _loadMemberEvents(int memberId) async {
     setState(() {
       _isLoadingEvents = true;
@@ -134,7 +123,6 @@ class _ChildScheduleScreenState extends State<ChildScheduleScreen>
     return _eventMap[DateTime(day.year, day.month, day.day)] ?? [];
   }
 
-  // ── Build ─────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(

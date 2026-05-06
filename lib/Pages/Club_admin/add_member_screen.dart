@@ -34,6 +34,7 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
   final _passwordCtrl = TextEditingController();
   final _medicalNotesCtrl = TextEditingController();
   String? _selectedGender;
+  bool _isPasswordVisible = false;
 
   // Step 2 – Club Details
   String? _selectedActivity;
@@ -344,46 +345,43 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
       AppUI.success(context, 'Please select gender');
       return;
     }
-    /* if (_currentStep < _stepTitles.length - 1) {
-      setState(() => _currentStep++);
-    } else {*/
+
     setState(() => _isLoading = true);
     try {
+      final List<int> guardianIds = [_selectedGuardian!.guardianId];
+      if (_selectedGuardian2 != null) {
+        guardianIds.add(_selectedGuardian2!.guardianId);
+      }
+
       Map<String, dynamic> data = {
         "username": _nameCtrl.text.trim(),
         "mobile": _phoneCtrl.text.trim(),
         "email": _emailCtrl.text.trim(),
         "password": _passwordCtrl.text.trim(),
-        "emergencyContact": int.tryParse(_guardianPhoneCtrl.text.trim()) ?? 0,
+        "emergencyContact": _guardianPhoneCtrl.text.trim(),
         "dob": _dobCtrl.text.trim().isNotEmpty
-            ? DateFormat(
-                'yyyy-MM-dd',
-              ).format(DateFormat('dd/MM/yyyy').parse(_dobCtrl.text.trim()))
+            ? DateFormat('yyyy-MM-dd')
+            .format(DateFormat('dd/MM/yyyy').parse(_dobCtrl.text.trim()))
             : "",
         "gender": _selectedGender ?? "",
         "medicalNotes": _medicalNotesCtrl.text.trim(),
-        "guardianUserId": _selectedGuardian!.guardianId,
+        "guardianIds": guardianIds,
         "membershipAmount": 10,
       };
 
       bool success = await ClubApiService().AddMember(data);
       if (success) {
         Navigator.pop(context);
-        //toast('Member added successfully!', bgColor: accentGreen);
         AppUI.success(context, 'Member added successfully!');
       } else {
-        //toast('Failed to add member. Please try again.');
         AppUI.error(context, "Failed to add member, Please try again.");
       }
     } catch (e) {
-      //toast('Error: ${e.toString()}');
       AppUI.error(context, "Failed to add member, Please try again.");
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-    //  }
   }
-
   Widget _stepContent() {
     switch (_currentStep) {
       case 0:
@@ -470,7 +468,8 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
           _passwordCtrl,
           Icons.lock_outline_rounded,
           hint: 'Create a password',
-          obscureText: true,
+          obscureText: !_isPasswordVisible,
+          customValidator: (v) => AppValidator.validatePassword(v),
         ),
         12.height,
         _formField(
@@ -853,6 +852,21 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
               color: textSecondary.withOpacity(0.5),
             ),
             prefixIcon: Icon(icon, color: textSecondary, size: 18.sp),
+            suffixIcon: label.contains("Password")
+                ? IconButton(
+              icon: Icon(
+                _isPasswordVisible
+                    ? Icons.visibility
+                    : Icons.visibility_off,
+                color: textSecondary,
+              ),
+              onPressed: () {
+                setState(() {
+                  _isPasswordVisible = !_isPasswordVisible;
+                });
+              },
+            )
+                : null,
             filled: true,
             fillColor: Colors.white,
             contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),

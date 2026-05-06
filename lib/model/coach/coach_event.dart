@@ -1,3 +1,5 @@
+import '../clubAdmin/get_event_details.dart';
+
 class CoachEventModel {
   final int eventId;
   final String eventName;
@@ -8,11 +10,11 @@ class CoachEventModel {
   final String eventType;
   final String status;
   final int clubId;
-  final int activityId;
+  final int? activityId;
+  final String? activityName;
   final int createdByUserId;
-  final String createdByUsername;
-  final List<int> coachIds;
-
+  final String? createdByUsername;
+  final List<EventCoach> coaches; // ← replaces coachIds
   final DateTime? createdAt;
 
   CoachEventModel({
@@ -25,29 +27,45 @@ class CoachEventModel {
     required this.eventType,
     required this.status,
     required this.clubId,
-    required this.activityId,
+    this.activityId,
+    this.activityName,
     required this.createdByUserId,
-    required this.createdByUsername,
-    required this.coachIds,
+    this.createdByUsername,
+    required this.coaches,
     this.createdAt,
   });
 
+  // Convenience getter — keeps all existing coachIds references working
+  List<int> get coachIds => coaches.map((c) => c.coachId).toList();
+
+  // Convenience getter for display
+  String get coachNamesDisplay =>
+      coaches.isEmpty ? 'No coaches' : coaches.map((c) => c.coachName).join(', ');
+
   factory CoachEventModel.fromJson(Map<String, dynamic> json) {
     return CoachEventModel(
-      eventId: json['eventId'] as int,
-      eventName: json['eventName'] as String,
-      eventDate: DateTime.parse(json['eventDate']),
-      startTime: json['startTime'] as String,
-      endTime: json['endTime'] as String,
-      location: json['location'] as String,
-      eventType: json['eventType'] as String,
-      status: json['status'] as String,
-      clubId: json['clubId'] as int,
-      activityId: json['activityId']??0,
-      createdByUserId: json['createdByUserId'] as int,
-      createdByUsername: json['createdByUsername'] as String,
-      coachIds: List<int>.from(json['coachIds']),
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
+      eventId: json['eventId'] as int? ?? 0,
+      eventName: json['eventName'] as String? ?? '',
+      eventDate: json['eventDate'] != null
+          ? DateTime.parse(json['eventDate'])
+          : DateTime.now(),
+      startTime: json['startTime'] as String? ?? '',
+      endTime: json['endTime'] as String? ?? '',
+      location: json['location'] as String? ?? '',
+      eventType: json['eventType'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      clubId: json['clubId'] as int? ?? 0,
+      activityId: json['activityId'] as int?,
+      activityName: json['activityName'] as String?,
+      createdByUserId: json['createdByUserId'] as int? ?? 0,
+      createdByUsername: json['createdByUsername'] as String?,
+      // Parse coaches array (new API shape)
+      coaches: (json['coaches'] as List<dynamic>? ?? [])
+          .map((c) => EventCoach.fromJson(c as Map<String, dynamic>))
+          .toList(),
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : null,
     );
   }
 
@@ -56,26 +74,26 @@ class CoachEventModel {
       'eventId': eventId,
       'eventName': eventName,
       'eventDate': eventDate.toIso8601String().split('T')[0],
-      'startTime': startTime.substring(0, 5),
-      'endTime': endTime.substring(0, 5),
+      'startTime': startTime,
+      'endTime': endTime,
       'location': location,
       'eventType': eventType,
       'status': status,
       'clubId': clubId,
-      'activityId':activityId,
+      'activityId': activityId,
+      'activityName': activityName,
       'createdByUserId': createdByUserId,
       'createdByUsername': createdByUsername,
-      'coachIds': coachIds,
+      'coaches': coaches.map((c) => c.toJson()).toList(),
     };
   }
 
-  // For creating/updating events
   Map<String, dynamic> toCreateUpdateJson() {
     return {
       'eventName': eventName,
       'eventDate': eventDate.toIso8601String().split('T')[0],
-      'startTime': startTime.substring(0, 5),
-      'endTime': endTime.substring(0, 5),
+      'startTime': startTime,
+      'endTime': endTime,
       'location': location,
       'eventType': eventType,
       'status': status,

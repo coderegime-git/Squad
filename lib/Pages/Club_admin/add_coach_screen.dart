@@ -31,7 +31,7 @@ class _ClubAdminAddCoachScreenState extends State<ClubAdminAddCoachScreen> {
   final roleController = TextEditingController();
   final _certificationCtrl = TextEditingController();
   final _bioCtrl = TextEditingController();
-
+  bool _isPasswordVisible = false;
   String? _selectedSpecialization;
   List<String> _selectedGroups = [];
 
@@ -416,8 +416,9 @@ class _ClubAdminAddCoachScreenState extends State<ClubAdminAddCoachScreen> {
           'Password *',
           _passwordCtrl,
           Icons.lock_rounded,
-          hint: '••••••••••',
-          obscureText: true,
+          hint: 'Create a password',
+          obscureText: !_isPasswordVisible,
+          customValidator: (v) => AppValidator.validatePassword(v),
         ),
         12.height,
 
@@ -713,6 +714,7 @@ class _ClubAdminAddCoachScreenState extends State<ClubAdminAddCoachScreen> {
             return AppValidator.validateRequired(v, fieldName);
           },
           style: GoogleFonts.poppins(fontSize: 13.sp, color: Colors.black),
+
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: GoogleFonts.poppins(
@@ -720,6 +722,21 @@ class _ClubAdminAddCoachScreenState extends State<ClubAdminAddCoachScreen> {
               color: textSecondary.withOpacity(0.5),
             ),
             prefixIcon: Icon(icon, color: textSecondary, size: 18.sp),
+            suffixIcon: label.contains("Password")
+                ? IconButton(
+              icon: Icon(
+                _isPasswordVisible
+                    ? Icons.visibility
+                    : Icons.visibility_off,
+                color: textSecondary,
+              ),
+              onPressed: () {
+                setState(() {
+                  _isPasswordVisible = !_isPasswordVisible;
+                });
+              },
+            )
+                : null,
             filled: true,
             fillColor: Colors.white,
             contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),

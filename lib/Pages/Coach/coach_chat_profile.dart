@@ -530,7 +530,7 @@ class _CoachProfileScreenState extends State<CoachProfileScreen> {
                           ),
                         ),
                         20.height,
-                        _buildSectionTitle("Settings"),
+
                         Container(
                           width: double.infinity,
                           padding: EdgeInsets.symmetric(vertical: 10.h),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:sports/model/notification_data.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -80,49 +81,120 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
-      appBar: _buildAppBar(context),
-      body: Consumer<NotificationProvider>(
-        builder: (context, provider, _) {
-          if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: Column(
+        children: [
+          // ── Black band header ──────────────────────────────────
+          Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(16),
+                bottomRight: Radius.circular(16),
+              ),
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.only(
+                    top: 5, left: 20, right: 20, bottom: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: const Icon(Icons.arrow_back_ios_rounded,
+                          color: Colors.white, size: 20),
+                    ),
+                    const SizedBox(width: 16),
+                     Expanded(
+                      child: Text(
+                        'Notifications',
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
+                          color: Colors.white,
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
 
-          if (provider.errorMessage != null) {
-            return _buildErrorState(provider);
-          }
+                      ),
+                    ),
+                    // Mark all read button
+                    Consumer<NotificationProvider>(
+                      builder: (context, provider, _) {
+                        final hasUnread = provider.notifications
+                            .any((n) => n.isRead == false);
+                        if (!hasUnread) return const SizedBox.shrink();
+                        return TextButton(
+                          onPressed: provider.isMarkingAll
+                              ? null
+                              : provider.markAllAsRead,
+                          child: provider.isMarkingAll
+                              ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white))
+                              : const Text(
+                            'Mark all read',
+                            style: TextStyle(
+                              color: Color(0xFF4CAF50),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
 
-          if (provider.notifications.isEmpty) {
-            return _buildEmptyState();
-          }
-
-          return RefreshIndicator(
-            onRefresh: provider.loadNotifications,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              itemCount: provider.notifications.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 1),
-              itemBuilder: (context, index) {
-                final notification = provider.notifications[index];
-                return _NotificationTile(
-                  notification: notification,
-                  onTap: () {
-                    if (notification.isRead == false) {
-                      provider.markAsRead(notification.notificationId!);
-                    }
-                    // TODO: Navigate based on notificationType / eventId
-                  },
+          // ── Body ──────────────────────────────────────────────
+          Expanded(
+            child: Consumer<NotificationProvider>(
+              builder: (context, provider, _) {
+                if (provider.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (provider.errorMessage != null) {
+                  return _buildErrorState(provider);
+                }
+                if (provider.notifications.isEmpty) {
+                  return _buildEmptyState();
+                }
+                return RefreshIndicator(
+                  onRefresh: provider.loadNotifications,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    itemCount: provider.notifications.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 1),
+                    itemBuilder: (context, index) {
+                      final notification = provider.notifications[index];
+                      return _NotificationTile(
+                        notification: notification,
+                        onTap: () {
+                          if (notification.isRead == false) {
+                            provider.markAsRead(notification.notificationId!);
+                          }
+                        },
+                      );
+                    },
+                  ),
                 );
               },
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
-
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
       backgroundColor: Colors.white,

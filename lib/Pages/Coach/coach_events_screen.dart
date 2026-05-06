@@ -1,11 +1,3 @@
-// screens/coach/coach_events_screen.dart
-// Coach: Events list — Scheduled & Completed tabs
-// - Scheduled: today + future events
-// - Completed: past events within last 6 months (hard-coded)
-// - FAB: Create Event → CoachCreateEventSheet
-// - Tap card → CoachEventDetailScreen (Details | Attendees | Performance)
-// - Attendance button (scheduled only) → CoachAttendanceScreen
-
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -27,15 +19,17 @@ class CoachEventsScreen extends StatefulWidget {
 
 class _CoachEventsScreenState extends State<CoachEventsScreen>
     with SingleTickerProviderStateMixin {
-  final ClubApiService _api = ClubApiService();
+  final CoachApiService _api = CoachApiService();
   late TabController _tabController;
-  late Future<GetEventDetails> _eventsFuture;
+  late Future<GetEventDetails> _scheduledFuture;
+  late Future<GetEventDetails> _completedFuture;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _eventsFuture = _api.getEvents();
+    _scheduledFuture = _api.getCoachScheduledEvents();
+    _completedFuture = _api.getCoachCompletedEvents();
   }
 
   @override
@@ -44,7 +38,10 @@ class _CoachEventsScreenState extends State<CoachEventsScreen>
     super.dispose();
   }
 
-  void _refresh() => setState(() => _eventsFuture = _api.getEvents());
+  void _refresh() => setState(() {
+    _scheduledFuture = _api.getCoachScheduledEvents();
+    _completedFuture = _api.getCoachCompletedEvents();
+  });
 
   void _showCreateSheet() {
     showModalBottomSheet(
@@ -59,41 +56,11 @@ class _CoachEventsScreenState extends State<CoachEventsScreen>
     );
   }
 
-  List<Data> _scheduled(List<Data> all) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    return all.where((e) {
-      try {
-        final d = DateTime.parse(e.eventDate);
-        return !d.isBefore(today);
-      } catch (_) {
-        return (e.status ?? '').toUpperCase() == 'SCHEDULED';
-      }
-    }).toList()
-      ..sort((a, b) => a.eventDate.compareTo(b.eventDate));
-  }
-
-  List<Data> _completed(List<Data> all) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final sixMonthsAgo = now.subtract(const Duration(days: 180));
-    return all.where((e) {
-      try {
-        final d = DateTime.parse(e.eventDate);
-        return d.isBefore(today) && d.isAfter(sixMonthsAgo);
-      } catch (_) {
-        return (e.status ?? '').toUpperCase() == 'COMPLETED';
-      }
-    }).toList()
-      ..sort((a, b) => b.eventDate.compareTo(a.eventDate));
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       body: Column(children: [
-        // ── Header ──────────────────────────────────────────────
         Container(
           width: double.infinity,
           decoration: BoxDecoration(
@@ -121,7 +88,6 @@ class _CoachEventsScreenState extends State<CoachEventsScreen>
                           fontSize: 20.sp,
                           fontWeight: FontWeight.bold)),
                   const Spacer(),
-                  // Refresh button
                   GestureDetector(
                     onTap: _refresh,
                     child: Container(
@@ -151,48 +117,35 @@ class _CoachEventsScreenState extends State<CoachEventsScreen>
             ]),
           ),
         ),
-
-        // ── Content ──────────────────────────────────────────────
         Expanded(
-          child: FutureBuilder<GetEventDetails>(
-            future: _eventsFuture,
-            builder: (context, snap) {
-              if (snap.connectionState == ConnectionState.waiting) {
-                return const Center(
-                    child: CircularProgressIndicator(color: accentGreen));
-              }
-              if (snap.hasError) {
-                return Center(child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error_outline, color: Colors.red, size: 40.sp),
-                    12.height,
-                    Text('Failed to load events',
-                        style: GoogleFonts.poppins(color: Colors.grey)),
-                    12.height,
-                    ElevatedButton(
-                      onPressed: _refresh,
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: accentOrange,
-                          foregroundColor: Colors.white),
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ));
-              }
-
-              final all = snap.data?.data ?? [];
-              final scheduled = _scheduled(all);
-              final completed = _completed(all);
-
-              return TabBarView(
-                controller: _tabController,
-                children: [
-                  _eventList(scheduled, isCompleted: false),
-                  _eventList(completed, isCompleted: true),
-                ],
-              );
-            },
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              // Scheduled tab
+              FutureBuilder<GetEventDetails>(
+                future: _scheduledFuture,
+                builder: (context, snap) {
+                  if (snap.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator(color: accentGreen));
+                  }
+                  if (snap.hasError) return _errorWidget();
+                  final events = snap.data?.data ?? [];
+                  return _eventList(events, isCompleted: false);
+                },
+              ),
+              // Completed tab
+              FutureBuilder<GetEventDetails>(
+                future: _completedFuture,
+                builder: (context, snap) {
+                  if (snap.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator(color: accentGreen));
+                  }
+                  if (snap.hasError) return _errorWidget();
+                  final events = snap.data?.data ?? [];
+                  return _eventList(events, isCompleted: true);
+                },
+              ),
+            ],
           ),
         ),
       ]),
@@ -207,6 +160,22 @@ class _CoachEventsScreenState extends State<CoachEventsScreen>
     );
   }
 
+  Widget _errorWidget() => Center(child: Column(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      Icon(Icons.error_outline, color: Colors.red, size: 40.sp),
+      12.height,
+      Text('Failed to load events', style: GoogleFonts.poppins(color: Colors.grey)),
+      12.height,
+      ElevatedButton(
+        onPressed: _refresh,
+        style: ElevatedButton.styleFrom(
+            backgroundColor: accentOrange, foregroundColor: Colors.white),
+        child: const Text('Retry'),
+      ),
+    ],
+  ));
+
   Widget _eventList(List<Data> events, {required bool isCompleted}) {
     if (events.isEmpty) {
       return Center(child: Column(
@@ -218,9 +187,7 @@ class _CoachEventsScreenState extends State<CoachEventsScreen>
           ),
           16.height,
           Text(
-            isCompleted
-                ? 'No completed events in last 6 months'
-                : 'No upcoming events',
+            isCompleted ? 'No completed events' : 'No upcoming events',
             style: GoogleFonts.poppins(
                 color: Colors.grey.shade500, fontSize: 14.sp),
             textAlign: TextAlign.center,
@@ -308,15 +275,13 @@ class _CoachEventCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(
-              color: statusColor.withOpacity(0.35), width: 1.5),
+          border: Border.all(color: statusColor.withOpacity(0.35), width: 1.5),
           boxShadow: [
             BoxShadow(color: Colors.black.withOpacity(0.04),
                 blurRadius: 8, offset: const Offset(0, 2)),
           ],
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Title + Status
           Row(children: [
             Expanded(
               child: Text(event.eventName,
@@ -337,20 +302,16 @@ class _CoachEventCard extends StatelessWidget {
             ),
           ]),
           10.height,
-
-          // Date & Location
           Row(children: [
             Icon(Icons.calendar_today_rounded, size: 13.sp, color: Colors.grey),
             6.width,
             Text(event.eventDate,
-                style: GoogleFonts.poppins(
-                    fontSize: 12.sp, color: Colors.grey.shade600)),
+                style: GoogleFonts.poppins(fontSize: 12.sp, color: Colors.grey.shade600)),
             16.width,
             Icon(Icons.access_time_rounded, size: 13.sp, color: Colors.grey),
             6.width,
             Text('${event.startTime} – ${event.endTime}',
-                style: GoogleFonts.poppins(
-                    fontSize: 12.sp, color: Colors.grey.shade600)),
+                style: GoogleFonts.poppins(fontSize: 12.sp, color: Colors.grey.shade600)),
           ]),
           6.height,
           Row(children: [
@@ -363,9 +324,17 @@ class _CoachEventCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis),
             ),
           ]),
+          6.height,
+          Row(children: [
+            Icon(Icons.group_rounded, size: 13.sp, color: Colors.grey),
+            6.width,
+            Expanded(
+              child: Text(event.coachNamesDisplay,
+                  style: GoogleFonts.poppins(fontSize: 12.sp, color: Colors.grey.shade600),
+                  overflow: TextOverflow.ellipsis),
+            ),
+          ]),
           12.height,
-
-          // Actions row
           Row(mainAxisAlignment: MainAxisAlignment.end, children: [
             if (onAttendance != null) ...[
               GestureDetector(

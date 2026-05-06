@@ -24,7 +24,7 @@ class _MemberBottomNavState extends State<MemberBottomNav> {
     const MemberDashboard(),
     const MemberScheduleScreen(),
     const MemberMetricsScreen(),
-    const MemberNotificationsScreen(),
+    //const MemberNotificationsScreen(),
     const MemberProfileScreen(),
   ];
 
@@ -63,7 +63,7 @@ class _MemberBottomNavState extends State<MemberBottomNav> {
               BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
               BottomNavigationBarItem(icon: Icon(Icons.calendar_month_rounded), label: 'Schedule'),
               BottomNavigationBarItem(icon: Icon(Icons.bar_chart_rounded), label: 'Metrics'),
-              BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Notifications'),
+              //BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Notifications'),
               BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
             ],
           ),

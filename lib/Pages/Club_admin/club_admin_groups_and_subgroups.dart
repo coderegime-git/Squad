@@ -14,6 +14,7 @@ import 'package:sports/model/clubAdmin/get_subgroups_member.dart';
 
 import '../../config/colors.dart';
 import '../../model/clubAdmin/activities_data.dart';
+import '../../model/clubAdmin/get_direct_group_members.dart';
 import '../../model/clubAdmin/get_groups.dart';
 import '../../model/clubAdmin/getSubGroups.dart';
 import '../../model/clubAdmin/get_members.dart';
@@ -185,8 +186,8 @@ class _ClubAdminGroupsScreenState extends State<ClubAdminGroupsScreen> {
                 _sheetField('Group Name *', nameCtrl, Icons.group_rounded,
                     hint: 'e.g., Under 14'),
                 12.height,
-                _sheetField('Description (optional)', descCtrl,
-                    Icons.description_rounded,
+                // AFTER:
+                _sheetField('Description', descCtrl, Icons.description_rounded,
                     hint: 'Short description', required: false),
                 if (allCoaches.isNotEmpty) ...[
                   16.height,
@@ -214,6 +215,7 @@ class _ClubAdminGroupsScreenState extends State<ClubAdminGroupsScreen> {
                         "activityId": _selectedActivityId,
                         "name": nameCtrl.text.trim(),
                         "description": descCtrl.text.trim(),
+                        "coachIds":selectedCoachIds
                       });
                       setSheet(() => isLoading = false);
                       if (success) {
@@ -222,6 +224,8 @@ class _ClubAdminGroupsScreenState extends State<ClubAdminGroupsScreen> {
                             context, 'Group "${nameCtrl.text}" created!');
                         _refresh();
                       } else {
+                        Navigator.pop(ctx);
+                        print("failed failed");
                         AppUI.error(
                             context, 'Failed to create group. Try again.');
                       }
@@ -880,7 +884,7 @@ class GroupMembersScreen extends StatefulWidget {
 
 class _GroupMembersScreenState extends State<GroupMembersScreen> {
   final ClubApiService _apiService = ClubApiService();
-  late Future<List<Data>> _membersFuture;
+  late Future<List<GetDirectGroupMembersData>> _membersFuture; // ✅
   bool _loadingAll = false;
   final Set<int> _removingIds = {};
 
@@ -890,19 +894,16 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
     _membersFuture = _fetchMembers();
   }
 
-  Future<List<Data>> _fetchMembers() async {
-    // GET /api/groups/{groupId}/members
-    final result =
-    await _apiService.getGroupDirectMembers(widget.group.groupId);
-    return result;
+  Future<List<GetDirectGroupMembersData>> _fetchMembers() async {
+    final result = await _apiService.getGroupDirectMembers1(widget.group.groupId); // ✅ use the new method
+    return result.data;
   }
-
   void _refresh() => setState(() => _membersFuture = _fetchMembers());
 
   void _showAddMembersSheet() async {
     setState(() => _loadingAll = true);
     List<Data> allMembers = [];
-    List<Data> currentMembers = [];
+    List<GetDirectGroupMembersData> currentMembers = [];
     try {
       final all = await _apiService.getMembers();
       allMembers = all.data;
@@ -1013,13 +1014,12 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
     );
   }
 
-  Future<void> _confirmRemove(Data member) async {
+  Future<void> _confirmRemove(GetDirectGroupMembersData member) async { // ✅
     final confirmed = await _removeDialog(
         context, 'Remove from Group',
-        'Remove "${member.username}" from ${widget.group.name}?');
+        'Remove "${member.name}" from ${widget.group.name}?'); // ✅ .name not .username
     if (confirmed == true) {
       setState(() => _removingIds.add(member.memberId));
-      // DELETE /api/groups/{groupId}/members  { memberIds: [id] }
       final success = await _apiService.removeMembersFromGroup(
           widget.group.groupId, [member.memberId]);
       setState(() => _removingIds.remove(member.memberId));
@@ -1069,7 +1069,7 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
   Widget _buildContent() {
     return Stack(
       children: [
-        FutureBuilder<List<Data>>(
+        FutureBuilder<List<GetDirectGroupMembersData>>(
           future: _membersFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -1120,7 +1120,7 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
     elevation: 4,
   );
 
-  Widget _memberTile(Data member) {
+  Widget _memberTile(GetDirectGroupMembersData member) {
     final isRemoving = _removingIds.contains(member.memberId);
     return Container(
       margin: EdgeInsets.only(bottom: 10.h),
@@ -1142,9 +1142,7 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
             radius: 22.r,
             backgroundColor: Colors.indigo.withOpacity(0.1),
             child: Text(
-                member.username.isNotEmpty
-                    ? member.username[0].toUpperCase()
-                    : '?',
+                member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
                 style: GoogleFonts.montserrat(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w700,
@@ -1155,7 +1153,7 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(member.username,
+                Text(member.name,
                     style: GoogleFonts.montserrat(
                         fontSize: 13.sp,
                         fontWeight: FontWeight.w700,
@@ -1207,6 +1205,7 @@ class _GroupSubGroupsScreenState extends State<GroupSubGroupsScreen> {
   late Future<List<SubGroupData>> _subGroupsFuture;
   bool _isFirstLoad = true;
   bool _creatingSubGroup = false;
+  bool _creatingSubGroup1 = false;
 
   @override
   void initState() {
@@ -1835,10 +1834,14 @@ class _GroupSubGroupsScreenState extends State<GroupSubGroupsScreen> {
             bottom: 16.h,
             right: 16.w,
             child: FloatingActionButton.extended(
-              onPressed: _showCreateSheet,
+              onPressed: _creatingSubGroup?null:_showCreateSheet,
               backgroundColor: Colors.teal,
-              icon:
-              Icon(Icons.add_rounded, color: Colors.white, size: 20.sp),
+              icon: _creatingSubGroup
+                  ? SizedBox(
+                  width: 20.w,
+                  height: 20.w,
+                  child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : Icon(Icons.add_rounded, color: Colors.white, size: 22.sp),
               label: Text('Add Sub-group',
                   style: GoogleFonts.poppins(
                       color: Colors.white, fontWeight: FontWeight.w600)),

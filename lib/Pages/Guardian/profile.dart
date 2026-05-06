@@ -6,7 +6,9 @@ import 'package:nb_utils/nb_utils.dart';
 import 'package:sports/utills/api_service.dart';
 
 import '../../config/colors.dart';
-import '../../model/member/profile_data.dart';
+import '../../model/member/profile_data.dart' hide Data;
+import '../../model/guardian/get_your_member.dart';
+
 import '../../routes/app_routes.dart';
 
 // lib/pages/guardian/guardian_profile.dart
@@ -20,6 +22,7 @@ import '../../routes/app_routes.dart';
 import '../../utills/shared_preference.dart';
 import '../Member/edit_profile.dart';
 import '../splash.dart';
+import 'demo.dart';
 
 class GuardianProfileScreen extends StatefulWidget {
   const GuardianProfileScreen({super.key});
@@ -32,12 +35,105 @@ class _GuardianProfileScreenState extends State<GuardianProfileScreen> {
   late MemberProfileData memberProfileData;
   bool isLoad = true;
   final apiService = ParentApiService();
-
-
+  List<Data> _children = [];
+  bool _isLoadingChildren = true;
   @override
   void initState() {
     getProfileData(true);
     super.initState();
+    _getYourChildren();
+  }
+  Future<void> _getYourChildren() async {
+    setState(() => _isLoadingChildren = true);
+    try {
+      final result = await apiService.getYourMembers();
+      setState(() {
+        _children = result.data;
+        _isLoadingChildren = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingChildren = false);
+      if (mounted) toast('Failed to load members');
+    }
+  }
+  Widget _buildNoChildrenWidget() {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 24.h),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(Icons.child_care_rounded,
+                size: 48.sp, color: Colors.grey.shade400),
+            12.height,
+            Text(
+              "No members are assigned to you",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 14.sp,
+                color: Colors.grey.shade500,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            6.height,
+            Text(
+              "Please wait while your club admin links a members to your account.",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 12.sp,
+                color: Colors.grey.shade400,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _displayGuardianMember(){
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("My Guardian",  style: GoogleFonts.montserrat(
+          fontSize: 13.sp,
+          fontWeight: FontWeight.w700,
+          color: Colors.black,
+        ),),
+        SizedBox(height: 10,),
+        SizedBox(
+          //height: 120.h,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 10,vertical: 10),
+            decoration: BoxDecoration(
+                //border: Border.all(color: Colors.green),
+              borderRadius: BorderRadius.circular(16.r),
+            ),
+            child: ListView.builder(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                scrollDirection:Axis.vertical,itemCount: _children.length,itemBuilder: (context,index){
+              final children = _children[index];
+              return Container(
+                margin: EdgeInsets.symmetric(vertical: 4.h),
+                padding: EdgeInsets.symmetric(horizontal: 10.w,vertical: 10.h),
+                decoration: BoxDecoration(
+                  color: cardDark,
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(children.username,style: Theme.of(context).textTheme.bodySmall?.copyWith(color: accentGreen,fontSize: 15.sp),),
+                    SizedBox(height: 5.h,),
+                    Text(children.dob,style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),)
+                  ],
+                ),
+              );
+            }),
+          ),
+        ),
+
+      ],
+    );
   }
 
   void getProfileData(isLoads) async {
@@ -232,24 +328,16 @@ class _GuardianProfileScreenState extends State<GuardianProfileScreen> {
                           ],
                         ),
 
-                        20.height,
-                        _buildSectionTitle("My Children"),
+                        //20.height,
                         12.height,
-                        _ChildProfileTile(
-                          name: "Abinesh",
-                          subtitle: "Under-14 A • Football • XYZ FC",
-                          onTap: () => toast("View child profile details"),
-                        ),
-                        12.height,
-                        _ChildProfileTile(
-                          name: "Gopal",
-                          subtitle: "Under-10 B • Swimming • ABC Sports",
-                          onTap: () => toast("View child profile details"),
-                        ),
-
+                        if (_isLoadingChildren)
+                          const ChildSelectorShimmer()
+                        else if (_children.isEmpty)
+                          _buildNoChildrenWidget()
+                        else
+                          _displayGuardianMember(),
                         20.height,
 
-                        // Membership Status - Improved Section
                         if (memberProfileData.data != null &&
                             memberProfileData.data!.memberships != null) ...[
                           _buildSectionTitle("Membership Status"),

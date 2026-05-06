@@ -48,7 +48,7 @@ class Data {
   String? title;
   String? message;
   int? eventId;
-  Null? memberId;
+  int? memberId;  // ✅ changed Null? → int?
   bool? isRead;
   String? createdAt;
 
@@ -67,32 +67,32 @@ class Data {
   });
 
   Data.fromJson(Map<String, dynamic> json) {
-    notificationId = json['notificationId'];
-    clubId = json['clubId'];
-    userId = json['userId'];
-    role = json['role'];
-    notificationType = json['notificationType'];
-    title = json['title'];
-    message = json['message'];
-    eventId = json['eventId'];
-    memberId = json['memberId'];
-    isRead = json['isRead'];
-    createdAt = json['createdAt'];
+    notificationId = json['notificationId'] ?? 0;
+    clubId = json['clubId'] ?? 0;
+    userId = json['userId'] ?? 0;
+    role = json['role'] ?? "";
+    notificationType = json['notificationType'] ?? "";
+    title = json['title'] ?? "";
+    message = json['message'] ?? "";
+    eventId = json['eventId'] as int?;        // ✅ can be null
+    memberId = json['memberId'] as int?;      // ✅ can be null or int
+    isRead = json['isRead'] ?? false;
+    createdAt = json['createdAt'] ?? "";
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['notificationId'] = this.notificationId;
-    data['clubId'] = this.clubId;
-    data['userId'] = this.userId;
-    data['role'] = this.role;
-    data['notificationType'] = this.notificationType;
-    data['title'] = this.title;
-    data['message'] = this.message;
-    data['eventId'] = this.eventId;
-    data['memberId'] = this.memberId;
-    data['isRead'] = this.isRead;
-    data['createdAt'] = this.createdAt;
+    final Map<String, dynamic> data = {};
+    data['notificationId'] = notificationId;
+    data['clubId'] = clubId;
+    data['userId'] = userId;
+    data['role'] = role;
+    data['notificationType'] = notificationType;
+    data['title'] = title;
+    data['message'] = message;
+    data['eventId'] = eventId;
+    data['memberId'] = memberId;
+    data['isRead'] = isRead;
+    data['createdAt'] = createdAt;
     return data;
   }
 }

@@ -14,6 +14,7 @@ import 'package:sports/model/guardian/get_your_member.dart';
 import 'package:sports/model/member/metrics.dart';
 import 'package:sports/model/member/profile_data.dart';
 import 'package:sports/utills/shared_preference.dart';
+import '../model/clubAdmin/get_direct_group_members.dart';
 import '../model/clubAdmin/get_members.dart' as membersModel;
 
 import '../model/clubAdmin/activity_mapped_event_data.dart';
@@ -30,6 +31,7 @@ import '../model/coach/club_member.dart';
 import '../model/coach/coach_dashboard_data.dart';
 import '../model/coach/coach_event.dart';
 import '../model/coach/event_performance_data.dart';
+import '../model/get_clubs_data.dart';
 import '../model/guardian/getGuardianEvents.dart';
 import '../model/guardian/get_member_dashboard_data.dart';
 import '../model/member/get_events_members.dart';
@@ -1413,6 +1415,17 @@ class ClubApiService {
       rethrow;
     }
   }
+  Future<GetDirectGroupMembers> getGroupDirectMembers1(int groupId) async {
+    try {
+      print("getGroupDirectMembers groupId: $groupId");
+      final fullResponse = await _helper.get("api/groups/$groupId/members");
+      final jsonResponse = jsonEncode(fullResponse);
+      return GetDirectGroupMembersFromJson(jsonResponse);
+    } catch (e) {
+      print("getGroupDirectMembers failed1: $e");
+      rethrow;
+    }
+  }
 
   /// DELETE /api/groups/{groupId}/members  body: { memberIds: [...] }
   /// Removes one or more members from a standalone group
@@ -1454,6 +1467,27 @@ class ClubApiService {
     } catch (e) {
       print("updateEvent failed: $e");
       return false;
+    }
+  }
+  Future<GetEventDetails> getCompletedEvents() async {
+    try {
+      final fullResponse = await _helper.get("api/events/completed");
+      final jsonResponse = jsonEncode(fullResponse);
+      return GetEventDetailsFromJson(jsonResponse);
+    } catch (e) {
+      print("getCompletedEvents failed: $e");
+      rethrow;
+    }
+  }
+  Future<GetClubsData> getClubsData() async {
+    try {
+      final fullResponse = await _helper.get("api/club-admin/clubs");
+      print("getClubs success: ${fullResponse['success']}");
+      jsonEncode(fullResponse);
+      return getClubsDataFromJson(fullResponse);
+    } catch (e) {
+      print("getClubs failed: $e");
+      rethrow;
     }
   }
 }
@@ -1709,6 +1743,28 @@ class CoachApiService {
       return eventAttendanceDataFromJson(fullResponse);
     } catch (e) {
       print("getMemberEvents failed: $e");
+      rethrow;
+    }
+  }
+  // Add after getClubEvents()
+  Future<GetEventDetails> getCoachScheduledEvents() async {
+    try {
+      final fullResponse = await _helper.get("api/coach/events");
+      final jsonResponse = jsonEncode(fullResponse);
+      return GetEventDetailsFromJson(jsonResponse);
+    } catch (e) {
+      print("getCoachScheduledEvents failed: $e");
+      rethrow;
+    }
+  }
+
+  Future<GetEventDetails> getCoachCompletedEvents() async {
+    try {
+      final fullResponse = await _helper.get("api/coach/events/completed");
+      final jsonResponse = jsonEncode(fullResponse);
+      return GetEventDetailsFromJson(jsonResponse);
+    } catch (e) {
+      print("getCoachCompletedEvents failed: $e");
       rethrow;
     }
   }
@@ -1972,12 +2028,12 @@ class MemberApiService {
       print("Profile update failed: $e");
       return false;
     }
-
   }
+
   Future<GetGuardianForMembers> getMembersGuardian({int? memberId}) async {
     try {
       final url =
-          "/api/members/guardians";
+          "api/members/guardians";
       print("getMembersGuardian url: $url");
       final fullResponse = await _helper.get(url);
       print("getMembersGuardian response: $fullResponse");
@@ -1987,6 +2043,18 @@ class MemberApiService {
       rethrow;
     }
   }
+  Future<GetClubsData> getClubsDataForMember() async {
+    try {
+      final fullResponse = await _helper.get("api/member/clubs");
+      print("getClubsMember success: ${fullResponse['success']}");
+      jsonEncode(fullResponse);
+      return getClubsDataFromJson(fullResponse);
+    } catch (e) {
+      print("getClubsMember failed: $e");
+      rethrow;
+    }
+  }
+
 }
 
 class AppException implements Exception {

@@ -34,20 +34,18 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
 
   List<GuardianEventData> _pendingEvents = [];
   bool _isLoadingEvents = false;
-
+  // List<GuardianChildEvent> _upcomingEvents = [];
+  bool _isLoadingUpcoming = false;
   String get _username => SharedPreferenceHelper.getUsername() ?? 'Guardian';
-
-  // Convenience getter for selected child dashboard body
   GuardianDashboardBody? get _dashBody => _dashboardData?.data;
   SelectedChildData? get _selectedChild => _dashBody?.selectedChild;
-
+  List<dynamic> _upcomingEvents = [];
+  // bool _isLoadingUpcoming = false;
   @override
   void initState() {
     super.initState();
     _init();
   }
-
-  /// Step 1 — load members, Step 2 — load dashboard for first member
   Future<void> _init() async {
     setState(() => _isLoadingChildren = true);
     try {
@@ -61,14 +59,42 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
         await Future.wait([
           _loadDashboard(_selectedMemberId!),
           _loadPendingEvents(_selectedMemberId!),
+          _loadUpcomingEvents(_selectedMemberId!), // ← add
         ]);
       }
     } catch (e) {
       setState(() => _isLoadingChildren = false);
       if (mounted) toast('Failed to load members');
     }
-  }
+  }  Future<void> _loadUpcomingEvents(int memberId) async {
+    setState(() => _isLoadingUpcoming = true);
+    try {
+      final response = await _api.getGuardianMemberEvents(memberId);
+      final now = DateTime.now();
+      final oneMonthLater = now.add(const Duration(days: 30));
 
+      final List<dynamic> rawList =
+      response is List ? response : (response['data'] ?? []);
+
+      final filtered = rawList.where((item) {
+        try {
+          final date = DateTime.parse(item['eventDate'] ?? '');
+          return date.isAfter(now.subtract(const Duration(days: 1))) &&
+              date.isBefore(oneMonthLater);
+        } catch (_) {
+          return false;
+        }
+      }).map((item) => MemberEvent.fromJson(item as Map<String, dynamic>)).toList();
+
+      setState(() {
+        _upcomingEvents = filtered;
+        _isLoadingUpcoming = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingUpcoming = false);
+      print("loadUpcomingEvents failed: $e");
+    }
+  }
   Future<void> _loadDashboard(int memberId) async {
     setState(() => _isLoadingDashboard = true);
     try {
@@ -117,9 +143,9 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
     Future.wait([
       _loadDashboard(member.memberId),
       _loadPendingEvents(member.memberId),
+      _loadUpcomingEvents(member.memberId), // ← add
     ]);
   }
-
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -209,22 +235,24 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
                         24.height,
                       ],
 
-                      // ── Upcoming Events ───────────────────────────
+                      // ── Upcoming Events ───────────────────────────────
                       if (_children.isNotEmpty) ...[
                         _buildSectionHeader("Upcoming Events"),
                         12.height,
-                        if (_isLoadingDashboard)
+                        if (_isLoadingUpcoming)
                           _shimmerBox(height: 100.h)
-                        else if (_selectedChild == null ||
-                            _selectedChild!.events.isEmpty)
-                          _buildEmptyCard("No upcoming events for this child")
+                        else if (_upcomingEvents.isEmpty)
+                          _buildEmptyCard("No upcoming events within the next month")
                         else
-                          ..._selectedChild!.events
-                              .map((e) => _EventTile(event: e)),
+                          ...(_upcomingEvents as List<MemberEvent>).map(
+                                (e) => Padding(
+                              padding: EdgeInsets.only(bottom: 10.h),
+                              child: _UpcomingEventTile(event: e),
+                            ),
+                          ),
                         24.height,
                       ],
 
-                      // ── Payments ─────────────────────────────────
                       if (_children.isNotEmpty) ...[
                         _buildSectionHeader("Payments"),
                         12.height,
@@ -564,7 +592,6 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
   }
 }
 
-// ── Event Tile ───────────────────────────────────────────────────────────────
 class _EventTile extends StatelessWidget {
   final GuardianChildEvent event;
 
@@ -657,7 +684,6 @@ class _EventTile extends StatelessWidget {
   }
 }
 
-// ── Payment Card ─────────────────────────────────────────────────────────────
 class _PaymentCard extends StatelessWidget {
   final GuardianPayment payment;
 
@@ -742,7 +768,6 @@ class _PaymentCard extends StatelessWidget {
   }
 }
 
-// ── Pending Event Card ────────────────────────────────────────────────────────
 class _PendingEventCard extends StatelessWidget {
   final GuardianEventData event;
   final VoidCallback onAccept;
@@ -864,5 +889,164 @@ class _PendingEventCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+class _UpcomingEventTile extends StatelessWidget {
+  final MemberEvent event;
+  const _UpcomingEventTile({required this.event});
+
+  Color get _typeColor {
+    switch (event.eventType.toUpperCase()) {
+      case 'MATCH': return accentOrange;
+      case 'TOURNAMENT': return Colors.purple;
+      default: return accentGreen;
+    }
+  }
+
+  IconData get _typeIcon {
+    switch (event.eventType.toUpperCase()) {
+      case 'MATCH': return Icons.sports_soccer_rounded;
+      case 'TOURNAMENT': return Icons.emoji_events_rounded;
+      default: return Icons.fitness_center_rounded;
+    }
+  }
+
+  Color get _statusColor {
+    switch (event.status.toUpperCase()) {
+      case 'ACCEPTED':
+      case 'CONFIRMED': return accentGreen;
+      case 'REJECTED':
+      case 'CANCELLED': return Colors.red;
+      default: return accentOrange;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: cardDark,
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: _typeColor.withOpacity(0.35), width: 1.2),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(10.w),
+            decoration: BoxDecoration(
+              color: _typeColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+            child: Icon(_typeIcon, color: _typeColor, size: 20.sp),
+          ),
+          12.width,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  event.eventName,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                4.height,
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today_rounded,
+                        size: 11.sp, color: textSecondary),
+                    4.width,
+                    Text(
+                      '${event.eventDate.day}/${event.eventDate.month}/${event.eventDate.year}',
+                      style: GoogleFonts.poppins(
+                          fontSize: 11.sp, color: textSecondary),
+                    ),
+                    if (event.eventTime.isNotEmpty) ...[
+                      12.width,
+                      Icon(Icons.access_time_rounded,
+                          size: 11.sp, color: textSecondary),
+                      4.width,
+                      Text(
+                        event.eventTime,
+                        style: GoogleFonts.poppins(
+                            fontSize: 11.sp, color: textSecondary),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+            decoration: BoxDecoration(
+              color: _statusColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            child: Text(
+              event.status,
+              style: GoogleFonts.poppins(
+                fontSize: 10.sp,
+                color: _statusColor,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+class MemberEvent {
+  final int eventId;
+  final String eventName;
+  final DateTime eventDate;
+  final String eventTime;
+  final String location;
+  final String eventType;
+  final String status;
+
+  MemberEvent({
+    required this.eventId,
+    required this.eventName,
+    required this.eventDate,
+    required this.eventTime,
+    required this.location,
+    required this.eventType,
+    required this.status,
+  });
+
+  factory MemberEvent.fromJson(Map<String, dynamic> json) {
+    DateTime parsedDate;
+    try {
+      parsedDate = DateTime.parse(json['eventDate'] ?? '');
+    } catch (_) {
+      parsedDate = DateTime.now();
+    }
+    return MemberEvent(
+      eventId: json['eventId'] ?? 0,
+      eventName: json['eventName'] ?? '',
+      eventDate: parsedDate,
+      eventTime: _parseTime(json['eventTime']),
+      location: json['location'] ?? '',
+      eventType: json['eventType'] ?? 'TRAINING',
+      status: json['status'] ?? 'PENDING',
+    );
+  }
+
+  static String _parseTime(dynamic t) {
+    if (t == null) return '';
+    if (t is String) return t;
+    if (t is Map) {
+      final h = (t['hour'] ?? 0).toString().padLeft(2, '0');
+      final m = (t['minute'] ?? 0).toString().padLeft(2, '0');
+      return '$h:$m';
+    }
+    return '';
   }
 }

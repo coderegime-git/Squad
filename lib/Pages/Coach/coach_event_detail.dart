@@ -305,12 +305,12 @@ class _CoachEventDetailScreenState extends State<CoachEventDetailScreen>
       _divider(),
       _infoRow(Icons.person_rounded, 'Created by', _event.createdByUsername), // uses _event
       _divider(),
-      _infoRow(Icons.group_rounded, 'Coaches', '${_event.coachIds.length} assigned'), // uses _event
+      _infoRow(Icons.group_rounded, 'Coaches', _event.coachNamesDisplay),
     ]),
   );
 
   Widget _locationRow() {
-    final loc = _event.location; // uses _event
+    final loc = _event.location;
     final isLink = loc.startsWith('http');
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 10.h),
@@ -852,7 +852,13 @@ class _CoachEditEventSheetState extends State<_CoachEditEventSheet> {
         status: widget.event.status,
         clubId: widget.event.clubId,
         activityId: _selectedActivityId ?? widget.event.activityId,
-        coachIds: _selectedCoachIds.toList(),
+        coaches: _selectedCoachIds.map((id) {
+          final existing = widget.event.coaches.firstWhere(
+                (c) => c.coachId == id,
+            orElse: () => EventCoach(coachId: id, coachName: ''),
+          );
+          return existing;
+        }).toList(),
         createdByUsername: widget.event.createdByUsername, createdByUserId: widget.event.createdByUserId, createdAt: widget.event.createdAt,
       );
       Navigator.pop(context);
@@ -939,34 +945,33 @@ class _CoachEditEventSheetState extends State<_CoachEditEventSheet> {
           ]),
           16.height,
 
-          _label('Coaches'),
           8.height,
-          _loadingCoaches
-              ? const Center(child: CircularProgressIndicator(color: accentGreen))
-              : _coaches.isEmpty
-              ? Text('No coaches available',
-              style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary))
-              : Container(
-            decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(color: Colors.grey.shade200)),
-            child: Column(children: _coaches.map((coach) {
-              final selected = _selectedCoachIds.contains(coach.coachId);
-              return CheckboxListTile(
-                dense: true,
-                value: selected,
-                activeColor: accentGreen,
-                onChanged: (_) => setState(() {
-                  if (selected) _selectedCoachIds.remove(coach.coachId);
-                  else _selectedCoachIds.add(coach.coachId);
-                }),
-                title: Text(coach.username, style: GoogleFonts.poppins(fontSize: 13.sp)),
-                subtitle: Text(coach.specialization,
-                    style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary)),
-              );
-            }).toList()),
-          ),
+          // _loadingCoaches
+          //     ? const Center(child: CircularProgressIndicator(color: accentGreen))
+          //     : _coaches.isEmpty
+          //     ? Text('No coaches available',
+          //     style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary))
+          //     : Container(
+          //   decoration: BoxDecoration(
+          //       color: Colors.grey.shade50,
+          //       borderRadius: BorderRadius.circular(12.r),
+          //       border: Border.all(color: Colors.grey.shade200)),
+          //   child: Column(children: _coaches.map((coach) {
+          //     final selected = _selectedCoachIds.contains(coach.coachId);
+          //     return CheckboxListTile(
+          //       dense: true,
+          //       value: selected,
+          //       activeColor: accentGreen,
+          //       onChanged: (_) => setState(() {
+          //         if (selected) _selectedCoachIds.remove(coach.coachId);
+          //         else _selectedCoachIds.add(coach.coachId);
+          //       }),
+          //       title: Text(coach.username, style: GoogleFonts.poppins(fontSize: 13.sp)),
+          //       subtitle: Text(coach.specialization,
+          //           style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary)),
+          //     );
+          //   }).toList()),
+          // ),
           20.height,
 
           SizedBox(

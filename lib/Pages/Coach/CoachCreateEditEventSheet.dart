@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nb_utils/nb_utils.dart';
 import '../../config/colors.dart';
+import '../../model/clubAdmin/activities_data.dart';
 import '../../model/coach/coach_event.dart';
 import '../../utills/api_service.dart';
 import '../../utills/helper.dart';
@@ -41,7 +42,13 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
   final _descriptionController = TextEditingController();
   final _mapsLinkController = TextEditingController();
   bool _isRecurring = false;
-
+  // String _selectedType = 'SINGLE_EVENT';
+  // bool _loading = false;
+  // final _descriptionController = TextEditingController();
+  bool _isTournament = false;
+  List<ActivityData1> _activities = [];
+  int? _selectedActivityId;
+  bool _loadingActivity = false;
   // final List<String> _eventTypes = [
   //   'SINGLE_EVENT',
   //   'TOURNAMENT',
@@ -60,24 +67,21 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
   bool get _isEditing => widget.event != null;
 
   @override
+  @override
   void initState() {
     super.initState();
+    _loadActivities();
     if (_isEditing) {
       _populateFields();
     }
   }
-
   void _populateFields() {
     final event = widget.event!;
     _nameController.text = event.eventName;
     _locationController.text = event.location;
-    //_mapsLinkController.text = event.mapsLink ?? '';
-    //_descriptionController.text = event.description ?? '';
     _selectedDate = event.eventDate;
-    _selectedType = (event.eventType == 'RECURRING') ? 'RECURRING' : 'SINGLE_EVENT';
-    _isRecurring = _selectedType == 'RECURRING';
-
-    // Parse time strings
+    _selectedType = (event.eventType == 'TOURNAMENT') ? 'TOURNAMENT' : 'SINGLE_EVENT';
+    _isTournament = _selectedType == 'TOURNAMENT';
     try {
       if (event.startTime.isNotEmpty) {
         final startParts = event.startTime.split(':');
@@ -88,7 +92,6 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
           );
         }
       }
-
       if (event.endTime.isNotEmpty) {
         final endParts = event.endTime.split(':');
         if (endParts.length >= 2) {
@@ -102,7 +105,76 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
       print("Error parsing time: $e");
     }
   }
+  Future<void> _loadActivities() async {
+    setState(() => _loadingActivity = true);
+    try {
+      final result = await ClubApiService().getActivities1();
+      if (mounted) {
+        setState(() {
+          _activities = result;
+          if (_isEditing && widget.event!.activityId != null && widget.event!.activityId != 0) {
+            _selectedActivityId = widget.event!.activityId;
+          } else {
+            _selectedActivityId = result.isNotEmpty ? result.first.id : null;
+          }
+          _loadingActivity = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loadingActivity = false);
+    }
+  }
 
+  Widget _activityField() {
+    if (_activities.length == 1) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildLabel('Activity'),
+          8.height,
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 14.h),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(12.r),
+              border: Border.all(color: Colors.grey.shade400),
+            ),
+            child: Text(_activities.first.name,
+                style: GoogleFonts.poppins(fontSize: 13.sp)),
+          ),
+          16.height,
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabel('Activity'),
+        8.height,
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 12.w),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: Colors.grey.shade400),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<int>(
+              value: _selectedActivityId,
+              isExpanded: true,
+              items: _activities.map((a) => DropdownMenuItem<int>(
+                value: a.id,
+                child: Text(a.name, style: GoogleFonts.poppins(fontSize: 13.sp)),
+              )).toList(),
+              onChanged: (v) => setState(() => _selectedActivityId = v),
+            ),
+          ),
+        ),
+        16.height,
+      ],
+    );
+  }
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -147,10 +219,14 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
         "eventDate": _formatDateForApi(_selectedDate),
         "startTime": _formatTimeForApi(_startTime),
         "endTime": _formatTimeForApi(_endTime),
-        "location": _locationController.text.trim(),
-        "mapsLink": _mapsLinkController.text.trim(),
-        "description": _descriptionController.text.trim(),
+        "location": _locationController.text.trim(), // plain string
         "eventType": _selectedType,
+        "status": "SCHEDULED",
+        "coachIds": [],
+        if (_selectedActivityId != null) "activityId": _selectedActivityId,
+        if (_descriptionController.text.trim().isNotEmpty)
+          "description": _descriptionController.text.trim(),
+        if (widget.clubId > 0) "clubId": widget.clubId,
       };
 
       print("Submitting event data: $data");
@@ -187,12 +263,13 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
   }
 
   @override
+  @override
   void dispose() {
     _nameController.dispose();
     _locationController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
-
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
@@ -265,8 +342,16 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
                     controller: scrollController,
                     padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
                     children: [
+                      // Activity
+                      if (_loadingActivity)
+                        Center(child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16.h),
+                          child: const CircularProgressIndicator(color: accentGreen),
+                        ))
+                      else if (_activities.isNotEmpty)
+                        _activityField(),
+
                       // Event Name
-// Event Name
                       _buildLabel("Event Name *"),
                       8.height,
                       TextFormField(
@@ -277,8 +362,8 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
                       ),
                       16.height,
 
-// Description
-                      _buildLabel("Description"),
+                      // Description
+                      _buildLabel("Description (optional)"),
                       8.height,
                       TextFormField(
                         controller: _descriptionController,
@@ -288,31 +373,18 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
                       ),
                       16.height,
 
-// Location
-                      _buildLabel("Location *"),
+                      // Location
+                      _buildLabel("Location / Google Maps Link *"),
                       8.height,
                       TextFormField(
                         controller: _locationController,
                         validator: (v) => (v == null || v.trim().isEmpty) ? "Required" : null,
-                        decoration: _inputDecor("e.g., Ground A"),
+                        decoration: _inputDecor("Address or paste a Google Maps link"),
                         style: GoogleFonts.poppins(fontSize: 14.sp),
-                      ),
-                      8.height,
-
-// Google Maps Link
-                      _buildLabel("Google Maps Link (optional)"),
-                      8.height,
-                      TextFormField(
-                        controller: _mapsLinkController,
-                        keyboardType: TextInputType.url,
-                        decoration: _inputDecor("https://maps.google.com/...").copyWith(
-                          prefixIcon: Icon(Icons.map_outlined, color: Colors.green, size: 18.sp),
-                        ),
-                        style: GoogleFonts.poppins(fontSize: 13.sp),
                       ),
                       16.height,
 
-// Event Type — Single or Recurring
+                      // Event Type — Single or Tournament
                       _buildLabel("Event Type"),
                       8.height,
                       Row(
@@ -321,30 +393,28 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
                             child: GestureDetector(
                               onTap: () => setState(() {
                                 _selectedType = 'SINGLE_EVENT';
-                                _isRecurring = false;
+                                _isTournament = false;
                               }),
                               child: Container(
                                 padding: EdgeInsets.symmetric(vertical: 12.h),
                                 decoration: BoxDecoration(
-                                  color: !_isRecurring ? accentGreen.withOpacity(0.1) : Colors.grey.shade100,
+                                  color: !_isTournament ? accentGreen.withOpacity(0.1) : Colors.grey.shade100,
                                   borderRadius: BorderRadius.circular(10.r),
                                   border: Border.all(
-                                    color: !_isRecurring ? accentGreen : Colors.grey.shade300,
-                                    width: !_isRecurring ? 1.5 : 1,
+                                    color: !_isTournament ? accentGreen : Colors.grey.shade300,
+                                    width: !_isTournament ? 1.5 : 1,
                                   ),
                                 ),
-                                child: Column(
-                                  children: [
-                                    Icon(Icons.event, color: !_isRecurring ? accentGreen : Colors.grey, size: 20.sp),
-                                    4.height,
-                                    Text("Single Event",
-                                        style: GoogleFonts.poppins(
+                                child: Column(children: [
+                                  Icon(Icons.event_rounded,
+                                      color: !_isTournament ? accentGreen : Colors.grey, size: 20.sp),
+                                  4.height,
+                                  Text("Single Event",
+                                      style: GoogleFonts.poppins(
                                           fontSize: 12.sp,
-                                          color: !_isRecurring ? accentGreen : Colors.grey,
-                                          fontWeight: !_isRecurring ? FontWeight.w600 : FontWeight.normal,
-                                        )),
-                                  ],
-                                ),
+                                          color: !_isTournament ? accentGreen : Colors.grey,
+                                          fontWeight: !_isTournament ? FontWeight.w600 : FontWeight.normal)),
+                                ]),
                               ),
                             ),
                           ),
@@ -352,31 +422,29 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
                           Expanded(
                             child: GestureDetector(
                               onTap: () => setState(() {
-                                _selectedType = 'RECURRING';
-                                _isRecurring = true;
+                                _selectedType = 'TOURNAMENT';
+                                _isTournament = true;
                               }),
                               child: Container(
                                 padding: EdgeInsets.symmetric(vertical: 12.h),
                                 decoration: BoxDecoration(
-                                  color: _isRecurring ? accentGreen.withOpacity(0.1) : Colors.grey.shade100,
+                                  color: _isTournament ? accentGreen.withOpacity(0.1) : Colors.grey.shade100,
                                   borderRadius: BorderRadius.circular(10.r),
                                   border: Border.all(
-                                    color: _isRecurring ? accentGreen : Colors.grey.shade300,
-                                    width: _isRecurring ? 1.5 : 1,
+                                    color: _isTournament ? accentGreen : Colors.grey.shade300,
+                                    width: _isTournament ? 1.5 : 1,
                                   ),
                                 ),
-                                child: Column(
-                                  children: [
-                                    Icon(Icons.repeat, color: _isRecurring ? accentGreen : Colors.grey, size: 20.sp),
-                                    4.height,
-                                    Text("Recurring",
-                                        style: GoogleFonts.poppins(
+                                child: Column(children: [
+                                  Icon(Icons.emoji_events_rounded,
+                                      color: _isTournament ? accentGreen : Colors.grey, size: 20.sp),
+                                  4.height,
+                                  Text("Tournament",
+                                      style: GoogleFonts.poppins(
                                           fontSize: 12.sp,
-                                          color: _isRecurring ? accentGreen : Colors.grey,
-                                          fontWeight: _isRecurring ? FontWeight.w600 : FontWeight.normal,
-                                        )),
-                                  ],
-                                ),
+                                          color: _isTournament ? accentGreen : Colors.grey,
+                                          fontWeight: _isTournament ? FontWeight.w600 : FontWeight.normal)),
+                                ]),
                               ),
                             ),
                           ),
@@ -384,7 +452,7 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
                       ),
                       16.height,
 
-// Date
+                      // Date
                       _buildLabel("Event Date"),
                       8.height,
                       GestureDetector(
@@ -395,107 +463,93 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
                             border: Border.all(color: Colors.grey.shade400),
                             borderRadius: BorderRadius.circular(12.r),
                           ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.calendar_today_rounded, color: accentGreen, size: 18.sp),
-                              10.width,
-                              Text(
-                                "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
-                                style: GoogleFonts.poppins(fontSize: 14.sp, color: Colors.black),
-                              ),
-                            ],
-                          ),
+                          child: Row(children: [
+                            Icon(Icons.calendar_today_rounded, color: accentGreen, size: 18.sp),
+                            10.width,
+                            Text(
+                              "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
+                              style: GoogleFonts.poppins(fontSize: 14.sp, color: Colors.black),
+                            ),
+                          ]),
                         ),
                       ),
                       16.height,
 
-// Times
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildLabel("Start Time"),
-                                8.height,
-                                GestureDetector(
-                                  onTap: _pickStartTime,
-                                  child: Container(
-                                    padding: EdgeInsets.all(14.w),
-                                    decoration: BoxDecoration(
-                                      border: Border.all(color: Colors.grey.shade400),
-                                      borderRadius: BorderRadius.circular(12.r),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.access_time_rounded, color: accentGreen, size: 16.sp),
-                                        8.width,
-                                        Text(_startTime.format(context),
-                                            style: GoogleFonts.poppins(fontSize: 13.sp)),
-                                      ],
-                                    ),
-                                  ),
+                      // Times
+                      Row(children: [
+                        Expanded(child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildLabel("Start Time"),
+                            8.height,
+                            GestureDetector(
+                              onTap: _pickStartTime,
+                              child: Container(
+                                padding: EdgeInsets.all(14.w),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey.shade400),
+                                  borderRadius: BorderRadius.circular(12.r),
                                 ),
-                              ],
+                                child: Row(children: [
+                                  Icon(Icons.access_time_rounded, color: accentGreen, size: 16.sp),
+                                  8.width,
+                                  Text(_startTime.format(context),
+                                      style: GoogleFonts.poppins(fontSize: 13.sp)),
+                                ]),
+                              ),
                             ),
-                          ),
-                          16.width,
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildLabel("End Time"),
-                                8.height,
-                                GestureDetector(
-                                  onTap: _pickEndTime,
-                                  child: Container(
-                                    padding: EdgeInsets.all(14.w),
-                                    decoration: BoxDecoration(
-                                      border: Border.all(color: Colors.grey.shade400),
-                                      borderRadius: BorderRadius.circular(12.r),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.access_time_rounded, color: accentOrange, size: 16.sp),
-                                        8.width,
-                                        Text(_endTime.format(context),
-                                            style: GoogleFonts.poppins(fontSize: 13.sp)),
-                                      ],
-                                    ),
-                                  ),
+                          ],
+                        )),
+                        16.width,
+                        Expanded(child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildLabel("End Time"),
+                            8.height,
+                            GestureDetector(
+                              onTap: _pickEndTime,
+                              child: Container(
+                                padding: EdgeInsets.all(14.w),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey.shade400),
+                                  borderRadius: BorderRadius.circular(12.r),
                                 ),
-                              ],
+                                child: Row(children: [
+                                  Icon(Icons.access_time_rounded, color: accentOrange, size: 16.sp),
+                                  8.width,
+                                  Text(_endTime.format(context),
+                                      style: GoogleFonts.poppins(fontSize: 13.sp)),
+                                ]),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        )),
+                      ]),
                       16.height,
 
-// Club Info banner
+                      // Info banner
                       Container(
                         padding: EdgeInsets.all(12.w),
                         decoration: BoxDecoration(
                           color: Colors.grey.shade50,
                           borderRadius: BorderRadius.circular(8.r),
                         ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.info_outline, size: 16.sp, color: accentGreen),
-                            8.width,
-                            Expanded(
-                              child: Text(
-                                _isEditing
-                                    ? "Editing event for ${widget.clubName}"
-                                    : "Event will be created for ${widget.clubName}",
-                                style: GoogleFonts.poppins(fontSize: 12.sp, color: Colors.grey.shade700),
-                              ),
+                        child: Row(children: [
+                          Icon(Icons.info_outline, size: 16.sp, color: accentGreen),
+                          8.width,
+                          Expanded(
+                            child: Text(
+                              _isEditing
+                                  ? "Editing event for ${widget.clubName}"
+                                  : "Event will be created for ${widget.clubName}",
+                              style: GoogleFonts.poppins(fontSize: 12.sp, color: Colors.grey.shade700),
                             ),
-                          ],
-                        ),
+                          ),
+                        ]),
                       ),
                       32.height,
 
-// Submit
+                      // Submit
                       SizedBox(
                         width: double.infinity,
                         height: 52.h,
@@ -510,8 +564,7 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
                               : Text(
                             _isEditing ? "Update Event" : "Create Event",
                             style: GoogleFonts.poppins(
-                              fontSize: 15.sp, fontWeight: FontWeight.w600, color: Colors.white,
-                            ),
+                                fontSize: 15.sp, fontWeight: FontWeight.w600, color: Colors.white),
                           ),
                         ),
                       ),

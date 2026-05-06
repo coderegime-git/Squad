@@ -25,7 +25,6 @@ class ClubAdminBottomNav extends StatefulWidget {
 class _ClubAdminBottomNavState extends State<ClubAdminBottomNav> {
   int _currentIndex = 0;
 
-  // This function creates a NEW instance of the screen every time the tab changes
   Widget _buildScreen(int index) {
     switch (index) {
       case 0:
@@ -92,10 +91,10 @@ class _ClubAdminBottomNavState extends State<ClubAdminBottomNav> {
                 icon: Icon(Icons.group_rounded),
                 label: 'Groups',
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.notifications_rounded),
-                label: 'Notifications',
-              ),
+              // BottomNavigationBarItem(
+              //   icon: Icon(Icons.notifications_rounded),
+              //   label: 'Notifications',
+              // ),
             ],
           ),
         ),

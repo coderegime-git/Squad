@@ -12,6 +12,7 @@ import 'package:sports/utills/api_service.dart';
 import '../../config/colors.dart';
 import '../../model/member/get_guardian_for_members.dart';
 import '../../utills/shared_preference.dart';
+import '../Guardian/demo.dart';
 import '../splash.dart';
 
 class MemberNotificationsScreen extends StatefulWidget {
@@ -309,7 +310,7 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
   bool isLoad = true;
   final memberApiService = MemberApiService();
   List<GuardianDataMembers> _guardians = [];
-
+ bool _isLoadingGuardian = true;
   @override
   void initState() {
     getProfileData();
@@ -332,6 +333,7 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
       final result = await memberApiService.getMembersGuardian();
       setState(() {
         _guardians = result.data;
+        _isLoadingGuardian = false;
       });
     }catch(e){
     print(e);
@@ -402,6 +404,85 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
     //   }).toList(),
     // );
   }
+  Widget _displayGuardianMember(){
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("My Guardian",  style: GoogleFonts.montserrat(
+          fontSize: 13.sp,
+          fontWeight: FontWeight.w700,
+          color: Colors.black,
+        ),),
+        SizedBox(height: 10,),
+        SizedBox(
+          //height: 120.h,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 10,vertical: 10),
+            decoration: BoxDecoration(
+              //border: Border.all(color: Colors.green),
+              borderRadius: BorderRadius.circular(10)
+            ),
+            child: ListView.builder(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+                scrollDirection:Axis.vertical,itemCount: _guardians.length,itemBuilder: (context,index){
+              final guardian = _guardians[index];
+              return Container(
+                margin: EdgeInsets.symmetric(vertical: 4.h),
+                padding: EdgeInsets.symmetric(horizontal: 10.w,vertical: 10.h),
+                decoration: BoxDecoration(
+                  color: cardDark,
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(guardian.username,style: Theme.of(context).textTheme.bodySmall?.copyWith(color: accentGreen,fontSize: 15.sp),),
+                    SizedBox(height: 5.h,),
+                    Text(guardian.relation,style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),)
+                  ],
+                ),
+              );
+            }),
+          ),
+        ),
+
+      ],
+    );
+  }
+  Widget _buildNoChildrenWidget() {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 24.h),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(Icons.child_care_rounded,
+                size: 48.sp, color: Colors.grey.shade400),
+            12.height,
+            Text(
+              "No Guardians are added yet",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 14.sp,
+                color: Colors.grey.shade500,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            6.height,
+            Text(
+              "Please wait while your club admin links a Guardian to your account.",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 12.sp,
+                color: Colors.grey.shade400,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -631,26 +712,33 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                             ],
                           ),
                           20.height,
-                          if (memberProfileData.data != null) ...[
-                            _buildSectionTitle("Guardian"),
-                            12.height,
-                            _buildGuardianSection(memberProfileData),
-                            20.height,
-                          ],
-                          _buildSectionTitle("My Activities"),
-                          12.height,
-                          _ActivityTile(
-                            clubName: "XYZ FC",
-                            activity: "Football",
-                            group: "Under-14 A",
-                          ),
-                          _ActivityTile(
-                            clubName: "ABC Sports",
-                            activity: "Swimming",
-                            group: "Intermediate B",
-                          ),
-
-                          15.height,
+                          if (_isLoadingGuardian)
+                            const ChildSelectorShimmer()
+                          else if (_guardians.isEmpty)
+                            _buildNoChildrenWidget()
+                          else
+                            _displayGuardianMember(),
+                          // if (memberProfileData.data != null) ...[
+                          //   _buildSectionTitle("Guardian"),
+                          //   12.height,
+                          //   _buildGuardianSection(memberProfileData),
+                          //   20.height,
+                          // ],
+                          SizedBox(height: 10.h,),
+                          // _buildSectionTitle("My Activities"),
+                          // 12.height,
+                          // _ActivityTile(
+                          //   clubName: "XYZ FC",
+                          //   activity: "Football",
+                          //   group: "Under-14 A",
+                          // ),
+                          // _ActivityTile(
+                          //   clubName: "ABC Sports",
+                          //   activity: "Swimming",
+                          //   group: "Intermediate B",
+                          // ),
+                          //
+                          // 15.height,
 
                           if (memberProfileData.data != null &&
                               memberProfileData.data!.memberships != null) ...[
@@ -757,7 +845,6 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
   }
 }
 
-// New widget for individual membership card
 class _MembershipStatusCard extends StatelessWidget {
   final String clubName;
   final String activity;

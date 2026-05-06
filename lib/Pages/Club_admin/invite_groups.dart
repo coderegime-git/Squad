@@ -11,6 +11,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:nb_utils/nb_utils.dart';
 
 import '../../config/colors.dart';
+import '../../model/clubAdmin/get_direct_group_members.dart';
 import '../../model/clubAdmin/get_event_details.dart' as eventModel;
 import '../../model/clubAdmin/get_groups.dart';
 import '../../model/clubAdmin/getSubGroups.dart';
@@ -31,7 +32,7 @@ class _InviteGroupsScreenState extends State<InviteGroupsScreen> {
   final ClubApiService _apiService = ClubApiService();
   List<GroupData> _groups = [];
   bool _loading = true;
-  final Map<int, List<memberModel.Data>?> _groupMembers = {};
+  final Map<int, List<GetDirectGroupMembersData>?> _groupMembers = {};
   final Set<int> _loadingGroupMembers = {};
   final Map<int, Set<int>> _uncheckedGroupMembers = {};
   final Map<int, List<SubGroupData>?> _subGroups = {};
@@ -83,11 +84,10 @@ class _InviteGroupsScreenState extends State<InviteGroupsScreen> {
     if (_groupMembers.containsKey(groupId)) return;
     setState(() => _loadingGroupMembers.add(groupId));
     try {
-      final result = await _apiService.getGroupDirectMembers(groupId);
+      final result = await _apiService.getGroupDirectMembers1(groupId); // ✅ new method
       if (mounted) {
         setState(() {
-          _groupMembers[groupId] = result;
-          //_uncheckedGroupMembers[groupId] = {};
+          _groupMembers[groupId] = result.data; // ✅ .data now needed
           _checkedGroupMembers[groupId] = {};
         });
       }
@@ -558,27 +558,19 @@ class _InviteGroupsScreenState extends State<InviteGroupsScreen> {
                           dense: true,
                           value: isChecked,
                           activeColor: accentGreen,
-                          onChanged: (_) =>
-                              _toggleGroupMember(group.groupId, m.memberId),
-                          title: Text(m.username,
+                          onChanged: (_) => _toggleGroupMember(group.groupId, m.memberId),
+                          title: Text(m.name, // ✅ was m.username
                               style: GoogleFonts.poppins(
                                   fontSize: 12.sp,
-                                  color: isChecked
-                                      ? Colors.black87
-                                      : Colors.grey.shade500)),
+                                  color: isChecked ? Colors.black87 : Colors.grey.shade500)),
                           subtitle: Text(m.email,
-                              style: GoogleFonts.poppins(
-                                  fontSize: 10.sp, color: textSecondary)),
+                              style: GoogleFonts.poppins(fontSize: 10.sp, color: textSecondary)),
                           controlAffinity: ListTileControlAffinity.leading,
                           secondary: CircleAvatar(
                             radius: 14.r,
-                            backgroundColor:
-                            (isChecked ? accentGreen : Colors.grey)
-                                .withOpacity(0.12),
+                            backgroundColor: (isChecked ? accentGreen : Colors.grey).withOpacity(0.12),
                             child: Text(
-                                m.username.isNotEmpty
-                                    ? m.username[0].toUpperCase()
-                                    : '?',
+                                m.name.isNotEmpty ? m.name[0].toUpperCase() : '?', // ✅ was m.username
                                 style: GoogleFonts.montserrat(
                                     fontSize: 10.sp,
                                     fontWeight: FontWeight.w700,

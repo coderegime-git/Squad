@@ -310,7 +310,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                         ),
                       ),
                       12.height,
-                      _buildInfoRow("Created By", event.createdByUsername),
+                      _buildInfoRow("Created By", event.createdByUsername.toString()),
                       _buildInfoRow("Club", widget.clubName),
                       if (event.createdAt != null)
                         _buildInfoRow("Created At", _formatDateTime(event.createdAt!)),

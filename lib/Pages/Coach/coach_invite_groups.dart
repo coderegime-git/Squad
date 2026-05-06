@@ -14,6 +14,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:nb_utils/nb_utils.dart';
 
 import '../../config/colors.dart';
+import '../../model/clubAdmin/get_direct_group_members.dart';
 import '../../model/clubAdmin/get_event_details.dart' as eventModel;
 import '../../model/clubAdmin/get_groups.dart';
 import '../../model/clubAdmin/getSubGroups.dart';
@@ -38,8 +39,9 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
   List<GroupData> _groups = [];
   bool _loading = true;
   bool _submitting = false;
-  final Map<int, List<memberModel.Data>?> _groupMembers = {};
-  final Set<int> _loadingGroupMembers = {};
+  final Map<int, List<GetDirectGroupMembersData>?> _groupMembers = {}; // ✅ was List<memberModel.Data>?  final Set<int> _loadingGroupMembers = {};
+  final Set<int> _loadingGroupMembers = {}; // ✅ add this line
+
   final Map<int, Set<int>> _checkedGroupMembers = {};
   final Map<int, List<subMemberModel.SubMemData>?> _subMembers = {};
   final Set<int> _loadingSubMembers = {};
@@ -67,7 +69,7 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
       if (members == null) return;
       for (final m in members) {
         if (ids.contains(m.memberId)) {
-          details[m.memberId] = {'name': m.username, 'email': m.email};
+          details[m.memberId] = {'name': m.name, 'email': m.email}; // ✅ .name not .username
         }
       }
     });
@@ -84,7 +86,6 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
 
     return details.values.toList();
   }
-
   @override
   void initState() {
     super.initState();
@@ -118,10 +119,10 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
     if (_groupMembers.containsKey(groupId)) return;
     setState(() => _loadingGroupMembers.add(groupId));
     try {
-      final result = await _api.getGroupDirectMembers(groupId);
+      final result = await _api.getGroupDirectMembers1(groupId); // ✅ new method
       if (mounted) setState(() {
-        _groupMembers[groupId] = result;
-        _checkedGroupMembers[groupId] = {}; // starts empty = all unchecked
+        _groupMembers[groupId] = result.data; // ✅ .data now needed
+        _checkedGroupMembers[groupId] = {};
       });
     } catch (_) {
       if (mounted) setState(() => _groupMembers[groupId] = []);
@@ -129,7 +130,6 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
       if (mounted) setState(() => _loadingGroupMembers.remove(groupId));
     }
   }
-
   Future<void> _fetchSubGroupMembers(int subGroupId) async {
     if (_subMembers.containsKey(subGroupId)) return;
     setState(() => _loadingSubMembers.add(subGroupId));
@@ -755,7 +755,7 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
           value: isChecked,
           activeColor: accentGreen,
           onChanged: (_) => _toggleGroupMember(groupId, m.memberId),
-          title: Text(m.username,
+          title: Text(m.name, // ✅ was m.username
               style: GoogleFonts.poppins(
                   fontSize: 12.sp,
                   color: isChecked ? Colors.black87 : Colors.grey.shade500)),
@@ -766,15 +766,14 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
             radius: 14.r,
             backgroundColor: (isChecked ? accentGreen : Colors.grey).withOpacity(0.12),
             child: Text(
-              m.username.isNotEmpty ? m.username[0].toUpperCase() : '?',
+              m.name.isNotEmpty ? m.name[0].toUpperCase() : '?', // ✅ was m.username
               style: GoogleFonts.montserrat(
                   fontSize: 10.sp, fontWeight: FontWeight.w700,
                   color: isChecked ? accentGreen : Colors.grey),
             ),
           ),
         );
-      }),
-      Divider(height: 1, color: Colors.grey.shade200),
+      }),      Divider(height: 1, color: Colors.grey.shade200),
     ]);
   }
 
