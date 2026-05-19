@@ -1,5 +1,5 @@
 // screens/coach/coach_invite_groups_screen.dart
-// Coach: Invite Groups to an event
+// Coach: Invite Members to an event
 // - All members start UNCHECKED by default
 // - Tap checkbox to select individual members
 // - "Select All" / "Deselect All" button per group and subgroup
@@ -452,7 +452,7 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
           Expanded(child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Invite Groups',
+              Text('Invite Members',
                   style: GoogleFonts.montserrat(
                       color: Colors.white, fontSize: 20.sp,
                       fontWeight: FontWeight.bold)),

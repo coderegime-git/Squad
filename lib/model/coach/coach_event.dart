@@ -7,6 +7,7 @@ class CoachEventModel {
   final String startTime;
   final String endTime;
   final String location;
+  final EventLocation? geoLocation;
   final String eventType;
   final String status;
   final int clubId;
@@ -24,6 +25,7 @@ class CoachEventModel {
     required this.startTime,
     required this.endTime,
     required this.location,
+    this.geoLocation,
     required this.eventType,
     required this.status,
     required this.clubId,
@@ -52,6 +54,9 @@ class CoachEventModel {
       startTime: json['startTime'] as String? ?? '',
       endTime: json['endTime'] as String? ?? '',
       location: json['location'] as String? ?? '',
+      geoLocation: json['geoLocation'] is Map<String, dynamic>
+          ? EventLocation.fromJson(json['geoLocation'] as Map<String, dynamic>)
+          : null,
       eventType: json['eventType'] as String? ?? '',
       status: json['status'] as String? ?? '',
       clubId: json['clubId'] as int? ?? 0,
@@ -66,6 +71,7 @@ class CoachEventModel {
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
           : null,
+
     );
   }
 
@@ -77,6 +83,7 @@ class CoachEventModel {
       'startTime': startTime,
       'endTime': endTime,
       'location': location,
+      'geoLocation': geoLocation?.toJson(),
       'eventType': eventType,
       'status': status,
       'clubId': clubId,
@@ -95,6 +102,7 @@ class CoachEventModel {
       'startTime': startTime,
       'endTime': endTime,
       'location': location,
+      'geoLocation': geoLocation?.toJson(),
       'eventType': eventType,
       'status': status,
       'coachIds': coachIds,

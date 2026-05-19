@@ -113,10 +113,10 @@ class _ClubAdminAddCoachScreenState extends State<ClubAdminAddCoachScreen> {
                         'Add New Coach',
                         style: Theme.of(context).textTheme.headlineMedium
                             ?.copyWith(
-                              color: Colors.white,
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          color: Colors.white,
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -174,20 +174,20 @@ class _ClubAdminAddCoachScreenState extends State<ClubAdminAddCoachScreen> {
                                     child: Center(
                                       child: isDone
                                           ? const Icon(
-                                              Icons.check_rounded,
-                                              color: Colors.white,
-                                              size: 16,
-                                            )
+                                        Icons.check_rounded,
+                                        color: Colors.white,
+                                        size: 16,
+                                      )
                                           : Text(
-                                              '${i + 1}',
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 13.sp,
-                                                color: isActive
-                                                    ? Colors.white
-                                                    : textSecondary,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                            ),
+                                        '${i + 1}',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 13.sp,
+                                          color: isActive
+                                              ? Colors.white
+                                              : textSecondary,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                   8.height,
@@ -268,12 +268,12 @@ class _ClubAdminAddCoachScreenState extends State<ClubAdminAddCoachScreen> {
                               child: _isLoading
                                   ? AppUI.buttonSpinner()
                                   : Text(
-                                      'Add Coach',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 14.sp,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
+                                'Add Coach',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -324,21 +324,20 @@ class _ClubAdminAddCoachScreenState extends State<ClubAdminAddCoachScreen> {
       // if (data["certification"] == "") data.remove("certification");
       // if (data["bio"] == "") data.remove("bio");
 
-      bool success = await ClubApiService().AddCoach(data);
-
-      if (success) {
+      final String? errorMsg = await ClubApiService().AddCoach(data);
+      if (errorMsg == null) {
         if (mounted) {
           Navigator.pop(context);
           AppUI.success(context, 'Coach added successfully!');
         }
       } else {
         if (mounted) {
-          AppUI.error(context, 'Failed to add coach. Please try again.');
+          AppUI.error(context, errorMsg);
         }
       }
     } catch (e) {
       if (mounted) {
-        AppUI.error(context, 'Failed to add coach. Please try again.');
+        AppUI.error(context, '${e} Please try again.');
         print("${e.toString()}");
       }
     } finally {
@@ -354,7 +353,7 @@ class _ClubAdminAddCoachScreenState extends State<ClubAdminAddCoachScreen> {
         return _step1();
       case 1:
         return _step2();
-      /* case 2:
+    /* case 2:
         return _step3();*/
       default:
         return const SizedBox.shrink();

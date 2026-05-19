@@ -305,7 +305,12 @@ class _CoachCreateEventSheetState extends State<CoachCreateEventSheet> {
                   Text(widget.clubName,
                       style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary)),
               ]),
+              SizedBox(width: 120.w,),
+              GestureDetector(onTap:(){
+                Navigator.pop(context);
+              },child: Icon(Icons.close,color: Colors.red,))
             ]),
+
             20.height,
             loadingActivity? Center(child: CircularProgressIndicator(color: accentGreen)):_activityField(),
             6.height,

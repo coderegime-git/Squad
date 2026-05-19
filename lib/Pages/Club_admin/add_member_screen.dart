@@ -154,10 +154,10 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
                         'Add New Member',
                         style: Theme.of(context).textTheme.headlineMedium
                             ?.copyWith(
-                              color: Colors.white,
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          color: Colors.white,
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -311,14 +311,14 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
                               child: _isLoading
                                   ? AppUI.buttonSpinner()
                                   : Text(
-                                      /* _currentStep == _stepTitles.length - 1
+                                /* _currentStep == _stepTitles.length - 1
                                           ?*/
-                                      'Add Member',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 14.sp,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
+                                'Add Member',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -353,6 +353,8 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
         guardianIds.add(_selectedGuardian2!.guardianId);
       }
 
+      final double membershipAmount =
+          double.tryParse(_membershipAmountCtrl.text.trim()) ?? 0;
       Map<String, dynamic> data = {
         "username": _nameCtrl.text.trim(),
         "mobile": _phoneCtrl.text.trim(),
@@ -366,18 +368,18 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
         "gender": _selectedGender ?? "",
         "medicalNotes": _medicalNotesCtrl.text.trim(),
         "guardianIds": guardianIds,
-        "membershipAmount": 10,
+        "membershipAmount": membershipAmount,
       };
 
-      bool success = await ClubApiService().AddMember(data);
-      if (success) {
-        Navigator.pop(context);
+      final String? errorMsg = await ClubApiService().AddMember(data);
+      if (errorMsg == null) {
+        if (mounted) Navigator.pop(context);
         AppUI.success(context, 'Member added successfully!');
       } else {
-        AppUI.error(context, "Failed to add member, Please try again.");
+        AppUI.error(context, errorMsg);
       }
     } catch (e) {
-      AppUI.error(context, "Failed to add member, Please try again.");
+      AppUI.error(context, "${e}, Please try again.");
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -444,7 +446,7 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
           'Select Gender',
           _genders,
           _selectedGender,
-          (v) => setState(() => _selectedGender = v),
+              (v) => setState(() => _selectedGender = v),
         ),
         12.height,
         _formField(
@@ -503,48 +505,48 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
             : _guardians.isEmpty
             ? Text('No guardians available')
             : DropdownButtonFormField<GuardianData>(
-                value: _selectedGuardian,
-                hint: Text(
-                  'Choose guardian',
-                  style: GoogleFonts.poppins(
-                    fontSize: 13.sp,
-                    color: textSecondary,
-                  ),
-                ),
-                isExpanded: true,
-                items: _guardians
-                    .map(
-                      (g) => DropdownMenuItem(
-                        value: g,
-                        child: Text(
-                          g.username,
-                          style: GoogleFonts.poppins(fontSize: 13.sp),
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => setState(() => _selectedGuardian = v),
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 14.w,
-                    vertical: 12.h,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                    borderSide: BorderSide(color: accentGreen, width: 1.5),
-                  ),
-                ),
+          value: _selectedGuardian,
+          hint: Text(
+            'Choose guardian',
+            style: GoogleFonts.poppins(
+              fontSize: 13.sp,
+              color: textSecondary,
+            ),
+          ),
+          isExpanded: true,
+          items: _guardians
+              .map(
+                (g) => DropdownMenuItem(
+              value: g,
+              child: Text(
+                g.username,
+                style: GoogleFonts.poppins(fontSize: 13.sp),
               ),
+            ),
+          )
+              .toList(),
+          onChanged: (v) => setState(() => _selectedGuardian = v),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: 14.w,
+              vertical: 12.h,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: accentGreen, width: 1.5),
+            ),
+          ),
+        ),
         12.height,
         Text(
           'Second Guardian (optional)',
@@ -598,6 +600,16 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
             ),
           ),
         ),
+        12.height,
+        _formField(
+          'Membership Amount *',
+          _membershipAmountCtrl,
+          Icons.currency_rupee_rounded,
+          hint: '0.00',
+          keyboardType: TextInputType.numberWithOptions(
+            decimal: true,
+          ),
+        ),
       ],
     );
   }
@@ -645,15 +657,7 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
         20.height,
         _heading('Membership & Payment'),
         12.height,
-        _formField(
-          'Membership Amount *',
-          _membershipAmountCtrl,
-          Icons.currency_rupee_rounded,
-          hint: '0.00',
-          keyboardType: TextInputType.numberWithOptions(
-            decimal: true,
-          ),
-        ),
+
         12.height,
         _dateField(
           'Membership Start Date *',
@@ -985,12 +989,12 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
   }
 
   Widget _dropdownField(
-    String label,
-    String text,
-    List<String> items,
-    String? value,
-    void Function(String?) onChange,
-  ) {
+      String label,
+      String text,
+      List<String> items,
+      String? value,
+      void Function(String?) onChange,
+      ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1007,13 +1011,13 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
           value: value,
           onChanged: onChange,
           hint:  Text(
-                 text,
-                 style: GoogleFonts.poppins(
-                   fontSize: 12.sp,
-                   color: textSecondary.withOpacity(0.5),
-                //fontWeight: FontWeight.w500,
-    ),
-    ),
+            text,
+            style: GoogleFonts.poppins(
+              fontSize: 12.sp,
+              color: textSecondary.withOpacity(0.5),
+              //fontWeight: FontWeight.w500,
+            ),
+          ),
           validator: (v) => v == null ? 'Required' : null,
           style: GoogleFonts.poppins(fontSize: 13.sp, color: Colors.black),
           decoration: InputDecoration(
@@ -1039,16 +1043,16 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
           items: items
               .map(
                 (i) => DropdownMenuItem(
-                  value: i,
-                  child: Text(
-                    i,
-                    style: GoogleFonts.poppins(
-                      fontSize: 13.sp,
-                      color: Colors.black,
-                    ),
-                  ),
+              value: i,
+              child: Text(
+                i,
+                style: GoogleFonts.poppins(
+                  fontSize: 13.sp,
+                  color: Colors.black,
                 ),
-              )
+              ),
+            ),
+          )
               .toList(),
         ),
       ],

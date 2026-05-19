@@ -31,7 +31,9 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
   final _formKey = GlobalKey<FormState>();
 
   final _nameController = TextEditingController();
-  final _locationController = TextEditingController();
+  final _placeNameController = TextEditingController();
+  final _addressController   = TextEditingController();
+  final _mapLinkController   = TextEditingController();
 
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _startTime = const TimeOfDay(hour: 9, minute: 0);
@@ -78,7 +80,9 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
   void _populateFields() {
     final event = widget.event!;
     _nameController.text = event.eventName;
-    _locationController.text = event.location;
+    _placeNameController.text = event.geoLocation?.placeName ?? '';
+    _addressController.text   = event.geoLocation?.address   ?? '';
+    _mapLinkController.text   = event.geoLocation?.mapLink   ?? '';
     _selectedDate = event.eventDate;
     _selectedType = (event.eventType == 'TOURNAMENT') ? 'TOURNAMENT' : 'SINGLE_EVENT';
     _isTournament = _selectedType == 'TOURNAMENT';
@@ -211,7 +215,15 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-
+    if (_placeNameController.text.trim().isEmpty) { AppUI.error(context, 'Enter place name'); return; }
+    if (_addressController.text.trim().isEmpty)   { AppUI.error(context, 'Enter address');    return; }
+    final mapLink = _mapLinkController.text.trim();
+    if (mapLink.isEmpty) { AppUI.error(context, 'Enter map link'); return; }
+    final uri = Uri.tryParse(mapLink);
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+      AppUI.error(context, 'Enter a valid map link URL');
+      return;
+    }
     setState(() => _loading = true);
     try {
       final data = {
@@ -219,7 +231,11 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
         "eventDate": _formatDateForApi(_selectedDate),
         "startTime": _formatTimeForApi(_startTime),
         "endTime": _formatTimeForApi(_endTime),
-        "location": _locationController.text.trim(), // plain string
+        "location": {
+          "placeName": _placeNameController.text.trim(),
+          "address":   _addressController.text.trim(),
+          "mapLink":   mapLink,
+        },// plain string
         "eventType": _selectedType,
         "status": "SCHEDULED",
         "coachIds": [],
@@ -266,7 +282,11 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
   @override
   void dispose() {
     _nameController.dispose();
-    _locationController.dispose();
+    _nameController.dispose();
+    _placeNameController.dispose();
+    _addressController.dispose();
+    _mapLinkController.dispose();
+    _descriptionController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
@@ -374,12 +394,30 @@ class _CoachCreateEditEventSheetState extends State<CoachCreateEditEventSheet> {
                       16.height,
 
                       // Location
-                      _buildLabel("Location / Google Maps Link *"),
+                      _buildLabel("Place Name *"),
                       8.height,
                       TextFormField(
-                        controller: _locationController,
+                        controller: _placeNameController,
                         validator: (v) => (v == null || v.trim().isEmpty) ? "Required" : null,
-                        decoration: _inputDecor("Address or paste a Google Maps link"),
+                        decoration: _inputDecor("e.g. City Sports Arena"),
+                        style: GoogleFonts.poppins(fontSize: 14.sp),
+                      ),
+                      16.height,
+                      _buildLabel("Address *"),
+                      8.height,
+                      TextFormField(
+                        controller: _addressController,
+                        validator: (v) => (v == null || v.trim().isEmpty) ? "Required" : null,
+                        decoration: _inputDecor("e.g. 123 Main Street, Chennai"),
+                        style: GoogleFonts.poppins(fontSize: 14.sp),
+                      ),
+                      16.height,
+                      _buildLabel("Map Link *"),
+                      8.height,
+                      TextFormField(
+                        controller: _mapLinkController,
+                        validator: (v) => (v == null || v.trim().isEmpty) ? "Required" : null,
+                        decoration: _inputDecor("https://maps.google.com/..."),
                         style: GoogleFonts.poppins(fontSize: 14.sp),
                       ),
                       16.height,

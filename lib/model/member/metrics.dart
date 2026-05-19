@@ -141,22 +141,30 @@ class CoachFeedback {
     required this.comment,
     required this.date,
     required this.coachName,
+    this.rating,
+    this.eventName,
   });
   late final String comment;
   late final String date;
   late final String coachName;
+  late final int? rating;
+  late final String? eventName;
 
-  CoachFeedback.fromJson(Map<String, dynamic> json){
-    comment = json['comment']??"";
-    date = json['date']??"";
-    coachName = json['coachName']??"";
+  CoachFeedback.fromJson(Map<String, dynamic> json) {
+    comment = json['note'] ?? json['comment'] ?? "";
+    date = json['createdAt'] ?? json['date'] ?? "";
+    coachName = json['coachName'] ?? "";
+    rating = json['rating'];
+    eventName = json['eventName'];
   }
 
   Map<String, dynamic> toJson() {
     final _data = <String, dynamic>{};
-    _data['comment'] = comment;
-    _data['date'] = date;
+    _data['note'] = comment;
+    _data['createdAt'] = date;
     _data['coachName'] = coachName;
+    _data['rating'] = rating;
+    _data['eventName'] = eventName;
     return _data;
   }
 }

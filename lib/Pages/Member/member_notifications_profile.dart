@@ -1,8 +1,11 @@
 // screens/member/member_notifications.dart
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:nb_utils/nb_utils.dart';
 import 'package:sports/Pages/Member/edit_profile.dart';
 import 'package:sports/model/clubAdmin/get_guardians.dart';
@@ -297,7 +300,6 @@ class _NotificationTile extends StatelessWidget {
   }
 }
 
-// screens/member/member_profile.dart
 class MemberProfileScreen extends StatefulWidget {
   const MemberProfileScreen({super.key});
 
@@ -309,8 +311,11 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
   late MemberProfileData memberProfileData;
   bool isLoad = true;
   final memberApiService = MemberApiService();
+  final uploadImageService = UploadProfileImageService();
   List<GuardianDataMembers> _guardians = [];
  bool _isLoadingGuardian = true;
+
+  File? _profileImage;
   @override
   void initState() {
     getProfileData();
@@ -322,7 +327,6 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
     setState(() {
       isLoad = true;
     });
-
     memberProfileData = await memberApiService.getMemberProfile();
     setState(() {
       isLoad = false;
@@ -449,6 +453,66 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
 
       ],
     );
+  }
+  Future<void> _pickAndUploadImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (picked == null) return;
+
+    final file = File(picked.path);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("Upload Profile Photo",
+                  style: GoogleFonts.montserrat(fontWeight: FontWeight.w700, fontSize: 16)),
+              const SizedBox(height: 16),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(file, height: 160, width: 260, fit: BoxFit.cover),
+              ),
+              const SizedBox(height: 12),
+              Text("Do you want to set this as your profile photo?",
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(fontSize: 13, color: textSecondary)),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: Text("Cancel", style: GoogleFonts.poppins(color: textSecondary)),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: Text("Upload", style: GoogleFonts.poppins(
+                        color: accentGreen, fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    toast("Uploading...");
+    final url = await uploadImageService.uploadProfileImage(file);
+    if (url != null) {
+      setState(() => _profileImage = file);
+      toast("Profile photo updated!");
+      getProfileData();
+    } else {
+      toast("Upload failed. Please try again.");
+    }
   }
   Widget _buildNoChildrenWidget() {
     return Padding(
@@ -665,50 +729,37 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                                 child: CircleAvatar(
                                   radius: 50.r,
                                   backgroundColor: Colors.grey.shade200,
-                                  child: Text(
-                                    memberProfileData
-                                                .data
-                                                ?.user
-                                                ?.username
-                                                ?.isNotEmpty ==
-                                            true
-                                        ? memberProfileData
-                                              .data!
-                                              .user!
-                                              .username![0]
-                                        : 'U', // default value
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.headlineLarge,
+                                  backgroundImage: _profileImage != null
+                                      ? FileImage(_profileImage!) as ImageProvider
+                                      : (memberProfileData.data?.profile?.profileImageUrl != null &&
+                                      memberProfileData.data!.profile!.profileImageUrl!.isNotEmpty)
+                                      ? NetworkImage(memberProfileData.data!.profile!.profileImageUrl!)
+                                      : null,
+                                  child: (_profileImage == null &&
+                                      (memberProfileData.data?.profile?.profileImageUrl == null ||
+                                          memberProfileData.data!.profile!.profileImageUrl!.isEmpty))
+                                      ? Text(
+                                    memberProfileData.data?.user?.username?.isNotEmpty == true
+                                        ? memberProfileData.data!.user!.username![0].toUpperCase()
+                                        : 'U',
+                                    style: Theme.of(context).textTheme.headlineLarge,
+                                  )
+                                      : null,
+                                ),
+                              ),
+                              Positioned(
+                                top: 20.h,
+                                left: 80,
+                                right: 0,
+                                child: GestureDetector(
+                                  onTap: () => _pickAndUploadImage(),
+                                  child: CircleAvatar(
+                                    radius: 12.r,
+                                    backgroundColor: Colors.grey.shade800,
+                                    child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
                                   ),
                                 ),
                               ),
-                              // Positioned(
-                              //   top: 20.h,
-                              //   left: 80,
-                              //   right: 0,
-                              //   child: GestureDetector(
-                              //     onTap: () async {
-                              //       await Navigator.push(
-                              //         context,
-                              //         MaterialPageRoute(
-                              //           builder: (context) => EditProfilePage(
-                              //             memberProfileData: memberProfileData,
-                              //           ),
-                              //         ),
-                              //       );
-                              //       memberProfileData = await memberApiService
-                              //           .getMemberProfile();
-                              //       if (!mounted) return;
-                              //       setState(() {});
-                              //     },
-                              //     child: CircleAvatar(
-                              //       radius: 12.r,
-                              //       backgroundColor: Colors.grey.shade800,
-                              //       child: Icon(Icons.edit, size: 14),
-                              //     ),
-                              //   ),
-                              // ),
                             ],
                           ),
                           20.height,
@@ -754,7 +805,7 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                                   activity: member.role ?? "",
                                   validUntil: member.membershipEndDate ?? "",
                                   status: member.status ?? "",
-                                  statusColor: accentGreen,
+                                  statusColor: accentGreen, startDate: member.membershipStartDate??"",
                                 );
                               },
                             ),
@@ -848,13 +899,15 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
 class _MembershipStatusCard extends StatelessWidget {
   final String clubName;
   final String activity;
-  final String validUntil;
-  final String status;
+  final String startDate;        // ← add
+  final String? validUntil;      // ← nullable
+  final String? status;          // ← nullable
   final Color statusColor;
 
   const _MembershipStatusCard({
     required this.clubName,
     required this.activity,
+    required this.startDate,     // ← add
     required this.validUntil,
     required this.status,
     required this.statusColor,
@@ -862,6 +915,9 @@ class _MembershipStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool hasStatus = status != null && status!.isNotEmpty;
+    final bool hasEndDate = validUntil != null && validUntil!.isNotEmpty;
+
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
@@ -894,28 +950,23 @@ class _MembershipStatusCard extends StatelessWidget {
                         color: textSecondary,
                       ),
                     ),
-                    4.height,
-                    Text(
-                      "Active",
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: accentGreen,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
                   ],
                 ),
               ),
+              // Status badge — grey "Active" fallback if null
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.18),
+                  color: hasStatus
+                      ? statusColor.withOpacity(0.18)
+                      : Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(30.r),
                 ),
                 child: Text(
-                  status,
+                  hasStatus ? status! : "Active",
                   style: GoogleFonts.poppins(
                     fontSize: 13.sp,
-                    color: statusColor,
+                    color: hasStatus ? statusColor : Colors.grey.shade600,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -923,87 +974,50 @@ class _MembershipStatusCard extends StatelessWidget {
             ],
           ),
           16.height,
+          // Start date — always visible
           Row(
             children: [
-              Icon(
-                Icons.calendar_today_rounded,
-                size: 16.sp,
-                color: textSecondary,
-              ),
+              Icon(Icons.calendar_today_rounded, size: 16.sp, color: textSecondary),
               8.width,
               Text(
-                "Valid until $validUntil",
-                style: GoogleFonts.poppins(
-                  fontSize: 13.sp,
-                  color: textSecondary,
-                ),
+                "Member since $startDate",
+                style: GoogleFonts.poppins(fontSize: 13.sp, color: textSecondary),
               ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActivityTile extends StatelessWidget {
-  final String clubName;
-  final String activity;
-  final String group;
-
-  const _ActivityTile({
-    required this.clubName,
-    required this.activity,
-    required this.group,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 10.h),
-      padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: cardDark,
-        borderRadius: BorderRadius.circular(16.r),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 24.r,
-            backgroundColor: accentGreen.withOpacity(0.2),
-            child: Icon(
-              Icons.sports_soccer_rounded,
-              color: accentGreen,
-              size: 24.sp,
-            ),
-          ),
-          12.width,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          // End date — only if not null, else show "No expiry"
+          if (hasEndDate) ...[
+            8.height,
+            Row(
               children: [
+                Icon(Icons.event_rounded, size: 16.sp, color: textSecondary),
+                8.width,
                 Text(
-                  clubName,
-                  style: GoogleFonts.poppins(
-                    fontSize: 13.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  "$activity • $group",
-                  style: GoogleFonts.poppins(
-                    fontSize: 11.sp,
-                    color: textSecondary,
-                  ),
+                  "Valid until $validUntil",
+                  style: GoogleFonts.poppins(fontSize: 13.sp, color: textSecondary),
                 ),
               ],
             ),
-          ),
+          ] else ...[
+            8.height,
+            Row(
+              children: [
+                Icon(Icons.all_inclusive_rounded, size: 16.sp, color: accentGreen),
+                8.width,
+                Text(
+                  "No expiry date",
+                  style: GoogleFonts.poppins(fontSize: 13.sp, color: accentGreen),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 }
+
+
 
 class _SettingsTile extends StatelessWidget {
   final IconData icon;
@@ -1063,6 +1077,64 @@ class _SettingsTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+class _ActivityTile extends StatelessWidget {
+  final String clubName;
+  final String activity;
+  final String group;
+
+  const _ActivityTile({
+    required this.clubName,
+    required this.activity,
+    required this.group,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 10.h),
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: cardDark,
+        borderRadius: BorderRadius.circular(16.r),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 24.r,
+            backgroundColor: accentGreen.withOpacity(0.2),
+            child: Icon(
+              Icons.sports_soccer_rounded,
+              color: accentGreen,
+              size: 24.sp,
+            ),
+          ),
+          12.width,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  clubName,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  "$activity • $group",
+                  style: GoogleFonts.poppins(
+                    fontSize: 11.sp,
+                    color: textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

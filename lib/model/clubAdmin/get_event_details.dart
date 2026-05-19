@@ -53,6 +53,36 @@ class EventCoach {
     'coachName': coachName,
   };
 }
+class EventLocation {
+  final String? address;
+  final String? placeName;
+  final String? mapLink;
+
+  EventLocation({this.address, this.placeName, this.mapLink});
+
+  factory EventLocation.fromJson(Map<String, dynamic> json) => EventLocation(
+    address: json['address'],
+    placeName: json['placeName'],
+    mapLink: json['mapLink'],
+  );
+
+  Map<String, dynamic> toJson() => {
+    'address': address,
+    'placeName': placeName,
+    'mapLink': mapLink,
+  };
+
+  bool get hasData =>
+      (placeName?.isNotEmpty ?? false) ||
+          (address?.isNotEmpty ?? false) ||
+          (mapLink?.isNotEmpty ?? false);
+
+  String get displayLabel {
+    if (placeName?.isNotEmpty ?? false) return placeName!;
+    if (address?.isNotEmpty ?? false) return address!;
+    return '';
+  }
+}
 
 class Data {
   Data({
@@ -61,6 +91,7 @@ class Data {
     required this.eventDate,
     required this.startTime,
     required this.endTime,
+    this.geoLocation,
     required this.location,
     required this.eventType,
     required this.status,
@@ -69,7 +100,7 @@ class Data {
     this.activityName,
     required this.createdByUserId,
     required this.createdByUsername,
-    required this.coaches,       // ← now List<EventCoach>
+    required this.coaches,
     required this.createdAt,
   });
 
@@ -78,62 +109,66 @@ class Data {
   late final String eventDate;
   late final String startTime;
   late final String endTime;
-  late final String location;
+  late final EventLocation? geoLocation;
+  late final String location; // keeps old plain string from API
   late final String eventType;
   late final String status;
   late final int clubId;
-  late final int? activityId;       // nullable — API sends null
-  late final String? activityName;  // nullable
+  late final int? activityId;
+  late final String? activityName;
   late final int createdByUserId;
   late final String createdByUsername;
-  late final List<EventCoach> coaches; // ← replaces coachIds
+  late final List<EventCoach> coaches;
   late final String createdAt;
 
-  // Convenience getter so existing coachIds references keep working
   List<int> get coachIds => coaches.map((c) => c.coachId).toList();
 
-  // Convenience getter for display
   String get coachNamesDisplay =>
       coaches.isEmpty ? 'No coaches' : coaches.map((c) => c.coachName).join(', ');
 
   Data.fromJson(Map<String, dynamic> json) {
-    eventId = json['eventId'] ?? 0;
-    eventName = json['eventName'] ?? '';
-    eventDate = json['eventDate'] ?? '';
-    startTime = json['startTime'] ?? '';
-    endTime = json['endTime'] ?? '';
-    location = json['location'] ?? '';
-    eventType = json['eventType'] ?? '';
-    status = json['status'] ?? '';
-    clubId = json['clubId'] ?? 0;
-    activityId = json['activityId'];       // keep null as-is
-    activityName = json['activityName'];   // keep null as-is
-    createdByUserId = json['createdByUserId'] ?? 0;
+    eventId          = json['eventId'] ?? 0;
+    eventName        = json['eventName'] ?? '';
+    eventDate        = json['eventDate'] ?? '';
+    startTime        = json['startTime'] ?? '';
+    endTime          = json['endTime'] ?? '';
+    location         = json['location'] ?? '';
+    eventType        = json['eventType'] ?? '';
+    status           = json['status'] ?? '';
+    clubId           = json['clubId'] ?? 0;
+    activityId       = json['activityId'];
+    activityName     = json['activityName'];
+    createdByUserId  = json['createdByUserId'] ?? 0;
     createdByUsername = json['createdByUsername'] ?? '';
-    // Parse coaches array from API
     coaches = (json['coaches'] as List<dynamic>? ?? [])
         .map((c) => EventCoach.fromJson(c as Map<String, dynamic>))
         .toList();
     createdAt = json['createdAt'] ?? '';
+    final rawGeo = json['geoLocation'];
+    geoLocation = rawGeo is Map<String, dynamic>
+        ? EventLocation.fromJson(rawGeo)
+        : null;
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'eventId': eventId,
-      'eventName': eventName,
-      'eventDate': eventDate,
-      'startTime': startTime,
-      'endTime': endTime,
-      'location': location,
-      'eventType': eventType,
-      'status': status,
-      'clubId': clubId,
-      'activityId': activityId,
-      'activityName': activityName,
-      'createdByUserId': createdByUserId,
+      'eventId':           eventId,
+      'eventName':         eventName,
+      'eventDate':         eventDate,
+      'startTime':         startTime,
+      'endTime':           endTime,
+      'location':          location,
+      'geoLocation':       geoLocation?.toJson(),
+      'eventType':         eventType,
+      'status':            status,
+      'clubId':            clubId,
+      'activityId':        activityId,
+      'activityName':      activityName,
+      'createdByUserId':   createdByUserId,
       'createdByUsername': createdByUsername,
-      'coaches': coaches.map((c) => c.toJson()).toList(),
-      'createdAt': createdAt,
+      'coaches':           coaches.map((c) => c.toJson()).toList(),
+      'createdAt':         createdAt,
     };
   }
+
 }

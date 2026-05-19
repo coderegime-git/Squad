@@ -314,16 +314,18 @@ class _CoachEventCard extends StatelessWidget {
                 style: GoogleFonts.poppins(fontSize: 12.sp, color: Colors.grey.shade600)),
           ]),
           6.height,
-          Row(children: [
-            Icon(Icons.location_on_outlined, size: 13.sp, color: Colors.grey),
-            6.width,
-            Expanded(
-              child: Text(event.location,
-                  style: GoogleFonts.poppins(
-                      fontSize: 12.sp, color: Colors.grey.shade600),
-                  overflow: TextOverflow.ellipsis),
-            ),
-          ]),
+          if (event.geoLocation != null && event.geoLocation!.hasData)
+            Row(children: [
+              Icon(Icons.location_on_outlined, size: 13.sp, color: Colors.grey),
+              6.width,
+              Expanded(
+                child: Text(
+                  event.geoLocation!.displayLabel,
+                  style: GoogleFonts.poppins(fontSize: 12.sp, color: Colors.grey.shade600),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ]),
           6.height,
           Row(children: [
             Icon(Icons.group_rounded, size: 13.sp, color: Colors.grey),

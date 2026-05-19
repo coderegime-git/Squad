@@ -36,6 +36,10 @@ class _GuardianMetricsScreenState extends State<GuardianMetricsScreen>
 
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
+  bool _showAllAttendance = false;
+  bool _showAllFeedback = false;
+  bool _showAllEvents = false;
+  bool _showAllActivities = false;
 
   @override
   void initState() {
@@ -53,7 +57,29 @@ class _GuardianMetricsScreenState extends State<GuardianMetricsScreen>
     _fadeCtrl.dispose();
     super.dispose();
   }
-
+  Widget _sectionHeaderToggle(String title, int total, bool expanded, VoidCallback onToggle) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 14.sp)),
+        if (total > 2)
+          GestureDetector(
+            onTap: onToggle,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  expanded ? 'See less' : 'See all ($total)',
+                  style: TextStyle(fontSize: 12.sp, color: AppColors.green, fontWeight: FontWeight.w600),
+                ),
+                Icon(expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                    color: AppColors.green, size: 16.sp),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
   // ── Load guardian's children ──────────────────────────────────────
   Future<void> _loadChildren() async {
     setState(() => _isLoadingChildren = true);
@@ -328,52 +354,56 @@ class _GuardianMetricsScreenState extends State<GuardianMetricsScreen>
           16.height,
 
           // ── Activities ─────────────────────────────────────────────
+          // ── Activities ─────────────────────────────────────────────
           if (data.activities.isNotEmpty) ...[
-            _sectionTitle("Activities"),
+            _sectionHeaderToggle("Activities", data.activities.length, _showAllActivities,
+                    () => setState(() => _showAllActivities = !_showAllActivities)),
             8.height,
             Wrap(
               spacing: 8.w,
               runSpacing: 8.h,
-              children: data.activities
+              children: (_showAllActivities ? data.activities : data.activities.take(4).toList())
                   .map((act) => _ActivityChip(activity: act))
                   .toList(),
             ),
             20.height,
           ],
 
-          // ── Upcoming Events ────────────────────────────────────────
+// ── Upcoming Events ────────────────────────────────────────
           if (data.upcomingEvents.isNotEmpty) ...[
-            _sectionTitle("Upcoming Events"),
+            _sectionHeaderToggle("Upcoming Events", data.upcomingEvents.length, _showAllEvents,
+                    () => setState(() => _showAllEvents = !_showAllEvents)),
             8.height,
-            ...data.upcomingEvents
-                .map((e) => _UpcomingEventCard(event: e))
-                .toList(),
+            ...(_showAllEvents ? data.upcomingEvents : data.upcomingEvents.take(2).toList())
+                .map((e) => _UpcomingEventCard(event: e)),
             12.height,
           ],
 
-          // ── Attendance History ─────────────────────────────────────
+// ── Attendance History ─────────────────────────────────────
           if (data.attendanceHistory.isNotEmpty) ...[
-            _sectionTitle("Attendance History"),
+            _sectionHeaderToggle("Attendance History", data.attendanceHistory.length, _showAllAttendance,
+                    () => setState(() => _showAllAttendance = !_showAllAttendance)),
             8.height,
             Card(
               elevation: 2,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16.r)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
               child: Padding(
                 padding: EdgeInsets.all(16.w),
                 child: Column(
-                  children: data.attendanceHistory
+                  children: (_showAllAttendance
+                      ? data.attendanceHistory
+                      : data.attendanceHistory.take(3).toList())
                       .asMap()
                       .entries
                       .map((entry) {
-                    final isLast =
-                        entry.key == data.attendanceHistory.length - 1;
+                    final list = _showAllAttendance
+                        ? data.attendanceHistory
+                        : data.attendanceHistory.take(3).toList();
+                    final isLast = entry.key == list.length - 1;
                     return Column(
                       children: [
                         _AttendanceRow(record: entry.value),
-                        if (!isLast)
-                          Divider(
-                              height: 20.h, color: Colors.grey.shade200),
+                        if (!isLast) Divider(height: 20.h, color: Colors.grey.shade200),
                       ],
                     );
                   }).toList(),
@@ -383,13 +413,13 @@ class _GuardianMetricsScreenState extends State<GuardianMetricsScreen>
             20.height,
           ],
 
-          // ── Coach Feedback ─────────────────────────────────────────
+// ── Coach Feedback ─────────────────────────────────────────
           if (data.coachFeedback.isNotEmpty) ...[
-            _sectionTitle("Coach Feedback"),
+            _sectionHeaderToggle("Coach Feedback", data.coachFeedback.length, _showAllFeedback,
+                    () => setState(() => _showAllFeedback = !_showAllFeedback)),
             8.height,
-            ...data.coachFeedback
-                .map((f) => _CoachFeedbackCard(feedback: f))
-                .toList(),
+            ...(_showAllFeedback ? data.coachFeedback : data.coachFeedback.take(2).toList())
+                .map((f) => _CoachFeedbackCard(feedback: f)),
           ],
         ],
       ),
@@ -756,7 +786,6 @@ class _AttendanceRow extends StatelessWidget {
   }
 }
 
-// ── Coach Feedback Card ───────────────────────────────────────────────────────
 class _CoachFeedbackCard extends StatelessWidget {
   final CoachFeedback feedback;
 
@@ -802,6 +831,15 @@ class _CoachFeedbackCard extends StatelessWidget {
                         color: Colors.black,
                       ),
                     ),
+                    if (feedback.eventName != null &&
+                        feedback.eventName!.isNotEmpty)
+                      Text(
+                        feedback.eventName!,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11.sp,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
                     Text(
                       formattedDate,
                       style: GoogleFonts.poppins(
@@ -810,8 +848,22 @@ class _CoachFeedbackCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(Icons.format_quote_rounded,
-                  color: accentGreen.withOpacity(0.4), size: 20.sp),
+              // ── Star Rating ──
+              if (feedback.rating != null)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(5, (i) {
+                    return Icon(
+                      i < feedback.rating!
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                      color: i < feedback.rating!
+                          ? Colors.amber
+                          : Colors.grey.shade300,
+                      size: 16.sp,
+                    );
+                  }),
+                ),
             ],
           ),
           12.height,

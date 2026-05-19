@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:nb_utils/nb_utils.dart';
+import 'package:open_filex/open_filex.dart';
 import '../../config/app_theme.dart';
 import '../../config/colors.dart';
 import '../../model/member/metrics.dart';
+import '../../model/member_document.dart';
 import '../../utills/api_service.dart'; // same import as dashboard
 
 class MemberMetricsScreen extends StatefulWidget {
@@ -16,13 +18,164 @@ class MemberMetricsScreen extends StatefulWidget {
 class _MemberMetricsScreenState extends State<MemberMetricsScreen> {
   final MemberApiService _api = MemberApiService();
   late Future<GetMetrics> _metricsFuture;
+  final DocumentApiService _docApi = DocumentApiService();
+  List<MemberDocument> _documents = [];
+  bool _isLoadingDocs = false;
+  final Map<int, bool> _downloadingDocs = {};
+  bool _showAllAttendance = false;
+  bool _showAllFeedback = false;
+  bool _showAllEvents = false;
+  bool _showAllActivities = false;
+  int? _memberId;
+
 
   @override
   void initState() {
     super.initState();
     _metricsFuture = _api.getMetrics();
+    _loadDocuments();
+  }
+  Future<void> _loadDocuments() async {
+    setState(() => _isLoadingDocs = true);
+    try {
+      // No memberId needed — API derives from JWT for members
+      final docs = await _docApi.getDocuments1(memberId: 0);
+      setState(() {
+        _documents = docs;
+        _isLoadingDocs = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingDocs = false);
+    }
+  }
+  Widget _buildPerformanceReports() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Performance Reports',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 14.sp),
+        ),
+        SizedBox(height: 12.h),
+        if (_isLoadingDocs)
+          const Center(child: CircularProgressIndicator())
+        else if (_documents.isEmpty)
+          Card(
+            child: Padding(
+              padding: EdgeInsets.all(16.w),
+              child: Row(
+                children: [
+                  Icon(Icons.folder_open_rounded, color: Colors.grey.shade400),
+                  SizedBox(width: 12.w),
+                  Text(
+                    'No reports uploaded yet',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          ...(_documents.map((doc) => _buildDocCard(doc))),
+      ],
+    );
+  }
+  Widget _sectionHeaderToggle(String title, int total, bool expanded, VoidCallback onToggle) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 14.sp)),
+        if (total > 2)
+          GestureDetector(
+            onTap: onToggle,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  expanded ? 'See less' : 'See all ($total)',
+                  style: TextStyle(fontSize: 12.sp, color: AppColors.green, fontWeight: FontWeight.w600),
+                ),
+                Icon(expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                    color: AppColors.green, size: 16.sp),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+  Widget _buildDocCard(MemberDocument doc) {
+    final isDownloading = _downloadingDocs[doc.documentId] == true;
+    return Card(
+      margin: EdgeInsets.only(bottom: 10.h),
+      child: ListTile(
+        leading: Container(
+          padding: EdgeInsets.all(8.w),
+          decoration: BoxDecoration(
+            color: Colors.deepPurple.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8.r),
+          ),
+          child: Icon(Icons.picture_as_pdf, color: Colors.deepPurple, size: 24.sp),
+        ),
+        title: Text(
+          doc.description.isNotEmpty ? doc.description : doc.fileName,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            fontSize: 13.sp,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          '${doc.formattedDate}  •  ${doc.formattedSize}',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11.sp),
+        ),
+        trailing: GestureDetector(
+          onTap: isDownloading ? null : () => _openDoc(doc),
+          child: Container(
+            padding: EdgeInsets.all(8.w),
+            decoration: BoxDecoration(
+              color: isDownloading
+                  ? Colors.grey.shade200
+                  : AppColors.green.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: isDownloading
+                ? SizedBox(
+              width: 18.w,
+              height: 18.w,
+              child: CircularProgressIndicator(
+                strokeWidth: 2, color: AppColors.green,
+              ),
+            )
+                : Icon(Icons.download_rounded, color: AppColors.green, size: 18.sp),
+          ),
+        ),
+      ),
+    );
   }
 
+  Future<void> _openDoc(MemberDocument doc) async {
+    setState(() => _downloadingDocs[doc.documentId] = true);
+    try {
+      final path = await _docApi.downloadDocument(
+        documentId: doc.documentId,
+        memberId: doc.memberId,
+        fileName: doc.fileName,
+      );
+      setState(() => _downloadingDocs[doc.documentId] = false);
+      if (path == null) { ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Download failed'))); return; }
+      final result = await OpenFilex.open(path);
+      if (result.type != ResultType.done) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No PDF viewer installed')));
+      }
+    } catch (e) {
+      setState(() => _downloadingDocs[doc.documentId] = false);
+    }
+  }
   void _refresh() {
     setState(() {
       _metricsFuture = _api.getMetrics();
@@ -181,67 +334,45 @@ class _MemberMetricsScreenState extends State<MemberMetricsScreen> {
         SizedBox(height: 24.h),
 
         // ── Activities ────────────────────────────────────────────────────────
+        // ── Activities ─────────────────────────────────────────────
         if (data.activities.isNotEmpty) ...[
-          Text(
-            'Activities',
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontSize: 14.sp),
-          ),
+          _sectionHeaderToggle('Activities', data.activities.length, _showAllActivities,
+                  () => setState(() => _showAllActivities = !_showAllActivities)),
           SizedBox(height: 12.h),
           Wrap(
             spacing: 8.w,
             runSpacing: 8.h,
-            children: data.activities
-                .map(
-                  (a) => Chip(
-                label: Text(
-                  _toTitle(a),
+            children: (_showAllActivities ? data.activities : data.activities.take(4).toList())
+                .map((a) => Chip(
+              label: Text(_toTitle(a),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.green,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                backgroundColor: AppColors.green.withOpacity(0.10),
-                side: BorderSide.none,
-                avatar: const Icon(Icons.sports_soccer,
-                    color: AppColors.green, size: 16),
-              ),
-            )
+                      color: AppColors.green, fontWeight: FontWeight.w600)),
+              backgroundColor: AppColors.green.withOpacity(0.10),
+              side: BorderSide.none,
+              avatar: const Icon(Icons.sports_soccer, color: AppColors.green, size: 16),
+            ))
                 .toList(),
           ),
           SizedBox(height: 24.h),
         ],
 
-        // ── Upcoming Events ───────────────────────────────────────────────────
+// ── Upcoming Events ────────────────────────────────────────
         if (data.upcomingEvents.isNotEmpty) ...[
-          Text(
-            'Upcoming Events',
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontSize: 14.sp),
-          ),
+          _sectionHeaderToggle('Upcoming Events', data.upcomingEvents.length, _showAllEvents,
+                  () => setState(() => _showAllEvents = !_showAllEvents)),
           SizedBox(height: 12.h),
-          ...data.upcomingEvents.map(
-                (e) => Padding(
-              padding: EdgeInsets.only(bottom: 12.h),
-              child: _buildUpcomingEventCard(context, e),
-            ),
-          ),
+          ...(_showAllEvents ? data.upcomingEvents : data.upcomingEvents.take(2).toList())
+              .map((e) => Padding(
+            padding: EdgeInsets.only(bottom: 12.h),
+            child: _buildUpcomingEventCard(context, e),
+          )),
           SizedBox(height: 12.h),
         ],
 
-        // ── Attendance History ────────────────────────────────────────────────
+// ── Attendance History ─────────────────────────────────────
         if (data.attendanceHistory.isNotEmpty) ...[
-          Text(
-            'Attendance History',
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontSize: 14.sp),
-          ),
+          _sectionHeaderToggle('Attendance History', data.attendanceHistory.length, _showAllAttendance,
+                  () => setState(() => _showAllAttendance = !_showAllAttendance)),
           SizedBox(height: 12.h),
           Card(
             elevation: 2,
@@ -252,27 +383,21 @@ class _MemberMetricsScreenState extends State<MemberMetricsScreen> {
                 children: [
                   Text(
                     'Last ${data.attendanceHistory.length} Session${data.attendanceHistory.length == 1 ? '' : 's'}',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontSize: 14.sp),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 14.sp),
                   ),
                   SizedBox(height: 16.h),
-                  ...data.attendanceHistory.asMap().entries.map((entry) {
-                    final idx = entry.key;
-                    final h = entry.value;
-                    return Column(
-                      children: [
-                        if (idx != 0) SizedBox(height: 12.h),
-                        _buildAttendanceRow(
-                          context,
-                          date: _formatDate(h.eventDate),
-                          session: h.eventName,
-                          status: _toTitle(h.status),
-                        ),
-                      ],
-                    );
-                  }),
+                  ...(_showAllAttendance ? data.attendanceHistory : data.attendanceHistory.take(3).toList())
+                      .asMap()
+                      .entries
+                      .map((entry) => Column(
+                    children: [
+                      if (entry.key != 0) SizedBox(height: 12.h),
+                      _buildAttendanceRow(context,
+                          date: _formatDate(entry.value.eventDate),
+                          session: entry.value.eventName,
+                          status: _toTitle(entry.value.status)),
+                    ],
+                  )),
                 ],
               ),
             ),
@@ -280,37 +405,34 @@ class _MemberMetricsScreenState extends State<MemberMetricsScreen> {
           SizedBox(height: 24.h),
         ],
 
-        // ── Coach Feedback ────────────────────────────────────────────────────
+// ── Coach Feedback ─────────────────────────────────────────
         if (data.coachFeedback.isNotEmpty) ...[
-          Text(
-            'Coach Feedback',
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontSize: 14.sp),
-          ),
+          _sectionHeaderToggle('Coach Feedback', data.coachFeedback.length, _showAllFeedback,
+                  () => setState(() => _showAllFeedback = !_showAllFeedback)),
           SizedBox(height: 12.h),
-          ...data.coachFeedback.asMap().entries.map((entry) {
-            final idx = entry.key;
-            final f = entry.value;
-            return Padding(
-              padding: EdgeInsets.only(
-                  bottom: idx < data.coachFeedback.length - 1 ? 12.h : 0),
-              child: _buildFeedbackCard(
-                context,
-                coach: f.coachName,
-                date: _formatDate(f.date),
-                feedback: f.comment,
-              ),
-            );
-          }),
-          SizedBox(height: 100.h),
+          ...(_showAllFeedback ? data.coachFeedback : data.coachFeedback.take(2).toList())
+              .asMap()
+              .entries
+              .map((entry) => Padding(
+            padding: EdgeInsets.only(
+                bottom: entry.key < data.coachFeedback.length - 1 ? 12.h : 0),
+            child: _buildFeedbackCard(context,
+                coach: entry.value.coachName,
+                date: _formatDate(entry.value.date),
+                feedback: entry.value.comment,
+                rating: entry.value.rating,
+                eventName: entry.value.eventName),
+          )),
+          //SizedBox(height: 100.h),
         ],
+        SizedBox(height: 24.h),
+        _buildPerformanceReports(),
+        //SizedBox(height: 100.h),
       ],
     );
   }
 
-  // ── Card builders ─────────────────────────────────────────────────────────
+
 
   Widget _buildStatCard(
       BuildContext context, {
@@ -501,6 +623,8 @@ class _MemberMetricsScreenState extends State<MemberMetricsScreen> {
         required String coach,
         required String date,
         required String feedback,
+        int? rating,
+        String? eventName,
       }) {
     return Card(
       child: Padding(
@@ -516,11 +640,36 @@ class _MemberMetricsScreenState extends State<MemberMetricsScreen> {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    coach.isNotEmpty ? coach : 'Coach',
-                    style: Theme.of(context).textTheme.titleMedium,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        coach.isNotEmpty ? coach : 'Coach',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      if (eventName != null && eventName.isNotEmpty)
+                        Text(
+                          eventName,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.black,
+                            fontSize: 11.sp,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
+                // ── Star Rating ──
+                if (rating != null)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(5, (i) {
+                      return Icon(
+                        i < rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                        color: i < rating ? Colors.amber : Colors.grey.shade300,
+                        size: 16.sp,
+                      );
+                    }),
+                  ),
               ],
             ),
             const SizedBox(height: 12),

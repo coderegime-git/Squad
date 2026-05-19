@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:nb_utils/nb_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/colors.dart';
 import '../../model/get_clubs_data.dart';
@@ -27,7 +28,8 @@ class _MemberDashboardState extends State<MemberDashboard> {
   late Future<GetMemberEvents> _pendingFuture;
   late Future<GetMemberDashboard> _dashboardFuture;
   late Future<GetClubsData?> _clubsFallbackFuture;
-
+  bool _showAllPending = false;
+  bool _showAllUpcoming = false;
   String get _username => SharedPreferenceHelper.getUsername() ?? 'Member';
 
   int get _clubId {
@@ -47,7 +49,29 @@ class _MemberDashboardState extends State<MemberDashboard> {
     _clubsFallbackFuture = _fetchClubsFallback();
     _upcomingEventsFuture = _fetchUpcomingEvents(); // ← add
   }
-
+  Widget _sectionHeaderToggle(String title, int total, bool expanded, VoidCallback onToggle) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(title, style: GoogleFonts.montserrat(fontSize: 14.sp, fontWeight: FontWeight.w700, color: Colors.grey.shade700)),
+        if (total > 2)
+          GestureDetector(
+            onTap: onToggle,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  expanded ? 'See less' : 'See all ($total)',
+                  style: GoogleFonts.poppins(fontSize: 12.sp, color: accentGreen, fontWeight: FontWeight.w600),
+                ),
+                Icon(expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                    color: accentGreen, size: 16.sp),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
   Future<GetClubsData?> _fetchClubsFallback() async {
     try {
       return await _api.getClubsDataForMember();
@@ -96,6 +120,7 @@ class _MemberDashboardState extends State<MemberDashboard> {
       }
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -282,63 +307,26 @@ class _MemberDashboardState extends State<MemberDashboard> {
                             24.height,
                           ],
 
-                          // ── Pending Events ──────────────────────
                           FutureBuilder<GetMemberEvents>(
                             future: _pendingFuture,
                             builder: (context, pendSnap) {
-                              if (pendSnap.connectionState ==
-                                  ConnectionState.waiting) {
+                              if (pendSnap.connectionState == ConnectionState.waiting) {
                                 return _shimmerBox(height: 100.h);
                               }
                               final pending = pendSnap.data?.data ?? [];
                               if (pending.isEmpty) return const SizedBox();
-
                               return Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        "Pending Events",
-                                        style: GoogleFonts.montserrat(
-                                          fontSize: 14.sp,
-                                          fontWeight: FontWeight.w700,
-                                          color: Colors.grey.shade700,
-                                        ),
-                                      ),
-                                      8.width,
-                                      Container(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 8.w,
-                                          vertical: 2.h,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color:
-                                          accentOrange.withOpacity(0.15),
-                                          borderRadius:
-                                          BorderRadius.circular(20.r),
-                                        ),
-                                        child: Text(
-                                          '${pending.length}',
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 11.sp,
-                                            color: accentOrange,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                  _sectionHeaderToggle("Pending Events", pending.length, _showAllPending,
+                                          () => setState(() => _showAllPending = !_showAllPending)),
                                   12.height,
-                                  ...pending.map(
-                                        (e) => _PendingEventCard(
-                                      event: e,
-                                      onAccept: () =>
-                                          _updateStatus(e.eventId, 'ACCEPT'),
-                                      onDecline: () =>
-                                          _updateStatus(e.eventId, 'REJECT'),
-                                    ),
-                                  ),
+                                  ...(_showAllPending ? pending : pending.take(2).toList()).map((e) =>
+                                      _PendingEventCard(
+                                        event: e,
+                                        onAccept: () => _updateStatus(e.eventId, 'ACCEPT'),
+                                        onDecline: () => _updateStatus(e.eventId, 'REJECT'),
+                                      )),
                                   16.height,
                                 ],
                               );
@@ -346,54 +334,45 @@ class _MemberDashboardState extends State<MemberDashboard> {
                           ),
 
                           // ── All Events ──────────────────────────
-                          Text(
-                            "All Events",
-                            style: GoogleFonts.montserrat(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.grey.shade700,
-                            ),
-                          ),
-                          16.height,
-
-                          if (isLoading) ...[
-                            _shimmerBox(height: 80.h),
-                            8.height,
-                            _shimmerBox(height: 80.h),
-                          ] else if (dashEvents.isEmpty)
-                            Container(
-                              padding: EdgeInsets.all(20.w),
-                              decoration: BoxDecoration(
-                                color: cardDark,
-                                borderRadius: BorderRadius.circular(16.r),
-                                border:
-                                Border.all(color: Colors.grey.shade300),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  "No events yet",
-                                  style: GoogleFonts.poppins(
-                                    color: textSecondary,
-                                  ),
-                                ),
-                              ),
-                            )
-                          else
-                            Column(
-                              children: dashEvents
-                                  .map((e) => _DashboardEventCard(event: e))
-                                  .toList(),
-                            ),
+                          // Text(
+                          //   "All Events",
+                          //   style: GoogleFonts.montserrat(
+                          //     fontSize: 14.sp,
+                          //     fontWeight: FontWeight.w700,
+                          //     color: Colors.grey.shade700,
+                          //   ),
+                          // ),
+                          // 16.height,
+                          //
+                          // if (isLoading) ...[
+                          //   _shimmerBox(height: 80.h),
+                          //   8.height,
+                          //   _shimmerBox(height: 80.h),
+                          // ] else if (dashEvents.isEmpty)
+                          //   Container(
+                          //     padding: EdgeInsets.all(20.w),
+                          //     decoration: BoxDecoration(
+                          //       color: cardDark,
+                          //       borderRadius: BorderRadius.circular(16.r),
+                          //       border:
+                          //       Border.all(color: Colors.grey.shade300),
+                          //     ),
+                          //     child: Center(
+                          //       child: Text(
+                          //         "No events yet",
+                          //         style: GoogleFonts.poppins(
+                          //           color: textSecondary,
+                          //         ),
+                          //       ),
+                          //     ),
+                          //   )
+                          // else
+                          //   Column(
+                          //     children: dashEvents
+                          //         .map((e) => _DashboardEventCard(event: e))
+                          //         .toList(),
+                          //   ),
 // ── Upcoming Events ─────────────────────────────
-                          Text(
-                            "Upcoming Events",
-                            style: GoogleFonts.montserrat(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.grey.shade700,
-                            ),
-                          ),
-                          8.height,
                           FutureBuilder<List<MemberEventData>>(
                             future: _upcomingEventsFuture,
                             builder: (context, snap) {
@@ -401,29 +380,34 @@ class _MemberDashboardState extends State<MemberDashboard> {
                                 return _shimmerBox(height: 80.h);
                               }
                               final events = snap.data ?? [];
-                              if (events.isEmpty) {
-                                return Container(
-                                  padding: EdgeInsets.all(20.w),
-                                  decoration: BoxDecoration(
-                                    color: cardDark,
-                                    borderRadius: BorderRadius.circular(16.r),
-                                    border: Border.all(color: Colors.grey.shade300),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      "No upcoming events",
-                                      style: GoogleFonts.poppins(color: textSecondary),
-                                    ),
-                                  ),
-                                );
-                              }
                               return Column(
-                                children: events.map((e) => _MemberUpcomingEventCard(event: e)).toList(),
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _sectionHeaderToggle("Upcoming Events", events.length, _showAllUpcoming,
+                                          () => setState(() => _showAllUpcoming = !_showAllUpcoming)),
+                                  8.height,
+                                  if (events.isEmpty)
+                                    Container(
+                                      padding: EdgeInsets.all(20.w),
+                                      decoration: BoxDecoration(
+                                        color: cardDark,
+                                        borderRadius: BorderRadius.circular(16.r),
+                                        border: Border.all(color: Colors.grey.shade300),
+                                      ),
+                                      child: Center(
+                                        child: Text("No upcoming events",
+                                            style: GoogleFonts.poppins(color: textSecondary)),
+                                      ),
+                                    )
+                                  else
+                                    ...(_showAllUpcoming ? events : events.take(2).toList())
+                                        .map((e) => _MemberUpcomingEventCard(event: e)),
+                                  16.height,
+                                ],
                               );
                             },
                           ),
                           16.height,
-                          100.height,
                         ],
                       ),
                     ),
@@ -745,21 +729,18 @@ class _PendingEventCardState extends State<_PendingEventCard> {
           8.height,
           Row(
             children: [
-              Icon(Icons.sports_rounded, size: 13.sp, color: textSecondary),
-              5.width,
-              Text(widget.event.teamName,
-                  style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary)),
-              16.width,
               Icon(Icons.calendar_today_rounded, size: 13.sp, color: textSecondary),
               5.width,
               Text(widget.event.eventDate,
                   style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary)),
             ],
           ),
+          8.height,
+          buildEventExtraInfo(widget.event),   // ← ADD THIS
+          12.height,
           12.height,
           Row(
             children: [
-              // ── Accept button with loader ──
               Expanded(
                 child: ElevatedButton(
                   onPressed: (_isAccepting || _isDeclined)
@@ -868,23 +849,23 @@ class _MemberUpcomingEventCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: color.withOpacity(0.3), width: 1.2),
       ),
-      child: Row(
+      child: Column(                          // ← Column root, not Row
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 42.r,
-            height: 42.r,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10.r),
-            ),
-            child: Icon(Icons.event_rounded, color: color, size: 20.sp),
-          ),
-          12.width,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
+          Row(
+            children: [
+              Container(
+                width: 42.r,
+                height: 42.r,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Icon(Icons.event_rounded, color: color, size: 20.sp),
+              ),
+              12.width,
+              Expanded(
+                child: Text(
                   event.eventName,
                   style: GoogleFonts.montserrat(
                     fontSize: 13.sp,
@@ -892,50 +873,126 @@ class _MemberUpcomingEventCard extends StatelessWidget {
                     color: Colors.black,
                   ),
                 ),
-                4.height,
-                Row(
-                  children: [
-                    Icon(Icons.calendar_today_rounded,
-                        size: 11.sp, color: textSecondary),
-                    4.width,
-                    Text(
-                      event.eventDate,
-                      style: GoogleFonts.poppins(
-                          fontSize: 11.sp, color: textSecondary),
-                    ),
-                    12.width,
-                    Icon(Icons.sports_rounded,
-                        size: 11.sp, color: textSecondary),
-                    4.width,
-                    Expanded(
-                      child: Text(
-                        event.teamName,
-                        style: GoogleFonts.poppins(
-                            fontSize: 11.sp, color: textSecondary),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+                child: Text(
+                  event.status,
+                  style: GoogleFonts.poppins(
+                      fontSize: 10.sp,
+                      color: color,
+                      fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+          8.height,
+          Row(
+            children: [
+              Icon(Icons.calendar_today_rounded, size: 11.sp, color: textSecondary),
+              4.width,
+              Text(
+                event.eventDate,
+                style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary),
+              ),
+              if (event.teamName.isNotEmpty) ...[
+                12.width,
+                Icon(Icons.sports_rounded, size: 11.sp, color: textSecondary),
+                4.width,
+                Expanded(
+                  child: Text(
+                    event.teamName,
+                    style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
-            ),
+            ],
           ),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(20.r),
-            ),
-            child: Text(
-              event.status,
-              style: GoogleFonts.poppins(
-                  fontSize: 10.sp,
-                  color: color,
-                  fontWeight: FontWeight.w700),
-            ),
-          ),
+          buildEventExtraInfo(event, spTop: 6),   // ← now has full width, no clipping
         ],
       ),
     );
   }
+}
+Widget buildEventExtraInfo(MemberEventData event, {double? spTop}) {
+  final coaches = event.assignedCoaches;
+  final loc = event.location;
+  final hasCoaches = coaches.isNotEmpty;
+  final hasAddress = loc != null && (loc.placeName?.isNotEmpty == true || loc.address?.isNotEmpty == true);
+  final hasMapLink = loc != null && loc.mapLink?.isNotEmpty == true;
+
+  if (!hasCoaches && !hasAddress && !hasMapLink) return const SizedBox();
+
+  return Padding(
+    padding: EdgeInsets.only(top: spTop ?? 8.h),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (hasCoaches) ...[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.person_rounded, size: 13.sp, color: textSecondary),
+              4.width,
+              Expanded(
+                child: Text(
+                  'Coach: ${coaches.map((c) => c.coachName).join(', ')}',
+                  style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary),
+                ),
+              ),
+            ],
+          ),
+          4.height,
+        ],
+        if (hasAddress) ...[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.place_rounded, size: 13.sp, color: textSecondary),
+              4.width,
+              Expanded(
+                child: Text(
+                  [loc!.placeName, loc.address]
+                      .where((s) => s != null && s.isNotEmpty)
+                      .join(' – '),
+                  style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          4.height,
+        ],
+        if (hasMapLink)
+          GestureDetector(
+            onTap: () => _launchUrl(loc!.mapLink!),
+            child: Row(
+              children: [
+                Icon(Icons.map_rounded, size: 13.sp, color: accentGreen),
+                4.width,
+                Text(
+                  'Open in Maps',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11.sp,
+                    color: accentGreen,
+                    fontWeight: FontWeight.w600,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    ),
+  );
+}
+Future<void> _launchUrl(String url) async {
+  final uri = Uri.parse(url);
+  if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
 }

@@ -47,6 +47,11 @@ class Data {
     required this.gender,
     required this.medicalNotes,
     required this.createdAt,
+    this.membershipStartDate,
+    this.membershipEndDate,
+    this.membershipAmount,
+    this.membershipStatus,
+    this.membershipId,
   });
   late final int memberId;
   late final int userId;
@@ -56,16 +61,26 @@ class Data {
   late final String gender;
   late final String medicalNotes;
   late final String createdAt;
+  late final String? membershipStartDate;
+  late final String? membershipEndDate;
+  late final int? membershipAmount;
+  late final String? membershipStatus;
+  late final int? membershipId;
 
-  Data.fromJson(Map<String, dynamic> json){
-    memberId = json['memberId']??0;
-    userId = json['userId']??0;
-    dob = json["dob"];
-    username = json['username']??"";
-    email = json['email']??"";
-    gender = json['gender']??"";
-    medicalNotes = json['medicalNotes']??"";
-    createdAt = json['createdAt']??"";
+  Data.fromJson(Map<String, dynamic> json) {
+    memberId = json['memberId'] ?? 0;
+    userId = json['userId'] ?? 0;
+    dob = json['dob'];
+    username = json['username'] ?? '';
+    email = json['email'] ?? '';
+    gender = json['gender'] ?? '';
+    medicalNotes = json['medicalNotes'] ?? '';
+    createdAt = json['createdAt'] ?? '';
+    membershipStartDate = json['membershipStartDate'];
+    membershipEndDate = json['membershipEndDate'];
+    membershipAmount = json['membershipAmount'];
+    membershipStatus = json['membershipStatus'];
+    membershipId = json['membershipId'];
   }
 
   Map<String, dynamic> toJson() {
@@ -78,6 +93,11 @@ class Data {
     _data['gender'] = gender;
     _data['medicalNotes'] = medicalNotes;
     _data['createdAt'] = createdAt;
+    _data['membershipStartDate'] = membershipStartDate;
+    _data['membershipEndDate'] = membershipEndDate;
+    _data['membershipAmount'] = membershipAmount;
+    _data['membershipStatus'] = membershipStatus;
+    _data['membershipId'] = membershipId;
     return _data;
   }
 }

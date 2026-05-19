@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nb_utils/nb_utils.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/colors.dart';
 import '../../model/member/get_events_members.dart';
@@ -312,46 +313,46 @@ class _ScheduleEventCard extends StatelessWidget {
   }
 
   @override
+
   Widget build(BuildContext context) {
     final color = _statusColor(event.status);
-    return GestureDetector(
-      onTap: () => _openDetail(context),
-      child: Container(
-        margin: EdgeInsets.only(bottom: 12.h),
-        padding: EdgeInsets.all(16.w),
-        decoration: BoxDecoration(
-          color: cardDark,
-          borderRadius: BorderRadius.circular(20.r),
-          border: Border.all(color: color.withOpacity(0.3), width: 1.5),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    event.eventName,
-                    style: GoogleFonts.montserrat(
-                      fontSize: 15.sp, fontWeight: FontWeight.w700, color: Colors.black,
-                    ),
+    return Container(
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: cardDark,
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  event.eventName,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 15.sp, fontWeight: FontWeight.w700, color: Colors.black,
                   ),
                 ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20.r),
-                  ),
-                  child: Text(
-                    event.status,
-                    style: GoogleFonts.poppins(fontSize: 11.sp, color: color, fontWeight: FontWeight.w600),
-                  ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(20.r),
                 ),
-              ],
-            ),
-            8.height,
+                child: Text(
+                  event.status,
+                  style: GoogleFonts.poppins(fontSize: 11.sp, color: color, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          8.height,
+          if (event.teamName.isNotEmpty)
             Row(
               children: [
                 Icon(Icons.sports_rounded, size: 14.sp, color: textSecondary),
@@ -359,47 +360,47 @@ class _ScheduleEventCard extends StatelessWidget {
                 Text(event.teamName, style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary)),
               ],
             ),
-            4.height,
+          4.height,
+          Row(
+            children: [
+              Icon(Icons.calendar_today_rounded, size: 14.sp, color: textSecondary),
+              6.width,
+              Text(event.eventDate, style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary)),
+            ],
+          ),
+          buildEventExtraInfo(event),   // coaches + location + map link
+          if (event.status == 'PENDING' && onAccept != null && onDecline != null) ...[
+            16.height,
             Row(
               children: [
-                Icon(Icons.calendar_today_rounded, size: 14.sp, color: textSecondary),
-                6.width,
-                Text(event.eventDate, style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary)),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: onAccept,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accentGreen,
+                      padding: EdgeInsets.symmetric(vertical: 12.h),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                      elevation: 0,
+                    ),
+                    child: Text("Accept", style: GoogleFonts.poppins(fontSize: 13.sp, fontWeight: FontWeight.w600, color: Colors.white)),
+                  ),
+                ),
+                12.width,
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onDecline,
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.red, width: 1.5),
+                      padding: EdgeInsets.symmetric(vertical: 12.h),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                    ),
+                    child: Text("Decline", style: GoogleFonts.poppins(fontSize: 13.sp, fontWeight: FontWeight.w600, color: Colors.red)),
+                  ),
+                ),
               ],
             ),
-            if (event.status == 'PENDING' && onAccept != null && onDecline != null) ...[
-              16.height,
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: onAccept,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: accentGreen,
-                        padding: EdgeInsets.symmetric(vertical: 12.h),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-                        elevation: 0,
-                      ),
-                      child: Text("Accept", style: GoogleFonts.poppins(fontSize: 13.sp, fontWeight: FontWeight.w600, color: Colors.white)),
-                    ),
-                  ),
-                  12.width,
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: onDecline,
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.red, width: 1.5),
-                        padding: EdgeInsets.symmetric(vertical: 12.h),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-                      ),
-                      child: Text("Decline", style: GoogleFonts.poppins(fontSize: 13.sp, fontWeight: FontWeight.w600, color: Colors.red)),
-                    ),
-                  ),
-                ],
-              ),
-            ],
           ],
-        ),
+        ],
       ),
     );
   }
@@ -508,4 +509,81 @@ class _DetailRow extends StatelessWidget {
       ],
     );
   }
+}
+Widget buildEventExtraInfo(MemberEventData event, {double? spTop}) {
+  final coaches = event.assignedCoaches;
+  final loc = event.location;
+  final hasCoaches = coaches.isNotEmpty;
+  final hasAddress = loc != null && (loc.placeName?.isNotEmpty == true || loc.address?.isNotEmpty == true);
+  final hasMapLink = loc != null && loc.mapLink?.isNotEmpty == true;
+
+  if (!hasCoaches && !hasAddress && !hasMapLink) return const SizedBox();
+
+  return Padding(
+    padding: EdgeInsets.only(top: spTop ?? 8.h),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (hasCoaches) ...[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.person_rounded, size: 13.sp, color: textSecondary),
+              4.width,
+              Expanded(
+                child: Text(
+                  'Coach: ${coaches.map((c) => c.coachName).join(', ')}',
+                  style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary),
+                ),
+              ),
+            ],
+          ),
+          4.height,
+        ],
+        if (hasAddress) ...[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.place_rounded, size: 13.sp, color: textSecondary),
+              4.width,
+              Expanded(
+                child: Text(
+                  [loc!.placeName, loc.address]
+                      .where((s) => s != null && s.isNotEmpty)
+                      .join(' – '),
+                  style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          4.height,
+        ],
+        if (hasMapLink)
+          GestureDetector(
+            onTap: () => _launchUrl(loc!.mapLink!),
+            child: Row(
+              children: [
+                Icon(Icons.map_rounded, size: 13.sp, color: accentGreen),
+                4.width,
+                Text(
+                  'Open in Maps',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11.sp,
+                    color: accentGreen,
+                    fontWeight: FontWeight.w600,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    ),
+  );
+}
+Future<void> _launchUrl(String url) async {
+  final uri = Uri.parse(url);
+  if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
 }

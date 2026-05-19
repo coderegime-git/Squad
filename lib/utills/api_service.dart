@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:sports/model/clubAdmin/activities_data.dart';
 import 'package:sports/model/clubAdmin/add_guardians.dart';
 import 'package:sports/model/clubAdmin/dashboard_data.dart';
@@ -14,6 +15,7 @@ import 'package:sports/model/guardian/get_your_member.dart';
 import 'package:sports/model/member/metrics.dart';
 import 'package:sports/model/member/profile_data.dart';
 import 'package:sports/utills/shared_preference.dart';
+import '../model/clubAdmin/club_settings.dart';
 import '../model/clubAdmin/get_direct_group_members.dart';
 import '../model/clubAdmin/get_members.dart' as membersModel;
 
@@ -31,12 +33,14 @@ import '../model/coach/club_member.dart';
 import '../model/coach/coach_dashboard_data.dart';
 import '../model/coach/coach_event.dart';
 import '../model/coach/event_performance_data.dart';
+import '../model/coach/get_assigned_groups.dart';
 import '../model/get_clubs_data.dart';
 import '../model/guardian/getGuardianEvents.dart';
 import '../model/guardian/get_member_dashboard_data.dart';
 import '../model/member/get_events_members.dart';
 import '../model/member/get_guardian_for_members.dart';
 import '../model/member/get_member_dashboard.dart';
+import '../model/member_document.dart';
 import '../model/notification_data.dart';
 
 // late GlobalKey<NavigatorState> _navigatorKey;
@@ -88,7 +92,7 @@ class ApiBaseHelper {
         final msg = response.data is Map
             ? response.data['message']?.toString() ?? 'Bad request'
             : 'Bad request';
-      // throw BadRequestException(response.data.toString());
+    // throw BadRequestException(response.data.toString());
       case 401:
         throw UnAuthorisedException(response.data.toString());
       case 403:
@@ -194,14 +198,12 @@ class ApiBaseHelper {
   }
 
   Future<dynamic> post(String url, [dynamic body]) async {
-    String params = "";
-
-    var apiUrl = _baseUrl + url + params;
+    var apiUrl = _baseUrl + url;
     var headers = getMainHeaders();
     dynamic responseJson;
-    print("apiUrl ${apiUrl}");
-    print("");
-    print("headers ${headers}");
+    print("apiUrl $apiUrl");
+    print("headers $headers");
+
     try {
       final response = await dio.post(
         apiUrl,
@@ -210,70 +212,31 @@ class ApiBaseHelper {
             ? Options(headers: headers)
             : null,
       );
-      print("responseresponse ${response}");
+      print("response $response");
       responseJson = _returnResponse(response);
     } catch (e) {
-      print("sfsdsdsd");
-      print(e.toString());
-      if (e.toString().contains("401")) {
-        clearUserData();
-        throw Exception('token_expired');
-      } else if (e.toString().contains("403")) {
-        /* _showToast(
-          _navigatorKey.currentContext!,
-          "your_account_is_disabled_Please_contact_admin".tr(),
-        );*/
-        clearUserData();
-        throw Exception('user_inactive');
-      } else if (e.toString().contains("500")) {
-        /* _showToast(
-          _navigatorKey.currentContext!,
-          "your_account_is_disabled_Please_contact_admin".tr(),
-        );*/
-        print(e.toString().contains("500"));
-        print("50000");
-        ScaffoldMessenger.of(
-          _navigatorKey.currentContext!,
-        ).showSnackBar(SnackBar(content: Text("Server error")));
-        throw Exception('user_inactive');
-      } else if (e.toString().contains("400")) {
-        if (e is DioException) {
-          final responseData = e.response?.data;
-          print('❌ 400 Bad Request');
-          print('   Status : ${e.response?.statusCode}');
-          print('   URL    : ${e.requestOptions.uri}');
-          print('   Body   : $responseData');
-
-          // Extract the message if it's a Map
-          final message = responseData is Map
-              ? responseData['message']?.toString() ?? 'Bad request'
-              : responseData?.toString() ?? 'Bad request';
-
-          throw Exception(message); // ← throws the actual server message
+      print("POST error: $e");
+      if (e is DioException) {
+        final status = e.response?.statusCode;
+        if (status == 401) {
+          clearUserData();
+          throw Exception('token_expired');
+        } else if (status == 403) {
+          clearUserData();
+          throw Exception('user_inactive');
+        } else if (status == 500) {
+          throw Exception('server_error');
+        } else if (status == 400 || status == 409) {
+          final serverMessage =
+              e.response?.data?['message']?.toString() ?? 'Bad request';
+          throw Exception(serverMessage);
         }
-        throw Exception('Bad request');
-        /* _showToast(
-          _navigatorKey.currentContext!,
-          "your_account_is_disabled_Please_contact_admin".tr(),
-        );*/
-        print(e.toString().contains("500"));
-        print("50000");
-        _showToast(
-          _navigatorKey.currentContext!,
-          "your_account_is_disabled_Please_contact_admin",
-        );
-        ScaffoldMessenger.of(
-          _navigatorKey.currentContext!,
-        ).showSnackBar(SnackBar(content: Text("Failed to load")));
-        throw Exception('user_inactive');
-      } else {
-        throw Exception(e.toString());
       }
+      throw Exception(e.toString());
     }
 
     return responseJson;
   }
-
   Future<dynamic> put(String url, [dynamic body]) async {
     var headers = getMainHeaders();
     dynamic responseJson;
@@ -464,24 +427,16 @@ class ClubApiService {
     }
   }
 
-  Future<bool> AddMember(Map<String, dynamic> data) async {
+  Future<String?> AddMember(Map<String, dynamic> data) async {
     try {
-      print("Add member data: $data");
-
       final fullResponse = await _helper.post("api/members", data);
-      final jsonResponse = jsonEncode(fullResponse);
-
-      print("jsonResponse  ${jsonResponse}");
       if (fullResponse['success'] == true) {
-        print("Add member successful → ${fullResponse['message']}");
-        return true;
+        return null; // null = success
       } else {
-        print("Body says failure: ${fullResponse['message']}");
-        return false;
+        return fullResponse['message']?.toString() ?? 'Failed to add member';
       }
     } catch (e) {
-      print("Login failed: $e");
-      return false;
+      return e.toString().replaceFirst('Exception: ', '');
     }
   }
 
@@ -493,45 +448,32 @@ class ClubApiService {
     return DashboardData.fromJson(fullResponse["data"]);
   }
 
-  Future<bool> AddGuardian(Map<String, dynamic> data) async {
+  Future<String?> AddGuardian(Map<String, dynamic> data) async {
     try {
-      print("Add guardian data : $data");
-
+      print("Add guardian data: $data");
       final fullResponse = await _helper.post("api/guardians", data);
-      final jsonResponse = jsonEncode(fullResponse);
-
-      print("jsonResponse  ${jsonResponse}");
       if (fullResponse['success'] == true) {
         print("Add Guardian → ${fullResponse['message']}");
-        return true;
+        return null; // null = success
       } else {
-        print("Body says failure: ${fullResponse['message']}");
-        return false;
+        return fullResponse['message']?.toString() ?? 'Failed to add guardian';
       }
     } catch (e) {
-      print("Login failed: $e");
-      return false;
+      return e.toString().replaceFirst('Exception: ', '');
     }
   }
-
-  Future<bool> AddCoach(Map<String, dynamic> data) async {
+  Future<String?> AddCoach(Map<String, dynamic> data) async {
     try {
-      print("Add guardian data : $data");
-
+      print("Add coach data: $data");
       final fullResponse = await _helper.post("api/coaches", data);
-      final jsonResponse = jsonEncode(fullResponse);
-
-      print("jsonResponse  ${jsonResponse}");
       if (fullResponse['success'] == true) {
-        print("Add Coaches → ${fullResponse['message']}");
-        return true;
+        print("Add Coach → ${fullResponse['message']}");
+        return null; // null = success
       } else {
-        print("Body says failure: ${fullResponse['message']}");
-        return false;
+        return fullResponse['message']?.toString() ?? 'Failed to add coach';
       }
     } catch (e) {
-      print("Add Coach failed: $e");
-      return false;
+      return e.toString().replaceFirst('Exception: ', '');
     }
   }
 
@@ -634,7 +576,35 @@ class ClubApiService {
       rethrow;
     }
   }
+// In ClubApiService — replace the two club settings methods
 
+  Future<ClubSettingsData?> getClubSettings() async {
+    try {
+      final fullResponse = await _helper.get("api/club/settings");
+      print("getClubSettings response: $fullResponse");
+      final parsed = ClubSettingsResponse.fromJson(
+          Map<String, dynamic>.from(fullResponse));
+      if (parsed.success) return parsed.data;
+      print("getClubSettings failure: ${parsed.message}");
+      return null;
+    } catch (e) {
+      print("getClubSettings failed: $e");
+      return null;
+    }
+  }
+
+  Future<bool> updateClubSettings(ClubSettingsData data) async {
+    try {
+      print("updateClubSettings payload: ${data.toJson()}");
+      final fullResponse = await _helper.put(
+          "api/club/settings", data.toJson());
+      print("updateClubSettings response: $fullResponse");
+      return fullResponse['success'] == true;
+    } catch (e) {
+      print("updateClubSettings failed: $e");
+      return false;
+    }
+  }
   Future<bool> deleteMembers(int id) async {
     try {
       print("delete member data : $id");
@@ -791,10 +761,10 @@ class ClubApiService {
 
   /// PUT /api/events/{eventId}/groups/{groupId}
   Future<bool> updateGroup(
-    int eventId,
-    int groupId,
-    Map<String, dynamic> data,
-  ) async {
+      int eventId,
+      int groupId,
+      Map<String, dynamic> data,
+      ) async {
     try {
       print("Update group data: $data for eventId: $eventId groupId: $groupId");
       final fullResponse = await _helper.put(
@@ -871,8 +841,8 @@ class ClubApiService {
   }
 
   Future<ActivityMappedEventData> getMapActivitiesEvents(
-    String activityId,
-  ) async {
+      String activityId,
+      ) async {
     try {
       final fullResponse = await _helper.get(
         "api/activities/$activityId/events",
@@ -961,10 +931,10 @@ class ClubApiService {
   }
 
   Future<bool> updateSubGroup(
-    int groupId,
-    int subGroupId,
-    Map<String, dynamic> data,
-  ) async {
+      int groupId,
+      int subGroupId,
+      Map<String, dynamic> data,
+      ) async {
     try {
       print(
         "Update sub-group data: $data groupId: $groupId subGroupId: $subGroupId",
@@ -1128,10 +1098,10 @@ class ClubApiService {
   }
 
   Future<bool> updateTeam(
-    int subGroupId,
-    int teamId,
-    Map<String, dynamic> data,
-  ) async {
+      int subGroupId,
+      int teamId,
+      Map<String, dynamic> data,
+      ) async {
     try {
       print("Update team data: $data subGroupId: $subGroupId teamId: $teamId");
       final fullResponse = await _helper.put(
@@ -1459,7 +1429,7 @@ class ClubApiService {
     try {
       print("Update Events");
       print("Update Events ${data}");
-;      final fullResponse = await _helper.put(
+      ;      final fullResponse = await _helper.put(
         "api/events/$eventId",
         data,
       );
@@ -1488,6 +1458,118 @@ class ClubApiService {
     } catch (e) {
       print("getClubs failed: $e");
       rethrow;
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
+// MEMBERSHIP APIs
+// ─────────────────────────────────────────────────────────────────────────────
+
+  /// GET /api/users/{userId}/memberships
+  /// Get all memberships for a user
+  Future<List<Map<String, dynamic>>> getUserMemberships(int userId) async {
+    try {
+      final fullResponse = await _helper.get("api/users/$userId/memberships");
+      print("getUserMemberships response: $fullResponse");
+      if (fullResponse['success'] == true) {
+        final List<dynamic> data = fullResponse['data'] ?? [];
+        return data.map((e) => Map<String, dynamic>.from(e)).toList();
+      }
+      return [];
+    } catch (e) {
+      print("getUserMemberships failed: $e");
+      return [];
+    }
+  }
+
+  /// GET /api/memberships/{membershipId}/payment
+  /// Get payment details for a specific membership
+  Future<Map<String, dynamic>?> getMembershipPayment(int membershipId) async {
+    try {
+      final fullResponse = await _helper.get("api/memberships/$membershipId/payment");
+      print("getMembershipPayment response: $fullResponse");
+      if (fullResponse['success'] == true) {
+        return Map<String, dynamic>.from(fullResponse['data'] ?? {});
+      }
+      return null;
+    } catch (e) {
+      print("getMembershipPayment failed: $e");
+      return null;
+    }
+  }
+
+  /// GET /api/clubs/{clubId}/members/{userId}/membership-status
+  /// Get membership status for a user in a specific club
+  Future<Map<String, dynamic>?> getMembershipStatus(int clubId, int userId) async {
+    try {
+      final fullResponse = await _helper.get(
+        "api/clubs/$clubId/members/$userId/membership-status",
+      );
+      print("getMembershipStatus response: $fullResponse");
+      if (fullResponse['success'] == true) {
+        return Map<String, dynamic>.from(fullResponse['data'] ?? {});
+      }
+      return null;
+    } catch (e) {
+      print("getMembershipStatus failed: $e");
+      return null;
+    }
+  }
+
+  Future<bool> updatePaymentStatus(
+      int paymentId, {
+        required String status,
+        String? paymentMethod,
+        String? paymentReference,
+      }) async {
+    try {
+      print("updatePaymentStatus paymentId: $paymentId status: $status");
+      final body = {
+        "status": status,
+        if (paymentMethod != null) "paymentMethod": paymentMethod,
+        if (paymentReference != null) "paymentReference": paymentReference,
+      };
+      final fullResponse = await _helper.patch(
+        "api/payments/$paymentId/status",
+        body,
+      );
+      print("updatePaymentStatus response: $fullResponse");
+      return fullResponse['success'] == true;
+    } catch (e) {
+      print("updatePaymentStatus failed: $e");
+      return false;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getPaymentByMembershipId(int membershipId) async {
+    try {
+      final fullResponse = await _helper.get(
+        "api/payments/memberships/$membershipId",
+      );
+      print("getPaymentByMembershipId response: $fullResponse");
+      if (fullResponse['success'] == true) {
+        return Map<String, dynamic>.from(fullResponse['data'] ?? {});
+      }
+      return null;
+    } catch (e) {
+      print("getPaymentByMembershipId failed: $e");
+      return null;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getGuardianPendingPayments(int guardianId) async {
+    try {
+      final fullResponse = await _helper.get(
+        "api/payments/guardians/$guardianId/pending-payments",
+      );
+      print("getGuardianPendingPayments response: $fullResponse");
+      if (fullResponse['success'] == true) {
+        final List<dynamic> data = fullResponse['data'] ?? [];
+        return data.map((e) => Map<String, dynamic>.from(e)).toList();
+      }
+      return [];
+    } catch (e) {
+      print("getGuardianPendingPayments failed: $e");
+      return [];
     }
   }
 }
@@ -1617,10 +1699,10 @@ class CoachApiService {
   }
 
   Future<bool> updateEvent(
-    int clubId,
-    int eventId,
-    Map<String, dynamic> eventData,
-  ) async {
+      int clubId,
+      int eventId,
+      Map<String, dynamic> eventData,
+      ) async {
     try {
       print("Updating event: $eventId for club: $clubId with data: $eventData");
       // Note: Using ?clubId=$clubId in the URL as per your API
@@ -1728,9 +1810,9 @@ class CoachApiService {
   }
 
   Future<EventAttendanceData> saveAttendance(
-    final eventId,
-    dynamic payload,
-  ) async {
+      final eventId,
+      dynamic payload,
+      ) async {
     print(payload);
     print(eventId);
     try {
@@ -1755,6 +1837,39 @@ class CoachApiService {
     } catch (e) {
       print("getCoachScheduledEvents failed: $e");
       rethrow;
+    }
+  }
+
+  Future<AssignedGroupsData> getAssignedGroups() async {
+    try {
+      final fullResponse = await _helper.get("api/coach/assigned-groups");
+      print("getAssignedGroups response: $fullResponse");
+      return AssignedGroupsData.fromJson(fullResponse);
+    } catch (e) {
+      print("getAssignedGroups failed: $e");
+      return AssignedGroupsData(groups: [], subGroups: []);
+    }
+  }
+  Future<List<Map<String, dynamic>>> getGroupMembersRaw(int groupId) async {
+    try {
+      final fullResponse = await _helper.get("api/groups/$groupId/members");
+      final List<dynamic> data = fullResponse['data'] ?? [];
+      return data.map((e) => Map<String, dynamic>.from(e)).toList();
+    } catch (e) {
+      print("getGroupMembersRaw failed: $e");
+      return [];
+    }
+  }
+
+  /// GET /api/subgroups/{subGroupId}/members
+  Future<List<Map<String, dynamic>>> getSubGroupMembersRaw(int subGroupId) async {
+    try {
+      final fullResponse = await _helper.get("api/subgroups/$subGroupId/members");
+      final List<dynamic> data = fullResponse['data'] ?? [];
+      return data.map((e) => Map<String, dynamic>.from(e)).toList();
+    } catch (e) {
+      print("getSubGroupMembersRaw failed: $e");
+      return [];
     }
   }
 
@@ -1882,10 +1997,10 @@ class ParentApiService {
   /// PUT /api/guardian/events/status — Accept or Reject event for a child
   /// status values: "ACCEPT" or "REJECT"
   Future<bool> updateGuardianEventStatus(
-    int memberId,
-    int eventId,
-    String status,
-  ) async {
+      int memberId,
+      int eventId,
+      String status,
+      ) async {
     try {
       print(
         "updateGuardianEventStatus memberId: $memberId eventId: $eventId status: $status",
@@ -2056,6 +2171,201 @@ class MemberApiService {
   }
 
 }
+class DocumentApiService {
+  final ApiBaseHelper _helper = ApiBaseHelper();
+
+  static const String _baseUrl =
+      "http://clubmvp-env.eba-uvibktrv.ap-south-1.elasticbeanstalk.com/";
+
+  /// POST /api/members/{memberId}/documents
+  /// Upload a PDF document for a member
+  Future<bool> uploadDocument({
+    required int memberId,
+    required File file,
+    required String description,
+  }) async {
+    try {
+      final token = SharedPreferenceHelper.getToken() ?? '';
+      final dio = Dio(BaseOptions(
+        baseUrl: _baseUrl,
+        connectTimeout: const Duration(seconds: 60),
+      ));
+
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(
+          file.path,
+          filename: file.path.split('/').last,
+          contentType: DioMediaType('application', 'pdf'),
+        ),
+      });
+
+      final response = await dio.post(
+        'api/members/$memberId/documents?description=${Uri.encodeComponent(description)}',
+        data: formData,
+        options: Options(headers: {
+          'Authorization': token,
+          'Content-Type': 'multipart/form-data',
+        }),
+      );
+
+      print("uploadDocument response: ${response.data}");
+      return response.statusCode == 200 &&
+          (response.data['success'] == true);
+    } catch (e) {
+      print("uploadDocument failed: $e");
+      return false;
+    }
+  }
+
+  Future<List<MemberDocument>> getDocuments({required int memberId}) async {
+    try {
+      final fullResponse =
+      await _helper.get("api/members/documents?memberId=$memberId");
+      print("getDocuments response: $fullResponse");
+
+      // API returns data as list
+      final dynamic raw = fullResponse['data'];
+      if (raw == null) return [];
+
+      final List<dynamic> list = raw is List ? raw : [];
+      return list.map((e) => MemberDocument.fromJson(e)).toList();
+    } catch (e) {
+      print("getDocuments failed: $e");
+      return [];
+    }
+  }
+  Future<List<MemberDocument>> getDocuments1({required int memberId}) async {
+    try {
+      // In DocumentApiService.getDocuments — replace the get call line:
+      final fullResponse = await _helper.get(
+        memberId > 0
+            ? "api/members/documents?memberId=$memberId"
+            : "api/members/documents",
+      );
+      print("getDocuments response: $fullResponse");
+
+      // API returns data as list
+      final dynamic raw = fullResponse['data'];
+      if (raw == null) return [];
+
+      final List<dynamic> list = raw is List ? raw : [];
+      return list.map((e) => MemberDocument.fromJson(e)).toList();
+    } catch (e) {
+      print("getDocuments failed: $e");
+      return [];
+    }
+  }
+
+
+// Replace downloadDocument method in DocumentApiService
+  Future<String?> downloadDocument({
+    required int documentId,
+    required int memberId,
+    required String fileName,
+  }) async {
+    try {
+      debugPrint("document download entering");
+      final token = SharedPreferenceHelper.getToken() ?? '';
+      debugPrint("token: $token");
+      debugPrint("documentId: $documentId, memberId: $memberId, fileName: $fileName");
+
+      final dio = Dio(BaseOptions(
+        baseUrl: _baseUrl,
+        connectTimeout: const Duration(seconds: 60),
+        receiveTimeout: const Duration(seconds: 60),
+      ));
+
+      // ── Fix: declare savePath before the if/else ──
+      String savePath;
+
+      if (Platform.isAndroid) {
+        try {
+          final downloadsDir = Directory('/storage/emulated/0/Download');
+          if (!downloadsDir.existsSync()) {
+            downloadsDir.createSync(recursive: true);
+          }
+          savePath = '${downloadsDir.path}/$fileName';
+          debugPrint("Android savePath: $savePath");
+        } catch (e) {
+          debugPrint("Downloads dir failed, using app dir: $e");
+          final directory = await getApplicationDocumentsDirectory();
+          savePath = '${directory.path}/$fileName';
+        }
+      } else {
+        final directory = await getApplicationDocumentsDirectory();
+        savePath = '${directory.path}/$fileName';
+        debugPrint("iOS savePath: $savePath");
+      }
+
+      // Skip download if already cached
+      if (await File(savePath).exists()) {
+        debugPrint("File already cached at: $savePath");
+        return savePath;
+      }
+
+      final fullUrl = '${_baseUrl}api/documents/$documentId/download?memberId=$memberId';
+      debugPrint("Downloading from URL: $fullUrl");
+      debugPrint("Saving to: $savePath");
+
+      await dio.download(
+        fullUrl,  // ← use full URL, not relative
+        savePath,
+        onReceiveProgress: (count, total) {
+          debugPrint("Download progress: $count / $total bytes"
+              "${total > 0 ? ' (${(count / total * 100).toStringAsFixed(0)}%)' : ''}");
+        },
+        options: Options(
+          headers: {'Authorization': token},
+          responseType: ResponseType.bytes,
+          followRedirects: true,
+          receiveTimeout: const Duration(seconds: 60),
+        ),
+      );
+
+      final savedFile = File(savePath);
+      if (await savedFile.exists()) {
+        final size = await savedFile.length();
+        debugPrint("Download complete. File size: $size bytes at $savePath");
+        return savePath;
+      } else {
+        debugPrint("ERROR: File not found after download at $savePath");
+        return null;
+      }
+    } on DioException catch (e) {
+      debugPrint("DioException: ${e.type}");
+      debugPrint("DioException message: ${e.message}");
+      debugPrint("DioException response status: ${e.response?.statusCode}");
+      debugPrint("DioException response data: ${e.response?.data}");
+      return null;
+    } catch (e, stack) {
+      debugPrint("downloadDocument failed: $e");
+      debugPrint("Stack: $stack");
+      return null;
+    }
+  }
+}
+class UploadProfileImageService{
+  final ApiBaseHelper _helper = ApiBaseHelper();
+  Future<String?> uploadProfileImage(File imageFile) async {
+    try {
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(
+          imageFile.path,
+          filename: imageFile.path.split('/').last,
+        ),
+      });
+      final response = await _helper.post('api/profile/image', formData);
+      if (response != null && response['success'] == true) {
+        return response['data']['profileImageUrl'];
+      }
+      return null;
+    } catch (e) {
+      print("uploadProfileImage failed: $e");
+      return null;
+    }
+  }
+}
+
 
 class AppException implements Exception {
   final _message;
@@ -2071,7 +2381,7 @@ class AppException implements Exception {
 
 class FetchDataException extends AppException {
   FetchDataException([String? message])
-    : super(message, "Error During Communication: ");
+      : super(message, "Error During Communication: ");
 }
 
 class BadRequestException extends AppException {

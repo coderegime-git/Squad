@@ -4,7 +4,7 @@
 // - Details: date, time, location (with map link), coaches
 // - Attendees: list of invited members split by ACCEPTED / PENDING / REJECTED
 // - Performance: list of attendees → tap → write performance note
-// - FAB: Invite Groups → CoachInviteGroupsScreen
+// - FAB: Invite Members → CoachInviteGroupsScreen
 // - Edit button (coach can edit event)
 // API:
 //   GET  /api/events/{eventId}/members   → attendees
@@ -136,10 +136,14 @@ class _CoachEventDetailScreenState extends State<CoachEventDetailScreen>
   }
 
   void _openLocation() async {
-    final loc = _event.location;
-    final uri = loc.startsWith('http')
-        ? Uri.parse(loc)
-        : Uri.parse('https://maps.google.com/?q=${Uri.encodeComponent(loc)}');
+    final loc = _event.geoLocation;
+    if (loc == null) return;
+    Uri uri;
+    if (loc.mapLink?.isNotEmpty ?? false) {
+      uri = Uri.parse(loc.mapLink!);
+    } else if (loc.address?.isNotEmpty ?? false) {
+      uri = Uri.parse('https://maps.google.com/?q=${Uri.encodeComponent(loc.address!)}');
+    } else return;
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
@@ -272,7 +276,7 @@ class _CoachEventDetailScreenState extends State<CoachEventDetailScreen>
           ).then((_) => _loadAttendees()),
           backgroundColor: accentGreen,
           icon: Icon(Icons.group_add_rounded, color: Colors.white, size: 20.sp),
-          label: Text('Invite Groups',
+          label: Text('Invite Members',
               style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
         )
             : null,
@@ -310,45 +314,40 @@ class _CoachEventDetailScreenState extends State<CoachEventDetailScreen>
   );
 
   Widget _locationRow() {
-    final loc = _event.location;
-    final isLink = loc.startsWith('http');
+    final loc = _event.geoLocation;
+    if (loc == null || !loc.hasData) return const SizedBox.shrink();
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 10.h),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Icon(Icons.location_on_rounded, size: 18.sp, color: accentGreen),
         10.width,
-        Expanded(child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Location', style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary)),
-            4.height,
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Location', style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary)),
+          4.height,
+          if (loc.placeName?.isNotEmpty ?? false)
+            Text(loc.placeName!, style: GoogleFonts.poppins(
+                fontSize: 13.sp, fontWeight: FontWeight.w600, color: Colors.black87)),
+          if (loc.address?.isNotEmpty ?? false) ...[
+            2.height,
+            Text(loc.address!, style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary)),
+          ],
+          if (loc.mapLink?.isNotEmpty ?? false) ...[
+            6.height,
             GestureDetector(
               onTap: _openLocation,
-              child: Text(loc,
-                  style: GoogleFonts.poppins(
-                      fontSize: 13.sp,
-                      color: isLink ? Colors.blue : Colors.black87,
-                      decoration: isLink ? TextDecoration.underline : null,
-                      fontWeight: FontWeight.w500)),
+              child: Row(children: [
+                Icon(Icons.map_rounded, size: 12.sp, color: accentGreen),
+                4.width,
+                Text('Open in Maps', style: GoogleFonts.poppins(
+                    fontSize: 11.sp, color: accentGreen, fontWeight: FontWeight.w600)),
+              ]),
             ),
-            if (!isLink) ...[
-              4.height,
-              GestureDetector(
-                onTap: _openLocation,
-                child: Row(children: [
-                  Icon(Icons.map_rounded, size: 12.sp, color: accentGreen),
-                  4.width,
-                  Text('Open in Maps',
-                      style: GoogleFonts.poppins(
-                          fontSize: 11.sp, color: accentGreen, fontWeight: FontWeight.w600)),
-                ]),
-              ),
-            ],
           ],
-        )),
+        ])),
       ]),
     );
   }
+
 
   Widget _actionsCard() => Container(
     padding: EdgeInsets.all(14.w),
@@ -363,7 +362,7 @@ class _CoachEventDetailScreenState extends State<CoachEventDetailScreen>
       Row(children: [
         Expanded(child: _actionBtn(
           icon: Icons.group_add_rounded,
-          label: 'Invite Groups',
+          label: 'Invite Members',
           color: accentGreen,
           onTap: () => Navigator.push(
               context,
@@ -410,7 +409,7 @@ class _CoachEventDetailScreenState extends State<CoachEventDetailScreen>
             style: GoogleFonts.montserrat(fontSize: 15.sp, fontWeight: FontWeight.w600,
                 color: Colors.grey.shade400)),
         8.height,
-        Text('Use "Invite Groups" to add members',
+        Text('Use "Invite Members" to add members',
             style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary)),
       ]));
     }
@@ -682,7 +681,9 @@ class _CoachEditEventSheetState extends State<_CoachEditEventSheet> {
   late TextEditingController _nameCtrl;
   late TextEditingController _locationCtrl;
   late TextEditingController _descCtrl;
-
+  late TextEditingController  _placeNameCtrl;
+  late TextEditingController  _addressCtrl;
+  late TextEditingController  _mapLinkCtrl;
   DateTime? _eventDate;
   TimeOfDay? _startTime;
   TimeOfDay? _endTime;
@@ -701,8 +702,9 @@ class _CoachEditEventSheetState extends State<_CoachEditEventSheet> {
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.event.eventName);
-    _locationCtrl = TextEditingController(text: widget.event.location);
-    _descCtrl = TextEditingController();
+    _placeNameCtrl = TextEditingController(text: widget.event.geoLocation?.placeName ?? '');
+    _addressCtrl   = TextEditingController(text: widget.event.geoLocation?.address   ?? '');
+    _mapLinkCtrl   = TextEditingController(text: widget.event.geoLocation?.mapLink   ?? '');    _descCtrl = TextEditingController();
     try { _eventDate = DateTime.parse(widget.event.eventDate); } catch (_) {}
     try {
       final sp = widget.event.startTime.split(':');
@@ -816,7 +818,15 @@ class _CoachEditEventSheetState extends State<_CoachEditEventSheet> {
 
   Future<void> _submit() async {
     if (_nameCtrl.text.trim().isEmpty) { toast('Enter event name'); return; }
-    if (_locationCtrl.text.trim().isEmpty) { toast('Enter location'); return; }
+    if (_placeNameCtrl.text.trim().isEmpty) { toast('Enter place name'); return; }
+    if (_addressCtrl.text.trim().isEmpty)   { toast('Enter address');    return; }
+    final mapLink = _mapLinkCtrl.text.trim();
+    if (mapLink.isEmpty) { toast('Enter map link'); return; }
+    final uri = Uri.tryParse(mapLink);
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+      toast('Please enter a valid map link URL');
+      return;
+    }
     if (_eventDate == null) { toast('Select date'); return; }
     if (_startTime == null || _endTime == null) { toast('Select times'); return; }
     final startMinutes = _startTime!.hour * 60 + _startTime!.minute;
@@ -829,7 +839,11 @@ class _CoachEditEventSheetState extends State<_CoachEditEventSheet> {
       "eventDate": DateFormat('yyyy-MM-dd').format(_eventDate!),
       "startTime": _fmtTime(_startTime!),
       "endTime": _fmtTime(_endTime!),
-      "location": _locationCtrl.text.trim(),
+      "location": {
+        "placeName": _placeNameCtrl.text.trim(),
+        "address":   _addressCtrl.text.trim(),
+        "mapLink":   mapLink,
+      },
       "eventType": widget.event.eventType,
       "status": widget.event.status,
       "clubId": widget.event.clubId,
@@ -847,7 +861,12 @@ class _CoachEditEventSheetState extends State<_CoachEditEventSheet> {
         eventDate: DateFormat('yyyy-MM-dd').format(_eventDate!),
         startTime: _fmtTime(_startTime!),
         endTime: _fmtTime(_endTime!),
-        location: _locationCtrl.text.trim(),
+        location: _placeNameCtrl.text.trim(),
+        geoLocation: EventLocation(
+          placeName: _placeNameCtrl.text.trim(),
+          address:   _addressCtrl.text.trim(),
+          mapLink:   mapLink,
+        ),
         eventType: widget.event.eventType,
         status: widget.event.status,
         clubId: widget.event.clubId,
@@ -872,7 +891,10 @@ class _CoachEditEventSheetState extends State<_CoachEditEventSheet> {
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _locationCtrl.dispose();
+    _placeNameCtrl.dispose();
+    _addressCtrl.dispose();
+    _mapLinkCtrl.dispose();
+    _descCtrl.dispose();
     _descCtrl.dispose();
     super.dispose();
   }
@@ -897,6 +919,10 @@ class _CoachEditEventSheetState extends State<_CoachEditEventSheet> {
             ),
             12.width,
             Text('Edit Event', style: GoogleFonts.montserrat(fontSize: 18.sp, fontWeight: FontWeight.bold)),
+            SizedBox(width: 120.w,),
+            GestureDetector(onTap:(){
+              Navigator.pop(context);
+            },child: Icon(Icons.close,color: Colors.red,))
           ]),
           20.height,
 
@@ -916,9 +942,17 @@ class _CoachEditEventSheetState extends State<_CoachEditEventSheet> {
           _input('Add notes or description...', _descCtrl, maxLines: 2),
           12.height,
 
-          _label('Location / Google Maps Link'),
+          _label('Place Name *'),
           6.height,
-          _input('Location or URL', _locationCtrl),
+          _input('e.g. City Sports Arena', _placeNameCtrl),
+          12.height,
+          _label('Address *'),
+          6.height,
+          _input('e.g. 123 Main Street, Chennai', _addressCtrl),
+          12.height,
+          _label('Map Link *'),
+          6.height,
+          _input('https://maps.google.com/...', _mapLinkCtrl),
           12.height,
 
           _label('Event Date'),

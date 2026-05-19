@@ -1,7 +1,10 @@
 // lib/pages/guardian/guardian_profile.dart
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:nb_utils/nb_utils.dart';
 import 'package:sports/utills/api_service.dart';
 
@@ -35,8 +38,10 @@ class _GuardianProfileScreenState extends State<GuardianProfileScreen> {
   late MemberProfileData memberProfileData;
   bool isLoad = true;
   final apiService = ParentApiService();
+  final uploadImageService = UploadProfileImageService();
   List<Data> _children = [];
   bool _isLoadingChildren = true;
+  File? _profileImage;
   @override
   void initState() {
     getProfileData(true);
@@ -93,12 +98,12 @@ class _GuardianProfileScreenState extends State<GuardianProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("My Guardian",  style: GoogleFonts.montserrat(
+        Text("My Children",  style: GoogleFonts.montserrat(
           fontSize: 13.sp,
           fontWeight: FontWeight.w700,
           color: Colors.black,
         ),),
-        SizedBox(height: 10,),
+
         SizedBox(
           //height: 120.h,
           child: Container(
@@ -135,6 +140,84 @@ class _GuardianProfileScreenState extends State<GuardianProfileScreen> {
       ],
     );
   }
+
+  Future<void> _pickAndUploadImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (picked == null) return;
+
+    final file = File(picked.path);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Upload Profile Photo",
+                style: GoogleFonts.montserrat(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  file,
+                  height: 160,
+                  width: 260,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "Do you want to set this as your profile photo?",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(fontSize: 13, color: textSecondary),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: Text("Cancel",
+                        style: GoogleFonts.poppins(color: textSecondary)),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: Text("Upload",
+                        style: GoogleFonts.poppins(
+                            color: accentGreen, fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    toast("Uploading...");
+    final url = await uploadImageService.uploadProfileImage(file);
+    if (url != null) {
+      setState(() => _profileImage = file);
+      toast("Profile photo updated!");
+      getProfileData(false);
+    } else {
+      toast("Upload failed. Please try again.");
+    }
+  }
+
+
+
 
   void getProfileData(isLoads) async {
     setState(() {
@@ -317,11 +400,34 @@ class _GuardianProfileScreenState extends State<GuardianProfileScreen> {
                               child: CircleAvatar(
                                 radius: 50.r,
                                 backgroundColor: Colors.grey.shade200,
-                                child: Text(
+                                backgroundImage: _profileImage != null
+                                    ? FileImage(_profileImage!) as ImageProvider
+                                    : (memberProfileData.data?.profile?.profileImageUrl != null &&
+                                    memberProfileData.data!.profile!.profileImageUrl!.isNotEmpty)
+                                    ? NetworkImage(memberProfileData.data!.profile!.profileImageUrl!)
+                                    : null,
+                                child: (_profileImage == null &&
+                                    (memberProfileData.data?.profile?.profileImageUrl == null ||
+                                        memberProfileData.data!.profile!.profileImageUrl!.isEmpty))
+                                    ? Text(
                                   memberProfileData.data?.user?.username?.isNotEmpty == true
-                                      ? memberProfileData.data!.user!.username![0]
+                                      ? memberProfileData.data!.user!.username![0].toUpperCase()
                                       : 'U',
                                   style: Theme.of(context).textTheme.headlineLarge,
+                                )
+                                    : null,
+                              ),
+                            ),
+                            Positioned(
+                              top: 20.h,
+                              left: 80,
+                              right: 0,
+                              child: GestureDetector(
+                                onTap: () => _pickAndUploadImage(),
+                                child: CircleAvatar(
+                                  radius: 12.r,
+                                  backgroundColor: Colors.grey.shade800,
+                                  child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
                                 ),
                               ),
                             ),
@@ -352,7 +458,7 @@ class _GuardianProfileScreenState extends State<GuardianProfileScreen> {
                                 activity: member.role ?? "",
                                 validUntil: member.membershipEndDate ?? "",
                                 status: member.status ?? "",
-                                statusColor: accentGreen,
+                                statusColor: accentGreen, startDate: member.membershipStartDate??"",
                               );
                             },
                           ),
@@ -589,13 +695,15 @@ class _GuardianProfileScreenState extends State<GuardianProfileScreen> {
 class _MembershipRow extends StatelessWidget {
   final String clubName;
   final String activity;
-  final String validUntil;
-  final String status;
+  final String startDate;
+  final String? validUntil;   // nullable now
+  final String? status;       // nullable now
   final Color statusColor;
 
   const _MembershipRow({
     required this.clubName,
     required this.activity,
+    required this.startDate,
     required this.validUntil,
     required this.status,
     required this.statusColor,
@@ -603,6 +711,9 @@ class _MembershipRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool hasStatus = status != null && status!.isNotEmpty;
+    final bool hasEndDate = validUntil != null && validUntil!.isNotEmpty;
+
     return Container(
       padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
@@ -611,6 +722,7 @@ class _MembershipRow extends StatelessWidget {
         border: Border.all(color: statusColor.withOpacity(0.2)),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -638,41 +750,82 @@ class _MembershipRow extends StatelessWidget {
                   ],
                 ),
               ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20.r),
-                ),
-                child: Text(
-                  status,
-                  style: GoogleFonts.poppins(
-                    fontSize: 11.sp,
-                    color: statusColor,
-                    fontWeight: FontWeight.w600,
+              // Show status badge only if status is not null
+              if (hasStatus)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                  child: Text(
+                    status!,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11.sp,
+                      color: statusColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                  child: Text(
+                    "Active",
+                    style: GoogleFonts.poppins(
+                      fontSize: 11.sp,
+                      color: Colors.grey.shade300,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
           12.height,
+          // Start date — always show
           Row(
             children: [
-              Icon(
-                Icons.calendar_today_rounded,
-                size: 14.sp,
-                color: textSecondary,
-              ),
+              Icon(Icons.calendar_today_rounded, size: 14.sp, color: textSecondary),
               6.width,
               Text(
-                "Valid until $validUntil",
-                style: GoogleFonts.poppins(
-                  fontSize: 12.sp,
-                  color: textSecondary,
-                ),
+                "Member since $startDate",
+                style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary),
               ),
             ],
           ),
+          // End date — show only if not null
+          if (hasEndDate) ...[
+            6.height,
+            Row(
+              children: [
+                Icon(Icons.event_rounded, size: 14.sp, color: textSecondary),
+                6.width,
+                Text(
+                  "Valid until $validUntil",
+                  style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary),
+                ),
+              ],
+            ),
+          ] else ...[
+            6.height,
+            Row(
+              children: [
+                Icon(Icons.all_inclusive_rounded, size: 14.sp, color: accentGreen),
+                6.width,
+                Text(
+                  "No expiry date",
+                  style: GoogleFonts.poppins(
+                    fontSize: 12.sp,
+                    color: accentGreen,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

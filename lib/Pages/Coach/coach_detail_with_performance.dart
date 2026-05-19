@@ -151,7 +151,7 @@ class _CoachMemberDetailWithPerformanceState
                   child: Column(
                     children: [
                       _infoCard("Personal Information", [
-                        _row("Member ID", "#${m.memberId}"),
+                        //_row("Member ID", "#${m.memberId}"),
                         _row("User ID", "#${m.userId}"),
                         _row("Email", m.email),
                         _row("Gender", m.gender),

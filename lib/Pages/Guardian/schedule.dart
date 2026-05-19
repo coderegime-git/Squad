@@ -8,8 +8,10 @@ import 'package:nb_utils/nb_utils.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/colors.dart';
+import '../../model/guardian/getGuardianEvents.dart';
 import '../../model/guardian/get_your_member.dart';
 import '../../utills/api_service.dart';
 
@@ -625,18 +627,20 @@ class MemberEvent {
   final String eventName;
   final DateTime eventDate;
   final String eventTime;
-  final String location;
   final String eventType;
   final String status;
+  final List<GuardianCoachData> assignedCoaches;
+  final GuardianEventLocation? location;
 
   MemberEvent({
     required this.eventId,
     required this.eventName,
     required this.eventDate,
     required this.eventTime,
-    required this.location,
     required this.eventType,
     required this.status,
+    required this.assignedCoaches,
+    this.location,
   });
 
   factory MemberEvent.fromJson(Map<String, dynamic> json) {
@@ -651,9 +655,16 @@ class MemberEvent {
       eventName: json['eventName'] ?? '',
       eventDate: parsedDate,
       eventTime: _parseTime(json['eventTime']),
-      location: json['location'] ?? '',
       eventType: json['eventType'] ?? 'TRAINING',
       status: json['status'] ?? 'PENDING',
+      assignedCoaches: json['assignedCoaches'] == null
+          ? []
+          : List<GuardianCoachData>.from(
+          (json['assignedCoaches'] as List)
+              .map((x) => GuardianCoachData.fromJson(x))),
+      location: json['location'] != null
+          ? GuardianEventLocation.fromJson(json['location'])
+          : null,
     );
   }
 
@@ -724,6 +735,7 @@ class _MemberEventTile extends StatelessWidget {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.all(16.w),
@@ -739,85 +751,165 @@ class _MemberEventTile extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Icon
-          Container(
-            width: 48.w,
-            height: 48.h,
-            decoration: BoxDecoration(
-              color: _typeColor.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            child: Icon(_typeIcon, color: _typeColor, size: 24.sp),
-          ),
-          14.width,
-          // Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  event.eventName,
-                  style: GoogleFonts.montserrat(
-                    fontSize: 13.sp,
-                    fontWeight: FontWeight.w700,
-                    color: textPrimary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+          Row(
+            children: [
+              Container(
+                width: 48.w,
+                height: 48.h,
+                decoration: BoxDecoration(
+                  color: _typeColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12.r),
                 ),
-                6.height,
-                Row(
+                child: Icon(_typeIcon, color: _typeColor, size: 24.sp),
+              ),
+              14.width,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (event.eventTime.isNotEmpty) ...[
-                      Icon(Icons.access_time_rounded,
-                          size: 12.sp, color: textSecondary),
-                      4.width,
-                      Text(
-                        event.eventTime,
-                        style: GoogleFonts.poppins(
-                            fontSize: 11.sp, color: textSecondary),
+                    Text(
+                      event.eventName,
+                      style: GoogleFonts.montserrat(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w700,
+                        color: textPrimary,
                       ),
-                      12.width,
-                    ],
-                    if (event.location.isNotEmpty) ...[
-                      Icon(Icons.location_on_outlined,
-                          size: 12.sp, color: textSecondary),
-                      4.width,
-                      Expanded(
-                        child: Text(
-                          event.location,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    6.height,
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today_rounded,
+                            size: 11.sp, color: textSecondary),
+                        4.width,
+                        Text(
+                          '${event.eventDate.day}/${event.eventDate.month}/${event.eventDate.year}',
                           style: GoogleFonts.poppins(
                               fontSize: 11.sp, color: textSecondary),
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
+                        if (event.eventTime.isNotEmpty) ...[
+                          12.width,
+                          Icon(Icons.access_time_rounded,
+                              size: 11.sp, color: textSecondary),
+                          4.width,
+                          Text(
+                            event.eventTime,
+                            style: GoogleFonts.poppins(
+                                fontSize: 11.sp, color: textSecondary),
+                          ),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          10.width,
-          // Status badge
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
-            decoration: BoxDecoration(
-              color: _statusColor.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(20.r),
-            ),
-            child: Text(
-              _statusLabel,
-              style: GoogleFonts.poppins(
-                fontSize: 10.sp,
-                color: _statusColor,
-                fontWeight: FontWeight.w700,
               ),
-            ),
+              10.width,
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                decoration: BoxDecoration(
+                  color: _statusColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+                child: Text(
+                  _statusLabel,
+                  style: GoogleFonts.poppins(
+                    fontSize: 10.sp,
+                    color: _statusColor,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ),
+          // ── Coaches + Location ──
+          _buildExtraInfo(),
         ],
       ),
     );
   }
+
+  Widget _buildExtraInfo() {
+    final coaches = event.assignedCoaches;
+    final loc = event.location;
+    final hasCoaches = coaches.isNotEmpty;
+    final hasAddress = loc != null &&
+        (loc.placeName?.isNotEmpty == true || loc.address?.isNotEmpty == true);
+    final hasMapLink = loc != null && loc.mapLink?.isNotEmpty == true;
+
+    if (!hasCoaches && !hasAddress && !hasMapLink) return const SizedBox();
+
+    return Padding(
+      padding: EdgeInsets.only(top: 10.h),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (hasCoaches) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.person_rounded, size: 13.sp, color: textSecondary),
+                4.width,
+                Expanded(
+                  child: Text(
+                    'Coach: ${coaches.map((c) => c.coachName).join(', ')}',
+                    style: GoogleFonts.poppins(
+                        fontSize: 11.sp, color: textSecondary),
+                  ),
+                ),
+              ],
+            ),
+            4.height,
+          ],
+          if (hasAddress) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.place_rounded, size: 13.sp, color: textSecondary),
+                4.width,
+                Expanded(
+                  child: Text(
+                    [loc!.placeName, loc.address]
+                        .where((s) => s != null && s.isNotEmpty)
+                        .join(' – '),
+                    style: GoogleFonts.poppins(
+                        fontSize: 11.sp, color: textSecondary),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            4.height,
+          ],
+          if (hasMapLink)
+            GestureDetector(
+              onTap: () => _launchUrl(loc!.mapLink!),
+              child: Row(
+                children: [
+                  Icon(Icons.map_rounded, size: 13.sp, color: accentGreen),
+                  4.width,
+                  Text(
+                    'Open in Maps',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11.sp,
+                      color: accentGreen,
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+Future<void> _launchUrl(String url) async {
+  final uri = Uri.parse(url);
+  if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
 }

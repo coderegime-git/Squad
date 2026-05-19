@@ -238,7 +238,7 @@ class _InviteGroupsScreenState extends State<InviteGroupsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Invite Groups',
+                            Text('Invite Members',
                                 style: GoogleFonts.montserrat(
                                     color: Colors.white,
                                     fontSize: 20.sp,

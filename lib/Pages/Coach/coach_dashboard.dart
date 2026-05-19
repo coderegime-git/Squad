@@ -92,6 +92,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
         title: e.eventName,
         date: DateTime.tryParse(e.eventDate ?? '') ?? now,
         location: e.location,
+        geoLocation: e.geoLocation,
         type: e.eventType ?? '',
         clubId: e.clubId,
         startTime: e.startTime,
@@ -267,6 +268,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
               startTime: fullEvent.startTime,
               endTime: fullEvent.endTime,
               location: fullEvent.location,
+              geoLocation: fullEvent.geoLocation,
               eventType: fullEvent.eventType,
               status: fullEvent.status,
               clubId: fullEvent.clubId,
@@ -749,16 +751,16 @@ class _CoachDashboardState extends State<CoachDashboard> {
                 color: Colors.grey.shade700,
               ),
             ),
-            TextButton(
-              onPressed: _navigateToAllEvents,
-              child: Text(
-                "See All",
-                style: GoogleFonts.montserrat(
-                  color: accentGreen,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+            // TextButton(
+            //   onPressed: _navigateToAllEvents,
+            //   child: Text(
+            //     "See All",
+            //     style: GoogleFonts.montserrat(
+            //       color: accentGreen,
+            //       fontWeight: FontWeight.bold,
+            //     ),
+            //   ),
+            // ),
           ],
         ),
         12.height,
@@ -1531,31 +1533,28 @@ class _UpcomingEventCard extends StatelessWidget {
                       SizedBox(height: 6.h),
           
                       // ── Location ──
-                      Row(
-                        children: [
-                          Icon(Icons.location_on_outlined,
-                              size: 13.sp, color: Colors.grey.shade500),
+                      if (event.geoLocation != null && event.geoLocation!.hasData) ...[
+                        SizedBox(height: 6.h),
+                        Row(children: [
+                          Icon(Icons.location_on_outlined, size: 13.sp, color: Colors.grey.shade500),
                           SizedBox(width: 5.w),
                           Expanded(
-                            child: _isMapLink(event.location)
-                                ? Text(
-                              'View on Maps',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12.sp,
-                                color: const Color(0xFF185FA5),
-                                decoration: TextDecoration.underline,
-                              ),
-                            )
-                                : Text(
-                              event.location,
-                              style: GoogleFonts.poppins(
-                                  fontSize: 12.sp,
-                                  color: Colors.grey.shade700),
+                            child: Text(
+                              event.geoLocation!.displayLabel,
+                              style: GoogleFonts.poppins(fontSize: 12.sp, color: Colors.grey.shade700),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                        ],
-                      ),
+                          // if (event.geoLocation!.mapLink?.isNotEmpty ?? false) ...[
+                          //   SizedBox(width: 6.w),
+                          //   Icon(Icons.map_rounded, size: 12.sp, color: const Color(0xFF185FA5)),
+                          //   SizedBox(width: 3.w),
+                          //   Text('Map', style: GoogleFonts.poppins(
+                          //       fontSize: 11.sp, color: const Color(0xFF185FA5),
+                          //       decoration: TextDecoration.underline)),
+                          // ],
+                        ]),
+                      ],
           
 
           
@@ -1577,7 +1576,7 @@ class _UpcomingEventCard extends StatelessWidget {
                             ],
                           ),
                           GestureDetector(
-                            onTap: onEdit,
+                            //onTap: onEdit,
                             child: Container(
                               padding: EdgeInsets.symmetric(
                                   horizontal: 10.w, vertical: 5.h),
@@ -1590,12 +1589,12 @@ class _UpcomingEventCard extends StatelessWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.edit_outlined,
+                                  Icon(Icons.remove_red_eye,
                                       size: 12.sp,
                                       color: Colors.grey.shade600),
                                   SizedBox(width: 4.w),
                                   Text(
-                                    'Edit',
+                                    'View',
                                     style: GoogleFonts.poppins(
                                       fontSize: 11.sp,
                                       fontWeight: FontWeight.w600,
@@ -1690,6 +1689,7 @@ class CoachEvent {
   final String title;
   final DateTime date;
   final String location;
+  final EventLocation? geoLocation;
   final String type;
   final int? clubId;
   final String startTime;
@@ -1704,6 +1704,7 @@ class CoachEvent {
     required this.title,
     required this.date,
     required this.location,
+    this.geoLocation,
     required this.type,
     this.clubId,
     this.startTime = '',
@@ -1721,6 +1722,9 @@ class CoachEvent {
         ? DateTime.parse(json['eventDate'])
         : DateTime.now(),
     location: json['location'] ?? '',
+    geoLocation: json['geoLocation'] is Map<String, dynamic>
+        ? EventLocation.fromJson(json['geoLocation'] as Map<String, dynamic>)
+        : null,
     type: json['eventType'] ?? '',
     clubId: json['clubId'],
     startTime: json['startTime'] ?? '',

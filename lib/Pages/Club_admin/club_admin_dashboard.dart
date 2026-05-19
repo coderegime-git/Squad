@@ -8,6 +8,7 @@ import 'package:sports/Pages/Club_admin/payments.dart';
 import 'package:sports/model/clubAdmin/dashboard_data.dart';
 import 'package:sports/model/clubAdmin/get_event_details.dart';
 import 'package:sports/utills/api_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/colors.dart';
 import '../../model/get_clubs_data.dart';
@@ -228,7 +229,7 @@ class _ClubAdminDashboardState extends State<ClubAdminDashboard> {
                     MaterialPageRoute(
                         builder: (_) => const NotificationScreen())),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 15),
               GestureDetector(
                 onTap: () => _showProfileSheet(context),
                 child: Container(
@@ -448,8 +449,8 @@ class _ClubAdminDashboardState extends State<ClubAdminDashboard> {
               () => _push(const ClubAdminAddCoachScreen())),
       _QuickActionItem(Icons.group_add_rounded, 'Add\nGuardian', Colors.blue,
               () => _push(const ClubAdminAddGuardianScreen())),
-      _QuickActionItem(Icons.link_rounded, 'Link\nChild', Colors.purple,
-              () => _push(const ClubAdminLinkChildGuardianScreen())),
+      // _QuickActionItem(Icons.link_rounded, 'Link\nChild', Colors.purple,
+      //         () => _push(const ClubAdminLinkChildGuardianScreen())),
       _QuickActionItem(Icons.payment_rounded, 'Payments', Colors.deepOrange,
               () => _push(const ClubAdminPaymentsScreen())),
       _QuickActionItem(Icons.group_work_rounded, 'Groups', Colors.teal,
@@ -553,7 +554,6 @@ class _ClubAdminDashboardState extends State<ClubAdminDashboard> {
     final status    = data.status ?? '';
     final accent    = _accentBar(status);
     final daysLabel = _daysLabel(data.eventDate);
-    final isMapLink = (data.location ?? '').startsWith('http');
 
     return GestureDetector(
       onTap: () => _showEventDetailSheet(data),
@@ -568,7 +568,6 @@ class _ClubAdminDashboardState extends State<ClubAdminDashboard> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ── Left accent bar ──────────────────────────────────
               Container(
                 width: 4.w,
                 decoration: BoxDecoration(
@@ -712,44 +711,75 @@ class _ClubAdminDashboardState extends State<ClubAdminDashboard> {
                       SizedBox(height: 6.h),
 
                       // ── Location + View button ──
-                      Row(
-                        children: [
-                          Icon(Icons.location_on_outlined,
-                              size: 12.sp, color: Colors.grey.shade500),
+                      if (data.geoLocation != null && data.geoLocation!.hasData) ...[
+                        SizedBox(height: 6.h),
+                        Row(children: [
+                          Icon(Icons.location_on_outlined, size: 13.sp, color: Colors.grey.shade500),
                           SizedBox(width: 5.w),
                           Expanded(
                             child: Text(
-                              isMapLink
-                                  ? 'View on Maps'
-                                  : (data.location ?? ''),
-                              style: GoogleFonts.poppins(
-                                fontSize: 12.sp,
-                                color: isMapLink
-                                    ? const Color(0xFF185FA5)
-                                    : Colors.grey.shade700,
-                                decoration: isMapLink
-                                    ? TextDecoration.underline
-                                    : TextDecoration.none,
-                              ),
+                              data.geoLocation!.displayLabel,
+                              style: GoogleFonts.poppins(fontSize: 12.sp, color: Colors.grey.shade700),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          SizedBox(width: 8.w),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 10.w, vertical: 5.h),
-                            decoration: BoxDecoration(
-                              color: accent.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(8.r),
-                              border:
-                              Border.all(color: accent.withOpacity(0.3)),
-                            ),
-                            child: Text(
-                              'View',
-                              style: GoogleFonts.poppins(
-                                fontSize: 11.sp,
-                                fontWeight: FontWeight.w600,
-                                color: accent,
+                          // if (event.geoLocation!.mapLink?.isNotEmpty ?? false) ...[
+                          //   SizedBox(width: 6.w),
+                          //   Icon(Icons.map_rounded, size: 12.sp, color: const Color(0xFF185FA5)),
+                          //   SizedBox(width: 3.w),
+                          //   Text('Map', style: GoogleFonts.poppins(
+                          //       fontSize: 11.sp, color: const Color(0xFF185FA5),
+                          //       decoration: TextDecoration.underline)),
+                          // ],
+                        ]),
+                      ],
+
+
+
+                      // ── Footer: coach name + edit button ──
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.person_outline_rounded,
+                                  size: 13.sp, color: Colors.grey.shade500),
+                              SizedBox(width: 4.w),
+                              Text(
+                                data.createdByUsername ?? 'Coach',
+                                style: GoogleFonts.poppins(
+                                    fontSize: 11.sp,
+                                    color: Colors.grey.shade600),
+                              ),
+                            ],
+                          ),
+                          GestureDetector(
+                            //onTap: onEdit,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 10.w, vertical: 5.h),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(8.r),
+                                border: Border.all(
+                                    color: Colors.grey.shade300),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.remove_red_eye,
+                                      size: 12.sp,
+                                      color: Colors.grey.shade600),
+                                  SizedBox(width: 4.w),
+                                  Text(
+                                    'View',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),

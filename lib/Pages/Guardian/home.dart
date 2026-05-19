@@ -4,11 +4,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:nb_utils/nb_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:sports/Pages/Guardian/schedule.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/colors.dart';
 import '../../model/guardian/getGuardianEvents.dart';
 import '../../model/guardian/get_member_dashboard_data.dart';
 import '../../model/guardian/get_your_member.dart';
+import '../../model/member_document.dart';
 import '../../utills/api_service.dart';
 import '../../utills/shared_preference.dart';
 import '../../widgets/common.dart';
@@ -24,14 +28,18 @@ class GuardianDashboard extends StatefulWidget {
 
 class _GuardianDashboardState extends State<GuardianDashboard> {
   final ParentApiService _api = ParentApiService();
-
   List<Data> _children = [];
   int? _selectedMemberId;
   bool _isLoadingChildren = true;
-
+  final DocumentApiService _docApi = DocumentApiService();
+  List<MemberDocument> _documents = [];
+  bool _isLoadingDocs = false;
+  final Map<int, bool> _downloadingDocs = {};
   GuardianDashboardData? _dashboardData;
   bool _isLoadingDashboard = false;
-
+  bool _showAllPending = false;
+  bool _showAllUpcoming = false;
+  bool _showAllDocs = false;
   List<GuardianEventData> _pendingEvents = [];
   bool _isLoadingEvents = false;
   // List<GuardianChildEvent> _upcomingEvents = [];
@@ -45,6 +53,19 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
   void initState() {
     super.initState();
     _init();
+  }
+  // Add this method
+  Future<void> _loadDocumentsForMember(int memberId) async {
+    setState(() => _isLoadingDocs = true);
+    try {
+      final docs = await _docApi.getDocuments(memberId: memberId);
+      setState(() {
+        _documents = docs;
+        _isLoadingDocs = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingDocs = false);
+    }
   }
   Future<void> _init() async {
     setState(() => _isLoadingChildren = true);
@@ -60,6 +81,7 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
           _loadDashboard(_selectedMemberId!),
           _loadPendingEvents(_selectedMemberId!),
           _loadUpcomingEvents(_selectedMemberId!), // ← add
+          _loadDocumentsForMember(_selectedMemberId!),
         ]);
       }
     } catch (e) {
@@ -136,7 +158,29 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
   }
 
   Future<void> _onRefresh() => _init();
-
+  Widget _sectionHeaderToggle(String title, int total, bool expanded, VoidCallback onToggle) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(title, style: GoogleFonts.montserrat(fontSize: 14.sp, fontWeight: FontWeight.w700, color: Colors.grey.shade700)),
+        if (total > 2)
+          GestureDetector(
+            onTap: onToggle,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  expanded ? 'See less' : 'See all ($total)',
+                  style: GoogleFonts.poppins(fontSize: 12.sp, color: accentGreen, fontWeight: FontWeight.w600),
+                ),
+                Icon(expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                    color: accentGreen, size: 16.sp),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
   void _onChildTap(Data member) {
     if (_selectedMemberId == member.memberId) return;
     setState(() => _selectedMemberId = member.memberId);
@@ -145,6 +189,92 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
       _loadPendingEvents(member.memberId),
       _loadUpcomingEvents(member.memberId), // ← add
     ]);
+  }
+  Widget _buildGuardianDocCard(MemberDocument doc) {
+    final isDownloading = _downloadingDocs[doc.documentId] == true;
+    return Container(
+      margin: EdgeInsets.only(bottom: 10.h),
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: cardDark,
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: Colors.deepPurple.withOpacity(0.25)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(10.w),
+            decoration: BoxDecoration(
+              color: Colors.deepPurple.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+            child: Icon(Icons.picture_as_pdf, color: Colors.deepPurple, size: 22.sp),
+          ),
+          12.width,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  doc.description.isNotEmpty ? doc.description : doc.fileName,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13.sp, fontWeight: FontWeight.w600, color: Colors.black,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                4.height,
+                Text(
+                  '${doc.formattedDate}  •  ${doc.formattedSize}',
+                  style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary),
+                ),
+              ],
+            ),
+          ),
+          12.width,
+          GestureDetector(
+            onTap: isDownloading ? null : () => _openGuardianDoc(doc),
+            child: Container(
+              padding: EdgeInsets.all(10.w),
+              decoration: BoxDecoration(
+                color: isDownloading
+                    ? Colors.grey.shade200
+                    : accentGreen.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: isDownloading
+                  ? SizedBox(
+                width: 18.w, height: 18.w,
+                child: CircularProgressIndicator(strokeWidth: 2, color: accentGreen),
+              )
+                  : Icon(Icons.download_rounded, color: accentGreen, size: 18.sp),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openGuardianDoc(MemberDocument doc) async {
+    setState(() => _downloadingDocs[doc.documentId] = true);
+    try {
+      final path = await _docApi.downloadDocument(
+        documentId: doc.documentId,
+        memberId: doc.memberId,
+        fileName: doc.fileName,
+      );
+      setState(() => _downloadingDocs[doc.documentId] = false);
+      if (path == null) {
+        toast('Download failed'); return;
+      }
+      final result = await OpenFilex.open(path);
+      if (result.type != ResultType.done) {
+        toast('No PDF viewer installed');
+      }
+    } catch (e) {
+      setState(() => _downloadingDocs[doc.documentId] = false);
+      toast('Error opening document');
+    }
   }
   @override
   Widget build(BuildContext context) {
@@ -158,10 +288,7 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
         backgroundColor: Colors.grey.shade100,
         body: Column(
           children: [
-            // ── Header ───────────────────────────────────────────────
             _buildHeader(),
-
-            // ── Body ─────────────────────────────────────────────────
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _onRefresh,
@@ -173,86 +300,54 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       20.height,
-
-                      // ── Children Selector ────────────────────────
                       if (_isLoadingChildren)
                         const ChildSelectorShimmer()
                       else if (_children.isEmpty)
                         _buildNoChildrenWidget()
                       else
                         _buildChildrenList(),
-
                       24.height,
-
-                      // ── Stats Row ────────────────────────────────
                       if (_isLoadingDashboard)
                         _shimmerBox(height: 90.h)
                       else if (_selectedChild != null)
                         _buildStatsRow(_selectedChild!),
 
                       24.height,
-
-                      // ── Pending Events ───────────────────────────
                       if (_children.isNotEmpty) ...[
-                        Row(
-                          children: [
-                            _buildSectionHeader("Pending Events"),
-                            8.width,
-                            // if (_pendingEvents.isNotEmpty)
-                            //   Container(
-                            //     padding: EdgeInsets.symmetric(
-                            //         horizontal: 8.w, vertical: 2.h),
-                            //     decoration: BoxDecoration(
-                            //       color: accentOrange.withOpacity(0.15),
-                            //       borderRadius: BorderRadius.circular(20.r),
-                            //     ),
-                            //     child: Text(
-                            //       '\${_pendingEvents.length}',
-                            //       style: GoogleFonts.poppins(
-                            //         fontSize: 11.sp,
-                            //         color: accentOrange,
-                            //         fontWeight: FontWeight.w700,
-                            //       ),
-                            //     ),
-                            //   ),
-                          ],
-                        ),
+                        _sectionHeaderToggle("Pending Events", _pendingEvents.length, _showAllPending,
+                                () => setState(() => _showAllPending = !_showAllPending)),
                         12.height,
                         if (_isLoadingEvents)
                           _shimmerBox(height: 100.h)
                         else if (_pendingEvents.isEmpty)
                           _buildEmptyCard("No pending events for this child")
                         else
-                          ..._pendingEvents.map(
-                                (e) => _PendingEventCard(
-                              event: e,
-                              onAccept: () => _updateStatus(
-                                  _selectedMemberId!, e.eventId, 'ACCEPT'),
-                              onDecline: () => _updateStatus(
-                                  _selectedMemberId!, e.eventId, 'REJECT'),
-                            ),
-                          ),
+                          ...(_showAllPending ? _pendingEvents : _pendingEvents.take(2).toList()).map((e) =>
+                              _PendingEventCard(
+                                event: e,
+                                onAccept: () => _updateStatus(_selectedMemberId!, e.eventId, 'ACCEPT'),
+                                onDecline: () => _updateStatus(_selectedMemberId!, e.eventId, 'REJECT'),
+                              )),
                         24.height,
                       ],
-
-                      // ── Upcoming Events ───────────────────────────────
                       if (_children.isNotEmpty) ...[
-                        _buildSectionHeader("Upcoming Events"),
+                        _sectionHeaderToggle("Upcoming Events", _upcomingEvents.length, _showAllUpcoming,
+                                () => setState(() => _showAllUpcoming = !_showAllUpcoming)),
                         12.height,
                         if (_isLoadingUpcoming)
                           _shimmerBox(height: 100.h)
                         else if (_upcomingEvents.isEmpty)
                           _buildEmptyCard("No upcoming events within the next month")
                         else
-                          ...(_upcomingEvents as List<MemberEvent>).map(
-                                (e) => Padding(
-                              padding: EdgeInsets.only(bottom: 10.h),
-                              child: _UpcomingEventTile(event: e),
-                            ),
-                          ),
+                          ...(_showAllUpcoming
+                              ? (_upcomingEvents as List<MemberEvent>)
+                              : (_upcomingEvents as List<MemberEvent>).take(2).toList())
+                              .map((e) => Padding(
+                            padding: EdgeInsets.only(bottom: 10.h),
+                            child: _UpcomingEventTile(event: e),
+                          )),
                         24.height,
                       ],
-
                       if (_children.isNotEmpty) ...[
                         _buildSectionHeader("Payments"),
                         12.height,
@@ -262,8 +357,19 @@ class _GuardianDashboardState extends State<GuardianDashboard> {
                           _PaymentCard(payment: _selectedChild!.payments),
                         24.height,
                       ],
-
-                      // ── Notifications / Club Updates ─────────────
+                      if (_children.isNotEmpty) ...[
+                        _sectionHeaderToggle("Performance Reports", _documents.length, _showAllDocs,
+                                () => setState(() => _showAllDocs = !_showAllDocs)),
+                        12.height,
+                        if (_isLoadingDocs)
+                          _shimmerBox(height: 80.h)
+                        else if (_documents.isEmpty)
+                          _buildEmptyCard("No performance reports uploaded yet")
+                        else
+                          ...(_showAllDocs ? _documents : _documents.take(2).toList())
+                              .map((doc) => _buildGuardianDocCard(doc)),
+                        24.height,
+                      ],
                       _buildSectionHeader("Club Updates"),
                       16.height,
                       if (_isLoadingDashboard)
@@ -839,8 +945,10 @@ class _PendingEventCard extends StatelessWidget {
               ),
             ],
           ),
+          8.height,
+          buildGuardianEventExtraInfo(event),   // ← ADD
           12.height,
-          Row(
+            Row(
             children: [
               Expanded(
                 child: ElevatedButton(
@@ -922,6 +1030,7 @@ class _UpcomingEventTile extends StatelessWidget {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.all(14.w),
@@ -930,123 +1039,231 @@ class _UpcomingEventTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(14.r),
         border: Border.all(color: _typeColor.withOpacity(0.35), width: 1.2),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: EdgeInsets.all(10.w),
-            decoration: BoxDecoration(
-              color: _typeColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10.r),
-            ),
-            child: Icon(_typeIcon, color: _typeColor, size: 20.sp),
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(10.w),
+                decoration: BoxDecoration(
+                  color: _typeColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Icon(_typeIcon, color: _typeColor, size: 20.sp),
+              ),
+              12.width,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      event.eventName,
+                      style: GoogleFonts.montserrat(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    4.height,
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today_rounded,
+                            size: 11.sp, color: textSecondary),
+                        4.width,
+                        Text(
+                          '${event.eventDate.day}/${event.eventDate.month}/${event.eventDate.year}',
+                          style: GoogleFonts.poppins(
+                              fontSize: 11.sp, color: textSecondary),
+                        ),
+                        if (event.eventTime.isNotEmpty) ...[
+                          12.width,
+                          Icon(Icons.access_time_rounded,
+                              size: 11.sp, color: textSecondary),
+                          4.width,
+                          Text(event.eventTime,
+                              style: GoogleFonts.poppins(
+                                  fontSize: 11.sp, color: textSecondary)),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                decoration: BoxDecoration(
+                  color: _statusColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+                child: Text(
+                  event.status,
+                  style: GoogleFonts.poppins(
+                      fontSize: 10.sp,
+                      color: _statusColor,
+                      fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
           ),
-          12.width,
-          Expanded(
-            child: Column(
+          _buildExtraInfo(),   // ← coaches + location
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExtraInfo() {
+    final coaches = event.assignedCoaches;
+    final loc = event.location;
+    final hasCoaches = coaches.isNotEmpty;
+    final hasAddress = loc != null &&
+        (loc.placeName?.isNotEmpty == true || loc.address?.isNotEmpty == true);
+    final hasMapLink = loc != null && loc.mapLink?.isNotEmpty == true;
+
+    if (!hasCoaches && !hasAddress && !hasMapLink) return const SizedBox();
+
+    return Padding(
+      padding: EdgeInsets.only(top: 10.h),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (hasCoaches) ...[
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  event.eventName,
-                  style: GoogleFonts.montserrat(
-                    fontSize: 13.sp,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                Icon(Icons.person_rounded, size: 13.sp, color: textSecondary),
+                4.width,
+                Expanded(
+                  child: Text(
+                    'Coach: ${coaches.map((c) => c.coachName).join(', ')}',
+                    style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                4.height,
-                Row(
-                  children: [
-                    Icon(Icons.calendar_today_rounded,
-                        size: 11.sp, color: textSecondary),
-                    4.width,
-                    Text(
-                      '${event.eventDate.day}/${event.eventDate.month}/${event.eventDate.year}',
-                      style: GoogleFonts.poppins(
-                          fontSize: 11.sp, color: textSecondary),
-                    ),
-                    if (event.eventTime.isNotEmpty) ...[
-                      12.width,
-                      Icon(Icons.access_time_rounded,
-                          size: 11.sp, color: textSecondary),
-                      4.width,
-                      Text(
-                        event.eventTime,
-                        style: GoogleFonts.poppins(
-                            fontSize: 11.sp, color: textSecondary),
-                      ),
-                    ],
-                  ],
                 ),
               ],
             ),
-          ),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-            decoration: BoxDecoration(
-              color: _statusColor.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(20.r),
+            4.height,
+          ],
+          if (hasAddress) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.place_rounded, size: 13.sp, color: textSecondary),
+                4.width,
+                Expanded(
+                  child: Text(
+                    [loc!.placeName, loc.address]
+                        .where((s) => s != null && s.isNotEmpty)
+                        .join(' – '),
+                    style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
-            child: Text(
-              event.status,
-              style: GoogleFonts.poppins(
-                fontSize: 10.sp,
-                color: _statusColor,
-                fontWeight: FontWeight.w700,
+            4.height,
+          ],
+          if (hasMapLink)
+            GestureDetector(
+              onTap: () => _launchUrl(loc!.mapLink!),
+              child: Row(
+                children: [
+                  Icon(Icons.map_rounded, size: 13.sp, color: accentGreen),
+                  4.width,
+                  Text(
+                    'Open in Maps',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11.sp,
+                      color: accentGreen,
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
         ],
       ),
     );
   }
 }
-class MemberEvent {
-  final int eventId;
-  final String eventName;
-  final DateTime eventDate;
-  final String eventTime;
-  final String location;
-  final String eventType;
-  final String status;
+Widget buildGuardianEventExtraInfo(GuardianEventData event, {double? spTop}) {
+  final coaches = event.assignedCoaches;
+  final loc = event.location;
+  final hasCoaches = coaches.isNotEmpty;
+  final hasAddress = loc != null &&
+      (loc.placeName?.isNotEmpty == true || loc.address?.isNotEmpty == true);
+  final hasMapLink = loc != null && loc.mapLink?.isNotEmpty == true;
 
-  MemberEvent({
-    required this.eventId,
-    required this.eventName,
-    required this.eventDate,
-    required this.eventTime,
-    required this.location,
-    required this.eventType,
-    required this.status,
-  });
+  if (!hasCoaches && !hasAddress && !hasMapLink) return const SizedBox();
 
-  factory MemberEvent.fromJson(Map<String, dynamic> json) {
-    DateTime parsedDate;
-    try {
-      parsedDate = DateTime.parse(json['eventDate'] ?? '');
-    } catch (_) {
-      parsedDate = DateTime.now();
-    }
-    return MemberEvent(
-      eventId: json['eventId'] ?? 0,
-      eventName: json['eventName'] ?? '',
-      eventDate: parsedDate,
-      eventTime: _parseTime(json['eventTime']),
-      location: json['location'] ?? '',
-      eventType: json['eventType'] ?? 'TRAINING',
-      status: json['status'] ?? 'PENDING',
-    );
-  }
-
-  static String _parseTime(dynamic t) {
-    if (t == null) return '';
-    if (t is String) return t;
-    if (t is Map) {
-      final h = (t['hour'] ?? 0).toString().padLeft(2, '0');
-      final m = (t['minute'] ?? 0).toString().padLeft(2, '0');
-      return '$h:$m';
-    }
-    return '';
-  }
+  return Padding(
+    padding: EdgeInsets.only(top: spTop ?? 8.h),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (hasCoaches) ...[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.person_rounded, size: 13.sp, color: textSecondary),
+              4.width,
+              Expanded(
+                child: Text(
+                  'Coach: ${coaches.map((c) => c.coachName).join(', ')}',
+                  style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary),
+                ),
+              ),
+            ],
+          ),
+          4.height,
+        ],
+        if (hasAddress) ...[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.place_rounded, size: 13.sp, color: textSecondary),
+              4.width,
+              Expanded(
+                child: Text(
+                  [loc!.placeName, loc.address]
+                      .where((s) => s != null && s.isNotEmpty)
+                      .join(' – '),
+                  style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          4.height,
+        ],
+        if (hasMapLink)
+          GestureDetector(
+            onTap: () => _launchUrl(loc!.mapLink!),
+            child: Row(
+              children: [
+                Icon(Icons.map_rounded, size: 13.sp, color: accentGreen),
+                4.width,
+                Text(
+                  'Open in Maps',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11.sp,
+                    color: accentGreen,
+                    fontWeight: FontWeight.w600,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    ),
+  );
+}
+Future<void> _launchUrl(String url) async {
+  final uri = Uri.parse(url);
+  if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
 }

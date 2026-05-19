@@ -108,10 +108,10 @@ class _ClubAdminAddGuardianScreenState
                         'Add New Guardian',
                         style: Theme.of(context).textTheme.headlineMedium
                             ?.copyWith(
-                              color: Colors.white,
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          color: Colors.white,
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -264,12 +264,12 @@ class _ClubAdminAddGuardianScreenState
                               child: _isLoading
                                   ? AppUI.buttonSpinner()
                                   : Text(
-                                      'Add Guardian',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 14.sp,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
+                                'Add Guardian',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -303,19 +303,18 @@ class _ClubAdminAddGuardianScreenState
         "password": _passwordCtrl.text.trim(),
         "relation": _selectedRelation ?? "",
         "emergencyContact":
-            int.tryParse(_emergencyContactCtrl.text.trim()) ?? 0,
+        int.tryParse(_emergencyContactCtrl.text.trim()) ?? 0,
       };
 
-      bool success = await ClubApiService().AddGuardian(data);
-
-      if (success) {
-        Navigator.pop(context);
+      final String? errorMsg = await ClubApiService().AddGuardian(data);
+      if (errorMsg == null) {
+        if (mounted) Navigator.pop(context);
         AppUI.success(context, 'Guardian added successfully!');
       } else {
-        AppUI.error(context, 'Failed to add guardian. Please try again.');
+        AppUI.error(context, (errorMsg));
       }
     } catch (e) {
-      toast('Failed to add guardian');
+      toast('${e},Failed to add guardian');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -462,7 +461,7 @@ class _ClubAdminAddGuardianScreenState
           'Relation to Children*',
           _relations,
           _selectedRelation,
-          (v) => setState(() => _selectedRelation = v),
+              (v) => setState(() => _selectedRelation = v),
         ),
       ],
     );
@@ -780,11 +779,11 @@ class _ClubAdminAddGuardianScreenState
   }
 
   Widget _dropdownField(
-    String label,
-    List<String> items,
-    String? value,
-    void Function(String?) onChange,
-  ) {
+      String label,
+      List<String> items,
+      String? value,
+      void Function(String?) onChange,
+      ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -825,16 +824,16 @@ class _ClubAdminAddGuardianScreenState
           items: items
               .map(
                 (i) => DropdownMenuItem(
-                  value: i,
-                  child: Text(
-                    i,
-                    style: GoogleFonts.poppins(
-                      fontSize: 13.sp,
-                      color: Colors.black,
-                    ),
-                  ),
+              value: i,
+              child: Text(
+                i,
+                style: GoogleFonts.poppins(
+                  fontSize: 13.sp,
+                  color: Colors.black,
                 ),
-              )
+              ),
+            ),
+          )
               .toList(),
         ),
       ],

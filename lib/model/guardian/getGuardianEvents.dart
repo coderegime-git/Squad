@@ -26,12 +26,50 @@ class GetGuardianEvents {
       );
 }
 
+class GuardianCoachData {
+  final int coachId;
+  final String coachName;
+
+  GuardianCoachData({required this.coachId, required this.coachName});
+
+  factory GuardianCoachData.fromJson(Map<String, dynamic> json) => GuardianCoachData(
+    coachId: json['coachId'] ?? 0,
+    coachName: json['coachName'] ?? '',
+  );
+}
+
+class GuardianEventLocation {
+  final double? latitude;
+  final double? longitude;
+  final String? address;
+  final String? mapLink;
+  final String? placeName;
+
+  GuardianEventLocation({
+    this.latitude,
+    this.longitude,
+    this.address,
+    this.mapLink,
+    this.placeName,
+  });
+
+  factory GuardianEventLocation.fromJson(Map<String, dynamic> json) => GuardianEventLocation(
+    latitude: (json['latitude'] as num?)?.toDouble(),
+    longitude: (json['longitude'] as num?)?.toDouble(),
+    address: json['address'],
+    mapLink: json['mapLink'],
+    placeName: json['placeName'],
+  );
+}
+
 class GuardianEventData {
   final int eventId;
   final String eventName;
   final String teamName;
   final String eventDate;
   final String status;
+  final List<GuardianCoachData> assignedCoaches;
+  final GuardianEventLocation? location;
 
   GuardianEventData({
     required this.eventId,
@@ -39,14 +77,23 @@ class GuardianEventData {
     required this.teamName,
     required this.eventDate,
     required this.status,
+    required this.assignedCoaches,
+    this.location,
   });
 
-  factory GuardianEventData.fromJson(Map<String, dynamic> json) =>
-      GuardianEventData(
-        eventId: json['eventId'] ?? 0,
-        eventName: json['eventName'] ?? '',
-        teamName: json['teamName'] ?? '',
-        eventDate: json['eventDate'] ?? '',
-        status: json['status'] ?? '',
-      );
+  factory GuardianEventData.fromJson(Map<String, dynamic> json) => GuardianEventData(
+    eventId: json['eventId'] ?? 0,
+    eventName: json['eventName'] ?? '',
+    teamName: json['teamName'] ?? '',
+    eventDate: json['eventDate'] ?? '',
+    status: json['status'] ?? '',
+    assignedCoaches: json['assignedCoaches'] == null
+        ? []
+        : List<GuardianCoachData>.from(
+        (json['assignedCoaches'] as List)
+            .map((x) => GuardianCoachData.fromJson(x))),
+    location: json['location'] != null
+        ? GuardianEventLocation.fromJson(json['location'])
+        : null,
+  );
 }

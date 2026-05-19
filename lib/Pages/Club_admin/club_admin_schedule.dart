@@ -1,6 +1,6 @@
 // screens/clubadmin/clubadmin_schedule.dart
 // Changes:
-// - "Manage Groups" renamed to "Invite Groups"
+// - "Manage Groups" renamed to "Invite Members"
 // - Three-dot menu: only "Cancel Event"
 // - Removed filter button
 // - Invite flow: groups/subgroups with ability to uncheck members
@@ -101,7 +101,6 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen>
         backgroundColor: Colors.grey.shade100,
         body: Column(
           children: [
-            // ── Header ──────────────────────────────────────────
             Container(
               width: double.infinity,
               decoration: const BoxDecoration(
@@ -410,7 +409,8 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen>
             _eRow(Icons.access_time_rounded,
                 '${e.startTime} – ${e.endTime}'),
             4.height,
-            _eRow(Icons.location_on_outlined, e.location),
+            if (e.geoLocation != null && e.geoLocation!.hasData)
+              _eRow(Icons.location_on_outlined, e.geoLocation!.displayLabel),
             4.height,
             _eRow(Icons.person_rounded, e.createdByUsername),
             4.height,
@@ -550,6 +550,9 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
   int? _selectedActivityId;
   bool loadingActivity = false;
   final List<String> _eventTypes = ['SINGLE_EVENT','TOURNAMENT'];
+  final _placeNameController = TextEditingController();
+  final _addressController   = TextEditingController();
+  final _mapLinkController   = TextEditingController();
 
   @override
   void initState() {
@@ -671,7 +674,15 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
 
   Future<void> _submit() async {
     if (_eventNameController.text.trim().isEmpty) { toast('Please enter event name'); return; }
-    if (_locationController.text.trim().isEmpty) { toast('Please enter location'); return; }
+    if (_placeNameController.text.trim().isEmpty) { toast('Please enter place name'); return; }
+    if (_addressController.text.trim().isEmpty) { toast('Please enter address'); return; }
+    final mapLink = _mapLinkController.text.trim();
+    if (mapLink.isEmpty) { toast('Please enter map link'); return; }
+    final uri = Uri.tryParse(mapLink);
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+      toast('Please enter a valid map link URL');
+      return;
+    }
     if (_selectedEventType == null) { toast('Please select event type'); return; }
     if (_eventDate == null) { toast('Please select event date'); return; }
     if (_startTime == null) { toast('Please select start time'); return; }
@@ -687,7 +698,11 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
       "eventDate": DateFormat('yyyy-MM-dd').format(_eventDate!),
       "startTime": _formatTime(_startTime!),
       "endTime": _formatTime(_endTime!),
-      "location": _locationController.text.trim(),
+      "location": {
+        "placeName": _placeNameController.text.trim(),
+        "address":   _addressController.text.trim(),
+        "mapLink": mapLink,
+      },
       "eventType": _selectedEventType,
       "status": "SCHEDULED",
       "activityId":_selectedActivityId,
@@ -705,9 +720,12 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
   }
 
   @override
+  @override
   void dispose() {
     _eventNameController.dispose();
-    _locationController.dispose();
+    _placeNameController.dispose();
+    _addressController.dispose();
+    _mapLinkController.dispose();
     super.dispose();
   }
 
@@ -731,9 +749,17 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
             6.height,
             _inputField('Event Title', _eventNameController),
             12.height,
-            _labelText('Add Location'),
+            _labelText('Place Name *'),
             6.height,
-            _inputField('Location (add Google Maps link if needed)', _locationController),
+            _inputField('e.g. City Sports Arena', _placeNameController),
+            12.height,
+            _labelText('Address *'),
+            6.height,
+            _inputField('e.g. 123 Main Street, Chennai', _addressController),
+            12.height,
+            _labelText('Map Link *'),
+            6.height,
+            _inputField('https://maps.google.com/...', _mapLinkController),
             12.height,
             _labelText('Event Date'),
             6.height,
@@ -1001,13 +1027,14 @@ class _EventDetailFullScreenState extends State<EventDetailFullScreen>
   }
 
   void _openLocation() async {
-    final loc = _event.location; // uses _event
+    final loc = _event.geoLocation;
+    if (loc == null) return;
     Uri uri;
-    if (loc.startsWith('http')) {
-      uri = Uri.parse(loc);
-    } else {
-      uri = Uri.parse('https://maps.google.com/?q=${Uri.encodeComponent(loc)}');
-    }
+    if (loc.mapLink?.isNotEmpty ?? false) {
+      uri = Uri.parse(loc.mapLink!);
+    } else if (loc.address?.isNotEmpty ?? false) {
+      uri = Uri.parse('https://maps.google.com/?q=${Uri.encodeComponent(loc.address!)}');
+    } else return;
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
@@ -1031,7 +1058,6 @@ class _EventDetailFullScreenState extends State<EventDetailFullScreen>
       ),
     );
   }
-// Add this method to _EventDetailFullScreenState:
   Widget _performanceTab() {
     if (_loadingAttendees || _loadingNotes) {
       return const Center(child: CircularProgressIndicator(color: accentGreen));
@@ -1322,7 +1348,7 @@ class _EventDetailFullScreenState extends State<EventDetailFullScreen>
                   builder: (_) => InviteGroupsScreen(event: _event))), // uses _event
           backgroundColor: accentGreen,
           icon: Icon(Icons.group_add_rounded, color: Colors.white, size: 20.sp),
-          label: Text('Invite Groups',
+          label: Text('Invite Members',
               style: GoogleFonts.poppins(
                   color: Colors.white, fontWeight: FontWeight.w600)),
         )
@@ -1371,58 +1397,50 @@ class _EventDetailFullScreenState extends State<EventDetailFullScreen>
     );
   }
 
+// REPLACE entire _locationRow() method:
   Widget _locationRow() {
-    final loc = _event.location; // uses _event
-    final isLink = loc.startsWith('http');
+    final loc = _event.geoLocation;
+    if (loc == null || !loc.hasData) return const SizedBox.shrink();
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 10.h),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.location_on_rounded, size: 18.sp, color: accentGreen),
-          10.width,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Location',
-                    style: GoogleFonts.poppins(
-                        fontSize: 11.sp, color: textSecondary)),
-                4.height,
-                GestureDetector(
-                  onTap: _openLocation,
-                  child: Text(loc,
-                      style: GoogleFonts.poppins(
-                          fontSize: 13.sp,
-                          color: isLink ? Colors.blue : Colors.black,
-                          decoration: isLink
-                              ? TextDecoration.underline
-                              : TextDecoration.none,
-                          fontWeight: FontWeight.w500)),
-                ),
-                if (!isLink) ...[
-                  4.height,
-                  GestureDetector(
-                    onTap: _openLocation,
-                    child: Row(children: [
-                      Icon(Icons.map_rounded, size: 12.sp, color: accentGreen),
-                      4.width,
-                      Text('Open in Maps',
-                          style: GoogleFonts.poppins(
-                              fontSize: 11.sp,
-                              color: accentGreen,
-                              fontWeight: FontWeight.w600)),
-                    ]),
-                  ),
-                ],
-              ],
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(Icons.location_on_rounded, size: 18.sp, color: accentGreen),
+        10.width,
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Location', style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary)),
+          4.height,
+          if (loc.placeName?.isNotEmpty ?? false)
+            Text(loc.placeName!, style: GoogleFonts.poppins(
+                fontSize: 13.sp, fontWeight: FontWeight.w600, color: Colors.black)),
+          if (loc.address?.isNotEmpty ?? false) ...[
+            2.height,
+            Text(loc.address!, style: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary)),
+          ],
+          if (loc.mapLink?.isNotEmpty ?? false) ...[
+            6.height,
+            GestureDetector(
+              onTap: () async {
+                final uri = Uri.parse(loc.mapLink!);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                } else {
+                  toast('Could not open map link');
+                }
+              },
+              child: Row(children: [
+                Icon(Icons.map_rounded, size: 13.sp, color: accentGreen),
+                4.width,
+                Text('Open in Maps', style: GoogleFonts.poppins(
+                    fontSize: 12.sp, color: accentGreen,
+                    fontWeight: FontWeight.w600,
+                    decoration: TextDecoration.underline)),
+              ]),
             ),
-          ),
-        ],
-      ),
+          ],
+        ])),
+      ]),
     );
   }
-
   Widget _actionsCard() {
     return Container(
       padding: EdgeInsets.all(14.w),
@@ -1443,7 +1461,7 @@ class _EventDetailFullScreenState extends State<EventDetailFullScreen>
               Expanded(
                 child: _actionButton(
                   icon: Icons.group_add_rounded,
-                  label: 'Invite Groups',
+                  label: 'Invite Members',
                   color: accentGreen,
                   onTap: () => Navigator.push(
                       context,
@@ -1515,7 +1533,7 @@ class _EventDetailFullScreenState extends State<EventDetailFullScreen>
                     fontWeight: FontWeight.w600,
                     color: Colors.grey.shade400)),
             8.height,
-            Text('Use "Invite Groups" to add members',
+            Text('Use "Invite Members" to add members',
                 style: GoogleFonts.poppins(
                     fontSize: 12.sp, color: textSecondary)),
           ],
@@ -1695,7 +1713,9 @@ class _EditEventSheetState extends State<_EditEventSheet> {
   final _apiService = ClubApiService();
   late TextEditingController _nameCtrl;
   late TextEditingController _locationCtrl;
-
+  late TextEditingController _placeNameCtrl;
+  late TextEditingController _addressCtrl;
+  late TextEditingController _mapLinkCtrl;
   DateTime? _eventDate;
   TimeOfDay? _startTime;
   TimeOfDay? _endTime;
@@ -1713,6 +1733,9 @@ class _EditEventSheetState extends State<_EditEventSheet> {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.event.eventName);
     _locationCtrl = TextEditingController(text: widget.event.location);
+    _placeNameCtrl = TextEditingController(text: widget.event.geoLocation?.placeName ?? '');
+    _addressCtrl   = TextEditingController(text: widget.event.geoLocation?.address   ?? '');
+    _mapLinkCtrl   = TextEditingController(text: widget.event.geoLocation?.mapLink??'');
     try {
       _eventDate = DateTime.parse(widget.event.eventDate);
     } catch (_) {}
@@ -1863,8 +1886,13 @@ class _EditEventSheetState extends State<_EditEventSheet> {
       toast('Enter event name');
       return;
     }
-    if (_locationCtrl.text.trim().isEmpty) {
-      toast('Enter location');
+    if (_placeNameCtrl.text.trim().isEmpty) { toast('Enter place name'); return; }
+    if (_addressCtrl.text.trim().isEmpty)   { toast('Enter address');    return; }
+    final mapLink = _mapLinkCtrl.text.trim();
+    if (mapLink.isEmpty) { toast('Please enter map link'); return; }
+    final uri = Uri.tryParse(mapLink);
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+      toast('Please enter a valid map link URL');
       return;
     }
     if (_eventDate == null) {
@@ -1887,7 +1915,12 @@ class _EditEventSheetState extends State<_EditEventSheet> {
       "eventDate": DateFormat('yyyy-MM-dd').format(_eventDate!),
       "startTime": _formatTime(_startTime!),
       "endTime": _formatTime(_endTime!),
-      "location": _locationCtrl.text.trim(),
+      // ADD:
+      "location": {
+        "placeName": _placeNameCtrl.text.trim(),
+        "address":   _addressCtrl.text.trim(),
+        "mapLink":   mapLink,
+      },
       "eventType": widget.event.eventType,
       "status": widget.event.status,
       "clubId": widget.event.clubId,
@@ -1904,7 +1937,12 @@ class _EditEventSheetState extends State<_EditEventSheet> {
         eventDate: DateFormat('yyyy-MM-dd').format(_eventDate!),
         startTime: _formatTime(_startTime!),
         endTime: _formatTime(_endTime!),
-        location: _locationCtrl.text.trim(),
+        location: _placeNameCtrl.text.trim(),
+        geoLocation: EventLocation(
+          placeName: _placeNameCtrl.text.trim(),
+          address:   _addressCtrl.text.trim(),
+          mapLink:   mapLink,
+        ),
         eventType: widget.event.eventType,
         status: widget.event.status,
         clubId: widget.event.clubId,
@@ -1937,8 +1975,9 @@ class _EditEventSheetState extends State<_EditEventSheet> {
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _locationCtrl.dispose();
-    super.dispose();
+    _placeNameCtrl.dispose();
+    _addressCtrl.dispose();
+    _mapLinkCtrl.dispose();    super.dispose();
   }
 
   @override
@@ -1972,6 +2011,11 @@ class _EditEventSheetState extends State<_EditEventSheet> {
               Text('Edit Event',
                   style: GoogleFonts.montserrat(
                       fontSize: 18.sp, fontWeight: FontWeight.bold)),
+              SizedBox(width: 120.w,),
+              GestureDetector(onTap:(){
+                Navigator.pop(context);
+    },child: Icon(Icons.close,color: Colors.red,))
+
             ]),
             20.height,
             _loadingActivities? Center(child: CircularProgressIndicator(color: accentGreen)):_activityField(),
@@ -1980,8 +2024,18 @@ class _EditEventSheetState extends State<_EditEventSheet> {
             6.height,
             _inputField('Event title', _nameCtrl),
             12.height,
-            _fieldLabel('Location (or Google Maps link)'),
+            _fieldLabel('Place Name *'),
             6.height,
+            _inputField('e.g. City Sports Arena', _placeNameCtrl),
+            12.height,
+            _fieldLabel('Address *'),
+            6.height,
+            _inputField('e.g. 123 Main Street, Chennai', _addressCtrl),
+            12.height,
+            _fieldLabel('Map Link *'),
+            6.height,
+            _inputField('https://maps.google.com/...', _mapLinkCtrl),
+            12.height,
             _inputField('Location', _locationCtrl),
             12.height,
             _fieldLabel('Event Date'),
@@ -2080,7 +2134,7 @@ class _EditEventSheetState extends State<_EditEventSheet> {
                         fontSize: 14.sp, fontWeight: FontWeight.w700)),
               ),
             ),
-            20.height,
+            50.height,
           ],
         ),
       ),
