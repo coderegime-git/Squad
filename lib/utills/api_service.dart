@@ -1572,6 +1572,20 @@ class ClubApiService {
       return [];
     }
   }
+  Future<bool> removeMembersFromEvent(int eventId, List<int> memberIds) async {
+    try {
+      print("Removing members $memberIds from event $eventId");
+      final fullResponse = await _helper.deleteWithBody(
+        "api/events/$eventId/members",
+        {"memberIds": memberIds},
+      );
+      print("removeMembersFromEvent response: ${jsonEncode(fullResponse)}");
+      return fullResponse['success'] == true;
+    } catch (e) {
+      print("removeMembersFromEvent failed: $e");
+      return false;
+    }
+  }
 }
 
 class CoachApiService {

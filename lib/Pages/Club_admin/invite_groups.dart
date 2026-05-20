@@ -183,6 +183,216 @@ class _InviteGroupsScreenState extends State<InviteGroupsScreen> {
       return;
     }
 
+    // Build member details for confirm dialog
+    final Map<int, Map<String, String>> details = {};
+    _checkedGroupMembers.forEach((gId, ids) {
+      final members = _groupMembers[gId];
+      if (members == null) return;
+      for (final m in members) {
+        if (ids.contains(m.memberId)) {
+          details[m.memberId] = {'name': m.name, 'email': m.email};
+        }
+      }
+    });
+    _checkedMembers.forEach((sgId, ids) {
+      final members = _members[sgId];
+      if (members == null) return;
+      for (final m in members) {
+        if (ids.contains(m.memberId)) {
+          details[m.memberId] = {'name': m.name, 'email': m.email};
+        }
+      }
+    });
+    final memberDetails = details.values.toList();
+
+    // Show confirm dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(20.w),
+              decoration: BoxDecoration(
+                color: accentGreen,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20.r),
+                  topRight: Radius.circular(20.r),
+                ),
+              ),
+              child: Column(children: [
+                Container(
+                  padding: EdgeInsets.all(10.w),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.send_rounded, color: Colors.white, size: 26.sp),
+                ),
+                10.height,
+                Text('Confirm Invites',
+                    style: GoogleFonts.montserrat(
+                        color: Colors.white, fontSize: 18.sp,
+                        fontWeight: FontWeight.bold)),
+                6.height,
+                Text(
+                  '${memberDetails.length} member${memberDetails.length > 1 ? 's' : ''} will be invited to',
+                  style: GoogleFonts.poppins(
+                      color: Colors.white.withOpacity(0.85), fontSize: 12.sp),
+                  textAlign: TextAlign.center,
+                ),
+                4.height,
+                Text(widget.event.eventName,
+                    style: GoogleFonts.poppins(
+                        color: Colors.white, fontSize: 13.sp,
+                        fontWeight: FontWeight.w700),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis),
+              ]),
+            ),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: 280.h),
+              child: Container(
+                color: Colors.grey.shade100,
+                child: Scrollbar(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                    itemCount: memberDetails.length,
+                    separatorBuilder: (_, __) =>
+                        Divider(height: 1, color: Colors.grey.shade500),
+                    itemBuilder: (_, i) {
+                      final m = memberDetails[i];
+                      final name = m['name'] ?? '';
+                      return Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8.h),
+                        child: Row(children: [
+                          CircleAvatar(
+                            radius: 16.r,
+                            backgroundColor: accentGreen.withOpacity(0.12),
+                            child: Text(
+                              name.isNotEmpty ? name[0].toUpperCase() : '?',
+                              style: GoogleFonts.montserrat(
+                                  fontSize: 11.sp, fontWeight: FontWeight.bold,
+                                  color: accentGreen),
+                            ),
+                          ),
+                          10.width,
+                          Expanded(child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(name,
+                                  style: GoogleFonts.poppins(
+                                      fontSize: 13.sp, fontWeight: FontWeight.w500,
+                                      color: Colors.black87)),
+                              Text(m['email'] ?? '',
+                                  style: GoogleFonts.poppins(
+                                      fontSize: 11.sp, color: textSecondary)),
+                            ],
+                          )),
+                          Icon(Icons.check_circle_rounded,
+                              color: accentGreen, size: 16.sp),
+                        ]),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+            Container(
+              padding: EdgeInsets.fromLTRB(16.w, 14.h, 16.w, 16.h),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(20.r),
+                  bottomRight: Radius.circular(20.r),
+                ),
+                border: Border(
+                  top: BorderSide(
+                    color: Colors.grey.shade200,
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade50,
+                        foregroundColor: Colors.grey.shade700,
+                        side: BorderSide(
+                          color: Colors.grey.shade300,
+                        ),
+                        elevation: 0,
+                        padding: EdgeInsets.symmetric(
+                          vertical: 14.h,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14.r),
+                        ),
+                      ),
+                      child: Text(
+                        'Cancel',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(width: 12.w),
+
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accentGreen,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: EdgeInsets.symmetric(
+                          vertical: 14.h,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14.r),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.send_rounded,
+                            size: 16.sp,
+                          ),
+                          SizedBox(width: 6.w),
+                          Text(
+                            'Confirm',
+                            style: GoogleFonts.poppins(
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true) return;
+
     setState(() => _submitting = true);
     try {
       final success = await _apiService.addMembersToEvent(
@@ -190,8 +400,9 @@ class _InviteGroupsScreenState extends State<InviteGroupsScreen> {
       if (mounted) {
         setState(() => _submitting = false);
         if (success) {
-          toast('Invites sent to ${invitedMemberIds.length} member(s)!', bgColor: accentGreen);
-          Navigator.pop(context);
+          toast('Invites sent to ${invitedMemberIds.length} member(s)!',
+              bgColor: accentGreen);
+          Navigator.pop(context, true); // ← pass true so caller knows to refresh
         } else {
           toast('Failed to send invites. Try again.');
         }

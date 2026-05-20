@@ -140,10 +140,10 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen>
                       tabs: [
                         Tab(
                             text:
-                            'Scheduled (${_loadingEvents ? '...' : _scheduledEvents.length})'),
+                            'Scheduled'),
                         Tab(
                             text:
-                            'Completed (${_loadingEvents ? '...' : _completedEvents.length})'),
+                            'Completed'),
                       ],
                     ),
                   ],
@@ -151,7 +151,6 @@ class _ClubAdminScheduleScreenState extends State<ClubAdminScheduleScreen>
               ),
             ),
 
-            // ── Tab content ──────────────────────────────────────
             Expanded(
               child: _loadingEvents
                   ? const Center(
@@ -741,7 +740,18 @@ class _CreateEventSheetState extends State<_CreateEventSheet> {
             Center(child: Container(width: 40.w, height: 4.h,
                 decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2.r)))),
             16.height,
-            Text('Create New Event', style: GoogleFonts.montserrat(fontSize: 18.sp, fontWeight: FontWeight.bold)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Create New Event', style: GoogleFonts.montserrat(fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                GestureDetector(
+                  onTap: (){
+                    Navigator.pop(context);
+                  },
+                    child: Icon(Icons.close,color: Colors.red,)
+                )
+              ],
+            ),
             20.height,
             loadingActivity? Center(child: CircularProgressIndicator(color: accentGreen)):_activityField(),
             10.height,
@@ -1340,12 +1350,19 @@ class _EventDetailFullScreenState extends State<EventDetailFullScreen>
             ),
           ],
         ),
+        // REPLACE this block in EventDetailFullScreen build():
+        // REPLACE this block in EventDetailFullScreen build():
         floatingActionButton: widget.canEdit
             ? FloatingActionButton.extended(
-          onPressed: () => Navigator.push(
+          onPressed: () async {
+            await Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (_) => InviteGroupsScreen(event: _event))), // uses _event
+                  builder: (_) => InviteGroupsScreen(event: _event)),
+            );
+            // Refresh attendees regardless of result
+            _loadAttendees();
+          },
           backgroundColor: accentGreen,
           icon: Icon(Icons.group_add_rounded, color: Colors.white, size: 20.sp),
           label: Text('Invite Members',
@@ -1463,10 +1480,14 @@ class _EventDetailFullScreenState extends State<EventDetailFullScreen>
                   icon: Icons.group_add_rounded,
                   label: 'Invite Members',
                   color: accentGreen,
-                  onTap: () => Navigator.push(
+                  onTap: () async {
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (_) => InviteGroupsScreen(event: _event))), // uses _event
+                          builder: (_) => InviteGroupsScreen(event: _event)),
+                    );
+                    _loadAttendees();
+                  }, // uses _event
                 ),
               ),
               12.width,
@@ -1581,11 +1602,53 @@ class _EventDetailFullScreenState extends State<EventDetailFullScreen>
               fontSize: 13.sp, fontWeight: FontWeight.w700, color: color)),
     ]);
   }
-
+  void _confirmRemoveMember(int memberId, String memberName) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.r)),
+        title: Text('Remove Member',
+            style: GoogleFonts.montserrat(
+                color: Colors.black, fontWeight: FontWeight.bold)),
+        content: Text(
+            'Remove "$memberName" from this event?',
+            style: GoogleFonts.poppins(color: textSecondary)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel',
+                  style: GoogleFonts.poppins(color: textSecondary))),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final success = await _apiService.removeMembersFromEvent(
+                  _event.eventId, [memberId]);
+              if (success) {
+                toast('Member removed', bgColor: Colors.red);
+                _loadAttendees();
+              } else {
+                toast('Failed to remove member');
+              }
+            },
+            child: Text('Remove',
+                style: GoogleFonts.poppins(
+                    color: Colors.red, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
   Widget _attendeeTile(Map<String, dynamic> member) {
+    print(widget.canEdit);
+    print(widget.canEdit);
+    print("widget.canEdit");
     final status = member['rsvpStatus'] as String? ?? 'PENDING';
     final name = member['memberName'] as String? ?? '';
     final email = member['memberEmail'] as String? ?? '';
+    final memberId = member['memberId'] as int? ??
+        int.tryParse(member['memberId']?.toString() ?? '0') ?? 0;
     final color = _statusColor(status);
     return Container(
       margin: EdgeInsets.only(bottom: 8.h),
@@ -1612,9 +1675,11 @@ class _EventDetailFullScreenState extends State<EventDetailFullScreen>
               children: [
                 Text(name,
                     style: GoogleFonts.poppins(
-                        fontSize: 13.sp, fontWeight: FontWeight.w600, color: Colors.black)),
+                        fontSize: 13.sp, fontWeight: FontWeight.w600,
+                        color: Colors.black)),
                 Text(email,
-                    style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary)),
+                    style: GoogleFonts.poppins(
+                        fontSize: 11.sp, color: textSecondary)),
               ],
             ),
           ),
@@ -1628,9 +1693,27 @@ class _EventDetailFullScreenState extends State<EventDetailFullScreen>
               4.width,
               Text(status,
                   style: GoogleFonts.poppins(
-                      fontSize: 10.sp, color: color, fontWeight: FontWeight.w600)),
+                      fontSize: 10.sp, color: color,
+                      fontWeight: FontWeight.w600)),
             ]),
           ),
+          // Remove button — only show if canEdit
+          if (widget.canEdit) ...[
+            8.width,
+            GestureDetector(
+              onTap: () => _confirmRemoveMember(memberId, name),
+              child: Container(
+                padding: EdgeInsets.all(6.w),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(8.r),
+                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                ),
+                child: Icon(Icons.person_remove_rounded,
+                    size: 14.sp, color: Colors.red),
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -447,11 +447,14 @@ class _CoachEventDetailScreenState extends State<CoachEventDetailScreen>
     final status = (member['rsvpStatus'] as String?) ?? 'PENDING';
     final name = (member['memberName'] as String?) ?? '';
     final email = (member['memberEmail'] as String?) ?? '';
+    final memberId = member['memberId'] as int? ??
+        int.tryParse(member['memberId']?.toString() ?? '0') ?? 0;
     final color = _statusColor(status);
     return Container(
       margin: EdgeInsets.only(bottom: 8.h),
       padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(color: Colors.white,
+      decoration: BoxDecoration(
+          color: Colors.white,
           borderRadius: BorderRadius.circular(12.r),
           border: Border.all(color: color.withOpacity(0.2))),
       child: Row(children: [
@@ -459,27 +462,90 @@ class _CoachEventDetailScreenState extends State<CoachEventDetailScreen>
           radius: 20.r,
           backgroundColor: color.withOpacity(0.1),
           child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
-              style: GoogleFonts.montserrat(fontSize: 14.sp, fontWeight: FontWeight.w700, color: color)),
+              style: GoogleFonts.montserrat(
+                  fontSize: 14.sp, fontWeight: FontWeight.w700, color: color)),
         ),
         12.width,
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(name, style: GoogleFonts.poppins(fontSize: 13.sp, fontWeight: FontWeight.w600)),
-          Text(email, style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary)),
+          Text(name,
+              style: GoogleFonts.poppins(
+                  fontSize: 13.sp, fontWeight: FontWeight.w600)),
+          Text(email,
+              style: GoogleFonts.poppins(
+                  fontSize: 11.sp, color: textSecondary)),
         ])),
         Container(
           padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-          decoration: BoxDecoration(color: color.withOpacity(0.1),
+          decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(20.r)),
           child: Row(children: [
-            Icon(_statusIcon(status), size: 11.sp, color: color), 4.width,
-            Text(status, style: GoogleFonts.poppins(
-                fontSize: 10.sp, color: color, fontWeight: FontWeight.w600)),
+            Icon(_statusIcon(status), size: 11.sp, color: color),
+            4.width,
+            Text(status,
+                style: GoogleFonts.poppins(
+                    fontSize: 10.sp, color: color,
+                    fontWeight: FontWeight.w600)),
           ]),
         ),
+        // Remove button — only for non-completed events
+        if (!_isCompleted) ...[
+          8.width,
+          GestureDetector(
+            onTap: () => _confirmRemoveMember(memberId, name),
+            child: Container(
+              padding: EdgeInsets.all(6.w),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(8.r),
+                border: Border.all(color: Colors.red.withOpacity(0.3)),
+              ),
+              child: Icon(Icons.person_remove_rounded,
+                  size: 14.sp, color: Colors.red),
+            ),
+          ),
+        ],
       ]),
     );
   }
-
+  void _confirmRemoveMember(int memberId, String memberName) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.r)),
+        title: Text('Remove Member',
+            style: GoogleFonts.montserrat(
+                color: Colors.black, fontWeight: FontWeight.bold)),
+        content: Text(
+            'Remove "$memberName" from this event?',
+            style: GoogleFonts.poppins(color: textSecondary)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel',
+                  style: GoogleFonts.poppins(color: textSecondary))),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final success = await _api.removeMembersFromEvent(
+                  _event.eventId, [memberId]);
+              if (success) {
+                toast('Member removed', bgColor: Colors.red);
+                _loadAttendees();
+              } else {
+                toast('Failed to remove member');
+              }
+            },
+            child: Text('Remove',
+                style: GoogleFonts.poppins(
+                    color: Colors.red, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
 // Replace _performanceTab() in _CoachEventDetailScreenState:
   Widget _performanceTab() {
     if (_loadingAttendees || _loadingNotes) {

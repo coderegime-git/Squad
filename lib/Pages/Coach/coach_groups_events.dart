@@ -864,70 +864,72 @@ class _CoachGroupMembersScreenState extends State<CoachGroupMembersScreen> {
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24.r))),
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setSheet) => Padding(
-          padding: EdgeInsets.only(
-              left: 20.w,
-              right: 20.w,
-              top: 20.h,
-              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24.h),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _sheetHandle(),
-              16.height,
-              Row(children: [
-                Container(
-                  padding: EdgeInsets.all(8.w),
-                  decoration: BoxDecoration(
-                      color: Colors.indigo.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(10.r)),
-                  child: Icon(Icons.person_add_rounded,
-                      color: Colors.indigo, size: 20.sp),
-                ),
-                12.width,
-                Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Add Members to Group',
-                            style: GoogleFonts.montserrat(
-                                fontSize: 16.sp, fontWeight: FontWeight.bold)),
-                        Text(widget.group.name,
-                            style: GoogleFonts.poppins(
-                                fontSize: 11.sp, color: textSecondary)),
-                      ]),
-                ),
-              ]),
-              12.height,
-              Text('${selectedIds.length} of ${available.length} selected',
-                  style: GoogleFonts.poppins(
-                      fontSize: 12.sp,
-                      color: accentGreen,
-                      fontWeight: FontWeight.w600)),
-              8.height,
-              _memberCheckList(
-                  available, selectedIds, setSheet, ctx, Colors.indigo),
-              20.height,
-              _addButton(
-                  isAdding: isAdding,
-                  selectedCount: selectedIds.length,
-                  onTap: () async {
-                    setSheet(() => isAdding = true);
-                    final success = await _apiService.addMembersToGroup(
-                        widget.group.groupId, selectedIds);
-                    setSheet(() => isAdding = false);
-                    if (success) {
-                      Navigator.pop(ctx);
-                      AppUI.success(context,
-                          '${selectedIds.length} member(s) added to group!');
-                      _refresh();
-                    } else {
-                      AppUI.error(context, 'Failed to add members.');
-                    }
-                  }),
-            ],
+      builder: (_) => SingleChildScrollView(
+        child: StatefulBuilder(
+          builder: (ctx, setSheet) => Padding(
+            padding: EdgeInsets.only(
+                left: 20.w,
+                right: 20.w,
+                top: 20.h,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _sheetHandle(),
+                16.height,
+                Row(children: [
+                  Container(
+                    padding: EdgeInsets.all(8.w),
+                    decoration: BoxDecoration(
+                        color: Colors.indigo.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(10.r)),
+                    child: Icon(Icons.person_add_rounded,
+                        color: Colors.indigo, size: 20.sp),
+                  ),
+                  12.width,
+                  Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Add Members to Group',
+                              style: GoogleFonts.montserrat(
+                                  fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                          Text(widget.group.name,
+                              style: GoogleFonts.poppins(
+                                  fontSize: 11.sp, color: textSecondary)),
+                        ]),
+                  ),
+                ]),
+                12.height,
+                Text('${selectedIds.length} of ${available.length} selected',
+                    style: GoogleFonts.poppins(
+                        fontSize: 12.sp,
+                        color: accentGreen,
+                        fontWeight: FontWeight.w600)),
+                8.height,
+                _memberCheckList(
+                    available, selectedIds, setSheet, ctx, Colors.indigo),
+                20.height,
+                _addButton(
+                    isAdding: isAdding,
+                    selectedCount: selectedIds.length,
+                    onTap: () async {
+                      setSheet(() => isAdding = true);
+                      final success = await _apiService.addMembersToGroup(
+                          widget.group.groupId, selectedIds);
+                      setSheet(() => isAdding = false);
+                      if (success) {
+                        Navigator.pop(ctx);
+                        AppUI.success(context,
+                            '${selectedIds.length} member(s) added to group!');
+                        _refresh();
+                      } else {
+                        AppUI.error(context, 'Failed to add members.');
+                      }
+                    }),
+              ],
+            ),
           ),
         ),
       ),
@@ -1773,72 +1775,74 @@ class _CoachSubGroupMembersScreenState
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24.r))),
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setSheet) => Padding(
-          padding: EdgeInsets.only(
-              left: 20.w,
-              right: 20.w,
-              top: 20.h,
-              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24.h),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _sheetHandle(),
-              16.height,
-              Row(children: [
-                Container(
-                  padding: EdgeInsets.all(8.w),
-                  decoration: BoxDecoration(
-                      color: accentGreen.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(10.r)),
-                  child: Icon(Icons.person_add_rounded,
-                      color: accentGreen, size: 20.sp),
-                ),
-                12.width,
-                Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Add to Sub-group',
-                            style: GoogleFonts.montserrat(
-                                fontSize: 16.sp, fontWeight: FontWeight.bold)),
-                        Text(
-                            '${widget.group.name} › ${widget.subGroup.name}',
-                            style: GoogleFonts.poppins(
-                                fontSize: 11.sp, color: textSecondary)),
-                      ]),
-                ),
-              ]),
-              12.height,
-              Text(
-                  '${selectedIds.length} of ${available.length} available',
-                  style: GoogleFonts.poppins(
-                      fontSize: 12.sp,
-                      color: accentGreen,
-                      fontWeight: FontWeight.w600)),
-              8.height,
-              _memberCheckList(
-                  available, selectedIds, setSheet, ctx, accentGreen),
-              20.height,
-              _addButton(
-                  isAdding: isAdding,
-                  selectedCount: selectedIds.length,
-                  onTap: () async {
-                    setSheet(() => isAdding = true);
-                    final success = await _apiService.addMembersToSubGroup(
-                        widget.subGroup.subGroupId, selectedIds);
-                    setSheet(() => isAdding = false);
-                    if (success) {
-                      Navigator.pop(ctx);
-                      AppUI.success(context,
-                          '${selectedIds.length} member(s) added!');
-                      _refresh();
-                    } else {
-                      AppUI.error(context, 'Failed to add members.');
-                    }
-                  }),
-            ],
+      builder: (_) => SingleChildScrollView(
+        child: StatefulBuilder(
+          builder: (ctx, setSheet) => Padding(
+            padding: EdgeInsets.only(
+                left: 20.w,
+                right: 20.w,
+                top: 20.h,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _sheetHandle(),
+                16.height,
+                Row(children: [
+                  Container(
+                    padding: EdgeInsets.all(8.w),
+                    decoration: BoxDecoration(
+                        color: accentGreen.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(10.r)),
+                    child: Icon(Icons.person_add_rounded,
+                        color: accentGreen, size: 20.sp),
+                  ),
+                  12.width,
+                  Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Add to Sub-group',
+                              style: GoogleFonts.montserrat(
+                                  fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                          Text(
+                              '${widget.group.name} › ${widget.subGroup.name}',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 11.sp, color: textSecondary)),
+                        ]),
+                  ),
+                ]),
+                12.height,
+                Text(
+                    '${selectedIds.length} of ${available.length} available',
+                    style: GoogleFonts.poppins(
+                        fontSize: 12.sp,
+                        color: accentGreen,
+                        fontWeight: FontWeight.w600)),
+                8.height,
+                _memberCheckList(
+                    available, selectedIds, setSheet, ctx, accentGreen),
+                20.height,
+                _addButton(
+                    isAdding: isAdding,
+                    selectedCount: selectedIds.length,
+                    onTap: () async {
+                      setSheet(() => isAdding = true);
+                      final success = await _apiService.addMembersToSubGroup(
+                          widget.subGroup.subGroupId, selectedIds);
+                      setSheet(() => isAdding = false);
+                      if (success) {
+                        Navigator.pop(ctx);
+                        AppUI.success(context,
+                            '${selectedIds.length} member(s) added!');
+                        _refresh();
+                      } else {
+                        AppUI.error(context, 'Failed to add members.');
+                      }
+                    }),
+              ],
+            ),
           ),
         ),
       ),
@@ -2280,51 +2284,122 @@ Widget _emptyView({
       ),
     ]);
 
-Widget _memberCheckList(
-    List<Data> available,
-    List<int> selectedIds,
-    StateSetter setSheet,
-    BuildContext ctx,
-    Color accentColor,
-    ) {
-  return Container(
-    constraints:
-    BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.38),
-    decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: Colors.grey.shade300)),
-    child: ListView.builder(
-      shrinkWrap: true,
-      physics: const ClampingScrollPhysics(),
-      padding: EdgeInsets.zero,
-      itemCount: available.length,
-      itemBuilder: (_, i) {
-        final member = available[i];
-        final selected = selectedIds.contains(member.memberId);
-        return CheckboxListTile(
-          title: Text(member.username,
-              style:
-              GoogleFonts.poppins(fontSize: 13.sp, color: Colors.black87)),
-          subtitle: Text(member.email,
-              style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary)),
-          value: selected,
-          activeColor: accentColor,
-          dense: true,
-          visualDensity: VisualDensity.compact,
-          contentPadding:
-          EdgeInsets.symmetric(horizontal: 16.w, vertical: 2.h),
-          onChanged: (bool? val) {
-            setSheet(() {
-              if (val == true)
-                selectedIds.add(member.memberId);
-              else
-                selectedIds.remove(member.memberId);
-            });
-          },
-        );
-      },
-    ),
+Widget _memberCheckList(List<Data> available, List<int> selectedIds,
+    StateSetter setSheet, BuildContext ctx, Color accentColor) {
+  String searchQuery = '';
+  List<Data> filtered = List.from(available);
+
+  return StatefulBuilder(
+    builder: (context, setSearch) {
+      filtered = searchQuery.isEmpty
+          ? available
+          : available
+          .where((m) =>
+      m.username.toLowerCase().contains(searchQuery.toLowerCase()) ||
+          m.email.toLowerCase().contains(searchQuery.toLowerCase()))
+          .toList();
+
+      return SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              onChanged: (val) => setSearch(() => searchQuery = val),
+              style: GoogleFonts.poppins(fontSize: 13.sp),
+              decoration: InputDecoration(
+                hintText: 'Search members...',
+                hintStyle: GoogleFonts.poppins(
+                    fontSize: 12.sp, color: textSecondary.withOpacity(0.5)),
+                prefixIcon: Icon(Icons.search_rounded,
+                    color: textSecondary, size: 18.sp),
+                suffixIcon: searchQuery.isNotEmpty
+                    ? GestureDetector(
+                  onTap: () => setSearch(() => searchQuery = ''),
+                  child: Icon(Icons.clear_rounded,
+                      color: textSecondary, size: 18.sp),
+                )
+                    : null,
+                filled: true,
+                fillColor: Colors.grey.shade100,
+                contentPadding:
+                EdgeInsets.symmetric(horizontal: 14.w, vertical: 11.h),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                    borderSide: BorderSide(color: Colors.grey.shade300)),
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                    borderSide: BorderSide(color: Colors.grey.shade300)),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                    borderSide:
+                    const BorderSide(color: accentGreen, width: 1.5)),
+              ),
+            ),
+            8.height,
+            Text(
+              filtered.isEmpty
+                  ? 'No members found'
+                  : '${selectedIds.length} selected · ${filtered.length} shown',
+              style: GoogleFonts.poppins(
+                  fontSize: 11.sp,
+                  color: accentGreen,
+                  fontWeight: FontWeight.w600),
+            ),
+            6.height,
+            Container(
+              constraints:
+              BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.32),
+              decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12.r),
+                  border: Border.all(color: Colors.grey.shade300)),
+              child: filtered.isEmpty
+                  ? Padding(
+                padding: EdgeInsets.all(20.w),
+                child: Center(
+                  child: Text('No members match your search',
+                      style: GoogleFonts.poppins(
+                          fontSize: 12.sp, color: textSecondary)),
+                ),
+              )
+                  : ListView.builder(
+                shrinkWrap: true,
+                physics: const ClampingScrollPhysics(),
+                padding: EdgeInsets.zero,
+                itemCount: filtered.length,
+                itemBuilder: (_, i) {
+                  final member = filtered[i];
+                  final selected = selectedIds.contains(member.memberId);
+                  return CheckboxListTile(
+                    title: Text(member.username,
+                        style: GoogleFonts.poppins(
+                            fontSize: 13.sp, color: Colors.black87)),
+                    subtitle: Text(member.email,
+                        style: GoogleFonts.poppins(
+                            fontSize: 11.sp, color: textSecondary)),
+                    value: selected,
+                    activeColor: accentColor,
+                    dense: true,
+                    visualDensity: VisualDensity.compact,
+                    contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16.w, vertical: 2.h),
+                    onChanged: (bool? val) {
+                      setSheet(() {
+                        if (val == true)
+                          selectedIds.add(member.memberId);
+                        else
+                          selectedIds.remove(member.memberId);
+                      });
+                      setSearch(() {});
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    },
   );
 }
 

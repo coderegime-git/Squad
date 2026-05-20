@@ -39,8 +39,8 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
   List<GroupData> _groups = [];
   bool _loading = true;
   bool _submitting = false;
-  final Map<int, List<GetDirectGroupMembersData>?> _groupMembers = {}; // ✅ was List<memberModel.Data>?  final Set<int> _loadingGroupMembers = {};
-  final Set<int> _loadingGroupMembers = {}; // ✅ add this line
+  final Map<int, List<GetDirectGroupMembersData>?> _groupMembers = {};
+  final Set<int> _loadingGroupMembers = {};
 
   final Map<int, Set<int>> _checkedGroupMembers = {};
   final Map<int, List<subMemberModel.SubMemData>?> _subMembers = {};
@@ -209,7 +209,6 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
     });
   }
 
-  // ── Show confirmation dialog before sending ────────────────────────────────
   Future<void> _showConfirmDialog() async {
     final memberDetails = _selectedMemberDetails;
     if (memberDetails.isEmpty) {
@@ -278,88 +277,136 @@ class _CoachInviteGroupsScreenState extends State<CoachInviteGroupsScreen> {
             // Member list
             ConstrainedBox(
               constraints: BoxConstraints(maxHeight: 300.h),
-              child: Scrollbar(
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-                  itemCount: memberDetails.length,
-                  separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade100),
-                  itemBuilder: (_, i) {
-                    final m = memberDetails[i];
-                    final name = m['name'] ?? '';
-                    return Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8.h),
-                      child: Row(children: [
-                        CircleAvatar(
-                          radius: 16.r,
-                          backgroundColor: accentGreen.withOpacity(0.12),
-                          child: Text(
-                            name.isNotEmpty ? name[0].toUpperCase() : '?',
-                            style: GoogleFonts.montserrat(
-                              fontSize: 11.sp,
-                              fontWeight: FontWeight.w700,
-                              color: accentGreen,
+              child: Container(
+                color: Colors.grey.shade100,
+                child: Scrollbar(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                    itemCount: memberDetails.length,
+                    separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade500),
+                    itemBuilder: (_, i) {
+                      final m = memberDetails[i];
+                      final name = m['name'] ?? '';
+                      return Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8.h),
+                        child: Row(children: [
+                          CircleAvatar(
+                            radius: 16.r,
+                            backgroundColor: accentGreen.withOpacity(0.12),
+                            child: Text(
+                              name.isNotEmpty ? name[0].toUpperCase() : '?',
+                              style: GoogleFonts.montserrat(
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.bold,
+                                color: accentGreen,
+                              ),
                             ),
                           ),
-                        ),
-                        10.width,
-                        Expanded(child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(name,
-                                style: GoogleFonts.poppins(
-                                    fontSize: 13.sp, fontWeight: FontWeight.w600)),
-                            Text(m['email'] ?? '',
-                                style: GoogleFonts.poppins(
-                                    fontSize: 11.sp, color: textSecondary)),
-                          ],
-                        )),
-                        Icon(Icons.check_circle_rounded, color: accentGreen, size: 16.sp),
-                      ]),
-                    );
-                  },
+                          10.width,
+                          Expanded(child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(name,
+                                  style: GoogleFonts.poppins(
+                                      fontSize: 13.sp, fontWeight: FontWeight.w500)),
+                              Text(m['email'] ?? '',
+                                  style: GoogleFonts.poppins(
+                                      fontSize: 11.sp, color: textSecondary)),
+                            ],
+                          )),
+                          Icon(Icons.check_circle_rounded, color: accentGreen, size: 16.sp),
+                        ]),
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
 
             // Action buttons
-            Padding(
-              padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 16.h),
-              child: Row(children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(ctx, false),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.grey.shade600,
-                      side: BorderSide(color: Colors.grey.shade300),
-                      padding: EdgeInsets.symmetric(vertical: 12.h),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.r)),
-                    ),
-                    child: Text('Cancel',
-                        style: GoogleFonts.poppins(
-                            fontSize: 13.sp, fontWeight: FontWeight.w600)),
+            // Action buttons
+            Container(
+              padding: EdgeInsets.fromLTRB(16.w, 14.h, 16.w, 16.h),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(20.r),
+                  bottomRight: Radius.circular(20.r),
+                ),
+                border: Border(
+                  top: BorderSide(
+                    color: Colors.grey.shade200,
+                    width: 1,
                   ),
                 ),
-                12.width,
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(ctx, true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: accentGreen,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: EdgeInsets.symmetric(vertical: 12.h),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.r)),
-                    ),
-                    child: Text('Confirm',
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade50,
+                        foregroundColor: Colors.grey.shade700,
+                        side: BorderSide(
+                          color: Colors.grey.shade300,
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          vertical: 14.h,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14.r),
+                        ),
+                      ),
+                      child: Text(
+                        'Cancel',
                         style: GoogleFonts.poppins(
-                            fontSize: 13.sp, fontWeight: FontWeight.w700)),
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ]),
-            ),
+
+                  SizedBox(width: 12.w),
+
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accentGreen,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: EdgeInsets.symmetric(
+                          vertical: 14.h,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14.r),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.send_rounded,
+                            size: 16.sp,
+                          ),
+                          SizedBox(width: 6.w),
+                          Text(
+                            'Confirm',
+                            style: GoogleFonts.poppins(
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
           ],
         ),
       ),

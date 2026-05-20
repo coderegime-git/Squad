@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sports/routes/app_routes.dart';
@@ -19,8 +21,25 @@ class _SplashState extends State<Splash> {
     super.initState();
     _navigate();
   }
+  Future<bool> _hasInternet() async {
+    try {
+      final result = await InternetAddress.lookup('google.com');
+      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+    } on SocketException {
+      return false;
+    }
+  }
 
-  void _navigate() {
+  Future<void> _navigate() async {
+    final hasInternet = await _hasInternet();
+    if (!mounted) return;
+
+    if (!hasInternet) {
+      SharedPreferenceHelper.setSplash(true);
+      return;
+    }
+
+    SharedPreferenceHelper.setSplash(false);
     final token = SharedPreferenceHelper.getToken();
     final role = SharedPreferenceHelper.getRole();
 

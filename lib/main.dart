@@ -6,6 +6,8 @@ import 'package:nb_utils/nb_utils.dart' as nb_util;
 import 'package:provider/provider.dart';
 import 'package:sports/routes/app_routes.dart';
 import 'package:sports/utills/api_service.dart';
+import 'package:sports/utills/connectivity.dart';
+import 'package:sports/utills/internet.dart';
 import 'package:sports/utills/notification_service.dart';
 import 'package:sports/utills/shared_preference.dart';
 import 'Pages/notification_provider.dart';
@@ -34,6 +36,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  final connectivityService = ConnectivityService();
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey(
     debugLabel: 'Main Navigator',
   );
@@ -70,6 +73,13 @@ class _MyAppState extends State<MyApp> {
             navigatorKey: navigatorKey,
             title: appTitle,
             debugShowCheckedModeBanner: false,
+            routes: {
+              //'/no-internet': (context) => const NoInternetPage(),
+              NoInterNetScreen.routeName: (context) => NoInterNetScreen(),
+            },
+            navigatorObservers: [
+              ConnectivityNavigatorObserver(connectivityService),
+            ],
             theme: ThemeData(
               useMaterial3: true,
               brightness: Brightness.dark,
