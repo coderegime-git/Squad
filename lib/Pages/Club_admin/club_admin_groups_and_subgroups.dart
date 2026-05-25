@@ -39,12 +39,24 @@ class _ClubAdminGroupsScreenState extends State<ClubAdminGroupsScreen> {
   int? _selectedActivityId;
   List<int> selectedCoachIds = [];
   bool _creatingGroup = false;
+  // Add these fields in _ClubAdminGroupsScreenState:
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+  final Set<int> _loadingGroupIds = {};
+  String? _loadingGroupAction;
+  int? _loadingGroupId;
 
   @override
   void initState() {
     super.initState();
     _groupsFuture = _fetchGroups();
     _loadActivities();
+    _searchCtrl.addListener(() => setState(() => _searchQuery = _searchCtrl.text));
+  }
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
   }
 
   Future<List<GroupData>> _fetchGroups() async {
@@ -507,48 +519,60 @@ class _ClubAdminGroupsScreenState extends State<ClubAdminGroupsScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: _actionBtn(
+                    child: _loadingActionBtn(
                       icon: Icons.people_alt_rounded,
                       label: 'Members',
                       color: Colors.indigo,
-                      onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  GroupMembersScreen(group: group)))
-                          .then((_) => _refresh()),
+                      isLoading: _loadingGroupId == group.groupId && _loadingGroupAction == 'members',
+                      onTap: () async {
+                        setState(() { _loadingGroupId = group.groupId; _loadingGroupAction = 'members'; });
+                        await Navigator.push(context, MaterialPageRoute(builder: (_) => GroupMembersScreen(group: group)));
+                        setState(() { _loadingGroupId = null; _loadingGroupAction = null; });
+                        _refresh();
+                      },
                     ),
                   ),
                   _vertDivider(),
                   Expanded(
-                    child: _actionBtn(
+                    child: _loadingActionBtn(
                       icon: Icons.account_tree_rounded,
                       label: 'Sub-groups',
                       color: Colors.teal,
-                      onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  GroupSubGroupsScreen(group: group)))
-                          .then((_) => _refresh()),
+                      isLoading: _loadingGroupId == group.groupId && _loadingGroupAction == 'subgroups',
+                      onTap: () async {
+                        setState(() { _loadingGroupId = group.groupId; _loadingGroupAction = 'subgroups'; });
+                        await Navigator.push(context, MaterialPageRoute(builder: (_) => GroupSubGroupsScreen(group: group)));
+                        setState(() { _loadingGroupId = null; _loadingGroupAction = null; });
+                        _refresh();
+                      },
                     ),
                   ),
                   _vertDivider(),
                   Expanded(
-                    child: _actionBtn(
+                    child: _loadingActionBtn(
                       icon: Icons.edit_rounded,
                       label: 'Edit',
                       color: Colors.blue,
-                      onTap: () => _showEditGroupSheet(group),
+                      isLoading: _loadingGroupId == group.groupId && _loadingGroupAction == 'edit',
+                      onTap: () async {
+                        setState(() { _loadingGroupId = group.groupId; _loadingGroupAction = 'edit'; });
+                        await _showEditGroupSheet(group);
+                        setState(() { _loadingGroupId = null; _loadingGroupAction = null; });
+                      },
                     ),
                   ),
                   _vertDivider(),
                   Expanded(
-                    child: _actionBtn(
+                    child: _loadingActionBtn(
                       icon: Icons.delete_rounded,
                       label: 'Delete',
                       color: Colors.red,
-                      onTap: () => _confirmDeleteGroup(group),
+                      isLoading: _loadingGroupId == group.groupId && _loadingGroupAction == 'delete',
+                      onTap: () async {
+                        setState(() { _loadingGroupId = group.groupId; _loadingGroupAction = 'delete'; });
+                        await _confirmDeleteGroup(group);
+                        setState(() { _loadingGroupId = null; _loadingGroupAction = null; });
+                      },
                     ),
                   ),
                 ],
@@ -566,31 +590,7 @@ class _ClubAdminGroupsScreenState extends State<ClubAdminGroupsScreen> {
     color: Colors.grey.shade200,
   );
 
-  Widget _actionBtn({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 10.h),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 18.sp),
-            4.height,
-            Text(label,
-                style: GoogleFonts.poppins(
-                    fontSize: 9.sp,
-                    color: color,
-                    fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   Widget _sheetHandle() => Center(
     child: Container(
@@ -725,19 +725,50 @@ class _ClubAdminGroupsScreenState extends State<ClubAdminGroupsScreen> {
                     return _errorView(_refresh);
                   }
                   final groups = snapshot.data ?? [];
+                  final filtered = groups.where((g) =>
+                  g.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                      (g.description ?? '').toLowerCase().contains(_searchQuery.toLowerCase())
+                  ).toList();
+
                   return RefreshIndicator(
                     onRefresh: () async => _refresh(),
                     color: accentGreen,
-                    child: groups.isEmpty
-                        ? _emptyView(
-                        icon: Icons.group_off_rounded,
-                        title: 'No groups yet',
-                        subtitle: 'Tap + to create the first group')
-                        : ListView.builder(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 16.w, vertical: 14.h),
-                      itemCount: groups.length,
-                      itemBuilder: (_, i) => _groupCard(groups[i]),
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 4.h),
+                          child: TextField(
+                            controller: _searchCtrl,
+                            style: GoogleFonts.poppins(fontSize: 13.sp),
+                            decoration: InputDecoration(
+                              hintText: 'Search groups...',
+                              hintStyle: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary.withOpacity(0.5)),
+                              prefixIcon: Icon(Icons.search_rounded, color: textSecondary, size: 18.sp),
+                              suffixIcon: _searchQuery.isNotEmpty
+                                  ? GestureDetector(
+                                onTap: () => setState(() { _searchCtrl.clear(); _searchQuery = ''; }),
+                                child: Icon(Icons.clear_rounded, color: textSecondary, size: 18.sp),
+                              )
+                                  : null,
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 11.h),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r), borderSide: BorderSide(color: Colors.grey.shade300)),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r), borderSide: BorderSide(color: Colors.grey.shade300)),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r), borderSide: const BorderSide(color: accentGreen, width: 1.5)),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: filtered.isEmpty
+                              ? _emptyView(icon: Icons.search_off_rounded, title: 'No groups found', subtitle: 'Try a different search term')
+                              : ListView.builder(
+                            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                            itemCount: filtered.length,
+                            itemBuilder: (_, i) => _groupCard(filtered[i]),
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 },
@@ -898,8 +929,10 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
     final result = await _apiService.getGroupDirectMembers1(widget.group.groupId); 
     return result.data;
   }
-  void _refresh() => setState(() => _membersFuture = _fetchMembers());
-
+  void _refresh() {
+    if (!mounted) return;
+    setState(() => _membersFuture = _fetchMembers());
+  }
   void _showAddMembersSheet() async {
     setState(() => _loadingAll = true);
     List<Data> allMembers = [];
@@ -1004,6 +1037,7 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
                         AppUI.success(context,
                             '${selectedIds.length} member(s) added to group!');
                         _refresh();
+                        print("Get Group Members");
                       } else {
                         AppUI.error(context, 'Failed to add members.');
                       }
@@ -1208,11 +1242,21 @@ class _GroupSubGroupsScreenState extends State<GroupSubGroupsScreen> {
   bool _isFirstLoad = true;
   bool _creatingSubGroup = false;
   bool _creatingSubGroup1 = false;
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+  int? _loadingSubGroupId;
+  String? _loadingSubGroupAction;
 
   @override
   void initState() {
     super.initState();
     _subGroupsFuture = _fetchSubGroups();
+    _searchCtrl.addListener(() => setState(() => _searchQuery = _searchCtrl.text));
+  }
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
   }
 
   Future<List<SubGroupData>> _fetchSubGroups() async {
@@ -1618,33 +1662,44 @@ class _GroupSubGroupsScreenState extends State<GroupSubGroupsScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: _actionBtn(
+                  child: _loadingActionBtn(
                     icon: Icons.people_alt_rounded,
                     label: 'Members',
                     color: Colors.indigo,
-                    onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => SubGroupMembersScreen(
-                                subGroup: sg, group: widget.group))),
+                    isLoading: _loadingSubGroupId == sg.subGroupId && _loadingSubGroupAction == 'members',
+                    onTap: () async {
+                      setState(() { _loadingSubGroupId = sg.subGroupId; _loadingSubGroupAction = 'members'; });
+                      await Navigator.push(context, MaterialPageRoute(builder: (_) => SubGroupMembersScreen(subGroup: sg, group: widget.group)));
+                      setState(() { _loadingSubGroupId = null; _loadingSubGroupAction = null; });
+                    },
                   ),
                 ),
                 _vertDivider(),
                 Expanded(
-                  child: _actionBtn(
+                  child: _loadingActionBtn(
                     icon: Icons.edit_rounded,
                     label: 'Edit',
                     color: Colors.blue,
-                    onTap: () => _showEditSheet(sg),
+                    isLoading: _loadingSubGroupId == sg.subGroupId && _loadingSubGroupAction == 'edit',
+                    onTap: () async {
+                      setState(() { _loadingSubGroupId = sg.subGroupId; _loadingSubGroupAction = 'edit'; });
+                      await _showEditSheet(sg);
+                      setState(() { _loadingSubGroupId = null; _loadingSubGroupAction = null; });
+                    },
                   ),
                 ),
                 _vertDivider(),
                 Expanded(
-                  child: _actionBtn(
+                  child: _loadingActionBtn(
                     icon: Icons.delete_rounded,
                     label: 'Delete',
                     color: Colors.red,
-                    onTap: () => _confirmDelete(sg),
+                    isLoading: _loadingSubGroupId == sg.subGroupId && _loadingSubGroupAction == 'delete',
+                    onTap: () async {
+                      setState(() { _loadingSubGroupId = sg.subGroupId; _loadingSubGroupAction = 'delete'; });
+                      await _confirmDelete(sg);
+                      setState(() { _loadingSubGroupId = null; _loadingSubGroupAction = null; });
+                    },
                   ),
                 ),
               ],
@@ -1814,19 +1869,50 @@ class _GroupSubGroupsScreenState extends State<GroupSubGroupsScreen> {
               return _errorView(_refresh);
             }
             final subGroups = snapshot.data ?? [];
+            final filtered = subGroups.where((sg) =>
+            sg.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                (sg.ageCategory ?? '').toLowerCase().contains(_searchQuery.toLowerCase())
+            ).toList();
+
             return RefreshIndicator(
               onRefresh: () async => _refresh(),
               color: accentGreen,
-              child: subGroups.isEmpty
-                  ? _emptyView(
-                  icon: Icons.group_work_outlined,
-                  title: 'No sub-groups yet',
-                  subtitle: 'Tap + to create the first sub-group')
-                  : ListView.builder(
-                padding:
-                EdgeInsets.fromLTRB(16.w, 14.h, 16.w, 80.h),
-                itemCount: subGroups.length,
-                itemBuilder: (_, i) => _subGroupCard(subGroups[i]),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 4.h),
+                    child: TextField(
+                      controller: _searchCtrl,
+                      style: GoogleFonts.poppins(fontSize: 13.sp),
+                      decoration: InputDecoration(
+                        hintText: 'Search sub-groups...',
+                        hintStyle: GoogleFonts.poppins(fontSize: 12.sp, color: textSecondary.withOpacity(0.5)),
+                        prefixIcon: Icon(Icons.search_rounded, color: textSecondary, size: 18.sp),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? GestureDetector(
+                          onTap: () => setState(() { _searchCtrl.clear(); _searchQuery = ''; }),
+                          child: Icon(Icons.clear_rounded, color: textSecondary, size: 18.sp),
+                        )
+                            : null,
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 11.h),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r), borderSide: BorderSide(color: Colors.grey.shade300)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r), borderSide: BorderSide(color: Colors.grey.shade300)),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r), borderSide: const BorderSide(color: accentGreen, width: 1.5)),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: filtered.isEmpty
+                        ? _emptyView(icon: Icons.search_off_rounded, title: 'No sub-groups found', subtitle: 'Try a different search term')
+                        : ListView.builder(
+                      padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 80.h),
+                      itemCount: filtered.length,
+                      itemBuilder: (_, i) => _subGroupCard(filtered[i]),
+                    ),
+                  ),
+                ],
               ),
             );
           },
@@ -2551,5 +2637,33 @@ Widget _coachPickerSection(
                 fontWeight: FontWeight.w600)),
       ],
     ],
+  );
+}
+Widget _loadingActionBtn({
+  required IconData icon,
+  required String label,
+  required Color color,
+  required VoidCallback onTap,
+  required bool isLoading,
+}) {
+  return GestureDetector(
+    onTap: isLoading ? null : onTap,
+    child: Padding(
+      padding: EdgeInsets.symmetric(vertical: 10.h),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          isLoading
+              ? SizedBox(
+            width: 18.sp,
+            height: 18.sp,
+            child: CircularProgressIndicator(color: color, strokeWidth: 2),
+          )
+              : Icon(icon, color: color, size: 18.sp),
+          4.height,
+          Text(label, style: GoogleFonts.poppins(fontSize: 9.sp, color: color, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    ),
   );
 }

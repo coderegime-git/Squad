@@ -21,6 +21,7 @@ class _SplashState extends State<Splash> {
     super.initState();
     _navigate();
   }
+
   Future<bool> _hasInternet() async {
     try {
       final result = await InternetAddress.lookup('google.com');

@@ -62,20 +62,11 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
   final _genders = ['Male', 'Female', 'Other'];
   final _activities = ['Football', 'Swimming', 'Cricket', 'Basketball'];
   final _groups = [
-    'Under-10',
-    'Under-12',
-    'Under-14',
-    'Under-16',
-    'Beginner',
-    'Intermediate',
-    'Advanced',
+    'Under-10', 'Under-12', 'Under-14', 'Under-16',
+    'Beginner', 'Intermediate', 'Advanced',
   ];
   final _subGroups = [
-    'Team A',
-    'Team B',
-    'Squad Alpha',
-    'Squad Beta',
-    'Main Squad',
+    'Team A', 'Team B', 'Squad Alpha', 'Squad Beta', 'Main Squad',
   ];
   final _paymentStatuses = ['Paid', 'Pending', 'Partial'];
   final _relations = ['Father', 'Mother', 'Guardian', 'Other'];
@@ -114,6 +105,539 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
     });
   }
 
+  // ── Searchable Guardian Picker ─────────────────────────────────────────────
+  /// Opens a bottom-sheet with a live search field and a scrollable list of guardians.
+  /// Returns the chosen [GuardianData] or null if dismissed.
+  Future<GuardianData?> _showGuardianPicker({
+    String title = 'Choose Guardian',
+    GuardianData? current,
+    GuardianData? exclude, // prevent selecting the same guardian twice
+  }) async {
+    final searchCtrl = TextEditingController();
+    List<GuardianData> filtered = List.from(_guardians);
+    if (exclude != null) {
+      filtered = filtered.where((g) => g.guardianId != exclude.guardianId).toList();
+    }
+
+    GuardianData? picked = await showModalBottomSheet<GuardianData>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            void onSearch(String q) {
+              final query = q.toLowerCase().trim();
+              setSheetState(() {
+                final base = exclude != null
+                    ? _guardians.where((g) => g.guardianId != exclude.guardianId).toList()
+                    : List<GuardianData>.from(_guardians);
+                filtered = query.isEmpty
+                    ? base
+                    : base.where((g) =>
+                g.username.toLowerCase().contains(query) ||
+                    g.emergencyContact.toLowerCase().contains(query) ||
+                    g.relation.toLowerCase().contains(query) ||
+                    g.guardianId.toString().contains(query)).toList();
+              });
+            }
+
+            return Container(
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+              ),
+              // Takes up to 75% of screen height
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.75,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  // ── Handle ──────────────────────────────────────────
+                  Padding(
+                    padding: EdgeInsets.only(top: 12.h, bottom: 4.h),
+                    child: Container(
+                      width: 40.w,
+                      height: 4.h,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade400,
+                        borderRadius: BorderRadius.circular(2.r),
+                      ),
+                    ),
+                  ),
+
+                  // ── Header row ───────────────────────────────────────
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(8.w),
+                          decoration: BoxDecoration(
+                            color: accentGreen.withOpacity(0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.group_rounded, color: accentGreen, size: 18.sp),
+                        ),
+                        12.width,
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: GoogleFonts.montserrat(
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => Navigator.pop(ctx),
+                          child: Container(
+                            padding: EdgeInsets.all(6.w),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.close_rounded,
+                                size: 16.sp, color: Colors.black54),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ── Search field ─────────────────────────────────────
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20.w),
+                    child: TextFormField(
+                      controller: searchCtrl,
+                      autofocus: true,
+                      onChanged: onSearch,
+                      style: GoogleFonts.poppins(fontSize: 13.sp, color: Colors.black),
+                      decoration: InputDecoration(
+                        hintText: 'Search by name, relation, contact…',
+                        hintStyle: GoogleFonts.poppins(
+                          fontSize: 12.sp,
+                          color: Colors.grey.shade400,
+                        ),
+                        prefixIcon: Icon(Icons.search_rounded,
+                            color: accentGreen, size: 18.sp),
+                        suffixIcon: searchCtrl.text.isNotEmpty
+                            ? GestureDetector(
+                          onTap: () {
+                            searchCtrl.clear();
+                            onSearch('');
+                          },
+                          child: Icon(Icons.cancel_rounded,
+                              color: Colors.grey.shade400, size: 18.sp),
+                        )
+                            : null,
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: EdgeInsets.symmetric(
+                            horizontal: 14.w, vertical: 12.h),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          borderSide: BorderSide(color: accentGreen, width: 1.5),
+                        ),
+                      ),
+                    ),
+                  ),
+                  10.height,
+
+                  // ── Result count chip ────────────────────────────────
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20.w),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 10.w, vertical: 4.h),
+                          decoration: BoxDecoration(
+                            color: accentGreen.withOpacity(0.10),
+                            borderRadius: BorderRadius.circular(20.r),
+                          ),
+                          child: Text(
+                            '${filtered.length} guardian${filtered.length == 1 ? '' : 's'}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11.sp,
+                              color: accentGreen,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  8.height,
+
+                  // ── Guardian list ────────────────────────────────────
+                  Flexible(
+                    child: filtered.isEmpty
+                        ? Padding(
+                      padding: EdgeInsets.symmetric(vertical: 32.h),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.search_off_rounded,
+                              size: 40.sp, color: Colors.grey.shade300),
+                          10.height,
+                          Text(
+                            'No guardians match\n"${searchCtrl.text}"',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                              fontSize: 13.sp,
+                              color: Colors.grey.shade400,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                        : ListView.separated(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 20.w, vertical: 4.h),
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, __) => 8.height,
+                      itemBuilder: (_, i) {
+                        final g = filtered[i];
+                        final isSelected =
+                            current?.guardianId == g.guardianId;
+                        return GestureDetector(
+                          onTap: () => Navigator.pop(ctx, g),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            padding: EdgeInsets.all(12.w),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? accentGreen.withOpacity(0.08)
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(14.r),
+                              border: Border.all(
+                                color: isSelected
+                                    ? accentGreen
+                                    : Colors.grey.shade200,
+                                width: isSelected ? 1.5 : 1,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                // Avatar
+                                Container(
+                                  width: 42.r,
+                                  height: 42.r,
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? accentGreen.withOpacity(0.15)
+                                        : Colors.blue.withOpacity(0.08),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      g.username.isNotEmpty
+                                          ? g.username[0].toUpperCase()
+                                          : '?',
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 16.sp,
+                                        fontWeight: FontWeight.w700,
+                                        color: isSelected
+                                            ? accentGreen
+                                            : Colors.blue,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                12.width,
+
+                                // Info
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        g.username,
+                                        style: GoogleFonts.montserrat(
+                                          fontSize: 13.sp,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                      4.height,
+                                      Row(
+                                        children: [
+                                          _guardianChip(
+                                            Icons.family_restroom_rounded,
+                                            g.relation,
+                                            Colors.blue,
+                                          ),
+                                          8.width,
+                                          _guardianChip(
+                                            Icons.phone_rounded,
+                                            g.emergencyContact,
+                                            Colors.green,
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                // Check / ID badge
+                                Column(
+                                  crossAxisAlignment:
+                                  CrossAxisAlignment.end,
+                                  children: [
+                                    if (isSelected)
+                                      Icon(Icons.check_circle_rounded,
+                                          color: accentGreen, size: 20.sp)
+                                    else
+                                      Container(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 8.w, vertical: 3.h),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade100,
+                                          borderRadius:
+                                          BorderRadius.circular(8.r),
+                                        ),
+                                        child: Text(
+                                          '#${g.guardianId}',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 10.sp,
+                                            color: textSecondary,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  SizedBox(height: MediaQuery.of(ctx).viewInsets.bottom + 16.h),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+    return picked;
+  }
+
+  /// Small inline chip used inside guardian list tiles
+  Widget _guardianChip(IconData icon, String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 10.sp, color: color.withOpacity(0.7)),
+        3.width,
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 9.5.sp,
+            color: textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Guardian selector tile (what is rendered in the form) ─────────────────
+  Widget _guardianSelectorTile({
+    required String label,
+    required GuardianData? selected,
+    required VoidCallback onTap,
+    VoidCallback? onClear,
+    bool optional = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 12.sp,
+                color: textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            if (optional)
+              Padding(
+                padding: EdgeInsets.only(left: 6.w),
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 2.h),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(6.r),
+                  ),
+                  child: Text(
+                    'optional',
+                    style: GoogleFonts.poppins(
+                      fontSize: 9.sp,
+                      color: textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        6.height,
+        GestureDetector(
+          onTap: _loadingGuardians ? null : onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12.r),
+              border: Border.all(
+                color: selected != null
+                    ? accentGreen.withOpacity(0.6)
+                    : Colors.grey.shade300,
+                width: selected != null ? 1.5 : 1.0,
+              ),
+            ),
+            child: _loadingGuardians
+                ? Row(
+              children: [
+                SizedBox(
+                  width: 16.w,
+                  height: 16.w,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: accentGreen,
+                  ),
+                ),
+                10.width,
+                Text(
+                  'Loading guardians…',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12.sp,
+                    color: textSecondary,
+                  ),
+                ),
+              ],
+            )
+                : selected == null
+                ? Row(
+              children: [
+                Icon(Icons.group_add_rounded,
+                    color: textSecondary, size: 18.sp),
+                10.width,
+                Expanded(
+                  child: Text(
+                    _guardians.isEmpty
+                        ? 'No guardians available'
+                        : 'Tap to search & select',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12.sp,
+                      color: textSecondary.withOpacity(0.5),
+                    ),
+                  ),
+                ),
+                Icon(Icons.keyboard_arrow_down_rounded,
+                    color: textSecondary, size: 20.sp),
+              ],
+            )
+                : Row(
+              children: [
+                // Mini avatar
+                Container(
+                  width: 34.r,
+                  height: 34.r,
+                  decoration: BoxDecoration(
+                    color: accentGreen.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      selected.username.isNotEmpty
+                          ? selected.username[0].toUpperCase()
+                          : '?',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w700,
+                        color: accentGreen,
+                      ),
+                    ),
+                  ),
+                ),
+                10.width,
+                // Name + meta
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        selected.username,
+                        style: GoogleFonts.montserrat(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black,
+                        ),
+                      ),
+                      3.height,
+                      Row(
+                        children: [
+                          _guardianChip(Icons.family_restroom_rounded,
+                              selected.relation, Colors.blue),
+                          10.width,
+                          _guardianChip(Icons.phone_rounded,
+                              selected.emergencyContact, Colors.green),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                // Clear + change buttons
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (onClear != null)
+                      GestureDetector(
+                        onTap: onClear,
+                        child: Container(
+                          padding: EdgeInsets.all(5.w),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.08),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.close_rounded,
+                              color: Colors.red.shade400, size: 14.sp),
+                        ),
+                      ),
+                    6.width,
+                    Container(
+                      padding: EdgeInsets.all(5.w),
+                      decoration: BoxDecoration(
+                        color: accentGreen.withOpacity(0.10),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.edit_rounded,
+                          color: accentGreen, size: 14.sp),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -126,7 +650,6 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
         body: Column(
           children: [
             Container(
-              //height: 85.h,
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.black,
@@ -152,8 +675,7 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
                       16.width,
                       Text(
                         'Add New Member',
-                        style: Theme.of(context).textTheme.headlineMedium
-                            ?.copyWith(
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                           color: Colors.white,
                           fontSize: 20.sp,
                           fontWeight: FontWeight.bold,
@@ -165,101 +687,6 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
               ),
             ),
 
-            // ── Step Indicator ──────────────────────────────────────────
-            /*
-            Container(
-              color: Colors.white,
-              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-
-              child: Row(
-                children: List.generate(_stepTitles.length, (i) {
-                  final isDone = i < _currentStep;
-                  final isActive = i == _currentStep;
-                  return Expanded(
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              if (i < _stepTitles.length - 1)
-                                Positioned(
-                                  left: 20.r,
-                                  right: -30.r,
-                                  top: 13.r,
-                                  child: Container(
-                                    height: 2.h,
-                                    color: i < _currentStep
-                                        ? accentGreen
-                                        : Colors.grey.shade300,
-                                  ),
-                                ),
-
-                              Column(
-                                children: [
-                                  AnimatedContainer(
-                                    duration: const Duration(milliseconds: 250),
-                                    width: 28.r,
-                                    height: 28.r,
-                                    decoration: BoxDecoration(
-                                      color: (isDone || isActive)
-                                          ? accentGreen
-                                          : Colors.white,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: (isDone || isActive)
-                                            ? accentGreen
-                                            : Colors.grey.shade300,
-                                        width: 2,
-                                      ),
-                                    ),
-                                    child: Center(
-                                      child: isDone
-                                          ? const Icon(
-                                              Icons.check_rounded,
-                                              color: Colors.white,
-                                              size: 16,
-                                            )
-                                          : Text(
-                                              '${i + 1}',
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 13.sp,
-                                                color: isActive
-                                                    ? Colors.white
-                                                    : textSecondary,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                            ),
-                                    ),
-                                  ),
-                                  8.height,
-                                  Text(
-                                    _stepTitles[i],
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 10.sp,
-                                      color: isActive
-                                          ? accentGreen
-                                          : textSecondary,
-                                      fontWeight: isActive
-                                          ? FontWeight.w600
-                                          : FontWeight.normal,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-              ),
-            ),
-*/
-
-            // ── Form Content ────────────────────────────────────────────
             Expanded(
               child: Form(
                 key: _formKey,
@@ -311,8 +738,6 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
                               child: _isLoading
                                   ? AppUI.buttonSpinner()
                                   : Text(
-                                /* _currentStep == _stepTitles.length - 1
-                                          ?*/
                                 'Add Member',
                                 style: GoogleFonts.poppins(
                                   fontSize: 14.sp,
@@ -338,7 +763,7 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
   void _handleNext() async {
     if (!_formKey.currentState!.validate() || _isLoading) return;
     if (_selectedGuardian == null) {
-      AppUI.success(context, 'Please select guardian');
+      AppUI.success(context, 'Please select a guardian');
       return;
     }
     if (_selectedGender == null) {
@@ -379,11 +804,12 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
         AppUI.error(context, errorMsg);
       }
     } catch (e) {
-      AppUI.error(context, "${e}, Please try again.");
+      AppUI.error(context, "$e, Please try again.");
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
+
   Widget _stepContent() {
     switch (_currentStep) {
       case 0:
@@ -397,218 +823,84 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
     }
   }
 
-  // ── Step 1: Personal Info ───────────────────────────────────────────
+  // ── Step 1: Personal Info ──────────────────────────────────────────────────
   Widget _step1() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _heading('Personal Information'),
         12.height,
-
-        /*   Center(
-          child: GestureDetector(
-            onTap: () => toast('Pick profile photo'),
-            child: Container(
-              width: 80.r,
-              height: 80.r,
-              decoration: BoxDecoration(
-                color: accentGreen.withOpacity(0.1),
-                shape: BoxShape.circle,
-                border:
-                Border.all(color: accentGreen.withOpacity(0.4), width: 2),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.camera_alt_rounded, color: accentGreen, size: 26.sp),
-                  4.height,
-                  Text('Photo',
-                      style: GoogleFonts.poppins(
-                          fontSize: 10.sp, color: accentGreen)),
-                ],
-              ),
-            ),
-          ),
-        ),
-        20.height,
-*/
-        _formField(
-          'Full Name *',
-          _nameCtrl,
-          Icons.person_rounded,
-          hint: 'e.g., Abinesh Kumar',
-        ),
+        _formField('Full Name *', _nameCtrl, Icons.person_rounded,
+            hint: 'e.g., Abinesh Kumar'),
         12.height,
         _dateField('Date of Birth *', _dobCtrl, Icons.calendar_today_rounded),
         12.height,
-        _dropdownField(
-          'Gender *',
-          'Select Gender',
-          _genders,
-          _selectedGender,
-              (v) => setState(() => _selectedGender = v),
+        _dropdownField('Gender *', 'Select Gender', _genders, _selectedGender,
+                (v) => setState(() => _selectedGender = v)),
+        12.height,
+        _formField('Phone / WhatsApp *', _phoneCtrl, Icons.phone_rounded,
+            hint: '987453210', keyboardType: TextInputType.phone),
+        12.height,
+        _formField('Email *', _emailCtrl, Icons.email_rounded,
+            hint: 'member@email.com', required: true),
+        12.height,
+        _formField('Password *', _passwordCtrl, Icons.lock_outline_rounded,
+            hint: 'Create a password',
+            obscureText: !_isPasswordVisible,
+            customValidator: (v) => AppValidator.validatePassword(v)),
+        12.height,
+        _formField('Medical Notes', _medicalNotesCtrl,
+            Icons.medical_information_rounded,
+            hint: 'e.g., No known allergies', required: true),
+        12.height,
+        _formField('Emergency Contact', _guardianPhoneCtrl, Icons.phone,
+            keyboardType: TextInputType.number,
+            hint: '98745623210', required: true),
+        12.height,
+
+        // ── Primary Guardian picker ──────────────────────────────────
+        _guardianSelectorTile(
+          label: 'Choose Guardian *',
+          selected: _selectedGuardian,
+          onTap: () async {
+            final g = await _showGuardianPicker(
+              title: 'Choose Primary Guardian',
+              current: _selectedGuardian,
+              exclude: _selectedGuardian2,
+            );
+            if (g != null) setState(() => _selectedGuardian = g);
+          },
+          onClear: _selectedGuardian != null
+              ? () => setState(() => _selectedGuardian = null)
+              : null,
         ),
         12.height,
-        _formField(
-          'Phone / WhatsApp *',
-          _phoneCtrl,
-          Icons.phone_rounded,
-          hint: '987453210',
-          keyboardType: TextInputType.phone,
+
+        // ── Secondary Guardian picker ────────────────────────────────
+        _guardianSelectorTile(
+          label: 'Second Guardian',
+          optional: true,
+          selected: _selectedGuardian2,
+          onTap: () async {
+            final g = await _showGuardianPicker(
+              title: 'Choose Second Guardian',
+              current: _selectedGuardian2,
+              exclude: _selectedGuardian, // can't pick same as primary
+            );
+            if (g != null) setState(() => _selectedGuardian2 = g);
+          },
+          onClear: _selectedGuardian2 != null
+              ? () => setState(() => _selectedGuardian2 = null)
+              : null,
         ),
         12.height,
-        _formField(
-          'Email *',
-          _emailCtrl,
-          Icons.email_rounded,
-          hint: 'member@email.com',
-          required: true,
-        ),
-        12.height,
-        _formField(
-          'Password *',
-          _passwordCtrl,
-          Icons.lock_outline_rounded,
-          hint: 'Create a password',
-          obscureText: !_isPasswordVisible,
-          customValidator: (v) => AppValidator.validatePassword(v),
-        ),
-        12.height,
-        _formField(
-          'Medical Notes',
-          _medicalNotesCtrl,
-          Icons.medical_information_rounded,
-          hint: 'e.g., No known allergies',
-          required: true,
-        ),
-        12.height,
-        _formField(
-          'Emergency Contact',
-          _guardianPhoneCtrl,
-          keyboardType: TextInputType.number,
-          Icons.phone,
-          hint: '98745623210',
-          required: true,
-        ),
-        12.height,
-        Text(
-          'Choose Guardian',
-          style: GoogleFonts.poppins(
-            fontSize: 12.sp,
-            color: textSecondary,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        6.height,
-        (_loadingGuardians)
-            ? const Center(child: CircularProgressIndicator())
-            : _guardians.isEmpty
-            ? Text('No guardians available')
-            : DropdownButtonFormField<GuardianData>(
-          value: _selectedGuardian,
-          hint: Text(
-            'Choose guardian',
-            style: GoogleFonts.poppins(
-              fontSize: 13.sp,
-              color: textSecondary,
-            ),
-          ),
-          isExpanded: true,
-          items: _guardians
-              .map(
-                (g) => DropdownMenuItem(
-              value: g,
-              child: Text(
-                g.username,
-                style: GoogleFonts.poppins(fontSize: 13.sp),
-              ),
-            ),
-          )
-              .toList(),
-          onChanged: (v) => setState(() => _selectedGuardian = v),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: 14.w,
-              vertical: 12.h,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide(color: accentGreen, width: 1.5),
-            ),
-          ),
-        ),
-        12.height,
-        Text(
-          'Second Guardian (optional)',
-          style: GoogleFonts.poppins(
-            fontSize: 12.sp,
-            color: textSecondary,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        6.height,
-        (_loadingGuardians)
-            ? const SizedBox.shrink()
-            : _guardians.isEmpty
-            ? const SizedBox.shrink()
-            : DropdownButtonFormField<GuardianData>(
-          value: _selectedGuardian2,
-          hint: Text(
-            'Choose second guardian (optional)',
-            style: GoogleFonts.poppins(
-              fontSize: 12.sp,
-              color: textSecondary.withOpacity(0.5),),
-          ),
-          isExpanded: true,
-          items: _guardians
-              .map((g) => DropdownMenuItem(
-            value: g,
-            child: Text(g.username,
-                style:
-                GoogleFonts.poppins(fontSize: 13.sp)),
-          ))
-              .toList(),
-          onChanged: (v) =>
-              setState(() => _selectedGuardian2 = v),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: EdgeInsets.symmetric(
-                horizontal: 14.w, vertical: 12.h),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide:
-              BorderSide(color: accentGreen, width: 1.5),
-            ),
-          ),
-        ),
-        12.height,
+
         _formField(
           'Membership Amount *',
           _membershipAmountCtrl,
           Icons.currency_rupee_rounded,
           hint: '0.00',
-          keyboardType: TextInputType.numberWithOptions(
-            decimal: true,
-          ),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
         ),
       ],
     );
@@ -626,50 +918,17 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
           Colors.blue,
         ),
         16.height,
-        // _dropdownField(
-        //   'Activity / Sport *',
-        //   _activities,
-        //   _selectedActivity,
-        //   (v) => setState(() => _selectedActivity = v),
-        // ),
-        // 12.height,
-        // _dropdownField(
-        //   'Group *',
-        //   _groups,
-        //   _selectedGroup,
-        //   (v) => setState(() => _selectedGroup = v),
-        // ),
-        // 12.height,
-        // _dropdownField(
-        //   'Sub-group *',
-        //   _subGroups,
-        //   _selectedSubGroup,
-        //   (v) => setState(() => _selectedSubGroup = v),
-        // ),
         12.height,
-        _formField(
-          'Jersey / ID Number (optional)',
-          _jerseyCtrl,
-          Icons.tag_rounded,
-          hint: '#10',
-          required: false,
-        ),
+        _formField('Jersey / ID Number (optional)', _jerseyCtrl, Icons.tag_rounded,
+            hint: '#10', required: false),
         20.height,
         _heading('Membership & Payment'),
         12.height,
-
+        _dateField('Membership Start Date *', _membershipStartCtrl,
+            Icons.calendar_month_rounded),
         12.height,
-        _dateField(
-          'Membership Start Date *',
-          _membershipStartCtrl,
-          Icons.calendar_month_rounded,
-        ),
-        12.height,
-        _dateField(
-          'Membership End Date *',
-          _membershipEndCtrl,
-          Icons.event_rounded,
-        ),
+        _dateField('Membership End Date *', _membershipEndCtrl,
+            Icons.event_rounded),
       ],
     );
   }
@@ -686,20 +945,11 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
           accentGreen,
         ),
         16.height,
-
-        _formField(
-          'Guardian Email (optional)',
-          _guardianEmailCtrl,
-          Icons.email_rounded,
-          hint: 'guardian@email.com',
-          required: false,
-        ),
+        _formField('Guardian Email (optional)', _guardianEmailCtrl,
+            Icons.email_rounded,
+            hint: 'guardian@email.com', required: false),
         12.height,
-        // _dropdownField('Relation to Member *', _relations, _selectedRelation,
-        //         (v) => setState(() => _selectedRelation = v)),
         20.height,
-
-        // Summary card
         Container(
           padding: EdgeInsets.all(16.w),
           decoration: BoxDecoration(
@@ -710,28 +960,23 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Review Summary',
-                style: GoogleFonts.montserrat(
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black,
-                ),
-              ),
+              Text('Review Summary',
+                  style: GoogleFonts.montserrat(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black)),
               12.height,
-              _summaryRow(
-                'Name',
-                _nameCtrl.text.isNotEmpty ? _nameCtrl.text : '—',
-              ),
+              _summaryRow('Name',
+                  _nameCtrl.text.isNotEmpty ? _nameCtrl.text : '—'),
               _summaryRow('Activity', _selectedActivity ?? '—'),
               _summaryRow('Group', _selectedGroup ?? '—'),
               _summaryRow('Sub-group', _selectedSubGroup ?? '—'),
               _summaryRow(
-                'Guardian',
-                _guardianNameCtrl.text.isNotEmpty
-                    ? _guardianNameCtrl.text
-                    : '—',
-              ),
+                  'Guardian',
+                  _selectedGuardian?.username ??
+                      (_guardianNameCtrl.text.isNotEmpty
+                          ? _guardianNameCtrl.text
+                          : '—')),
             ],
           ),
         ),
@@ -746,20 +991,16 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
         children: [
           SizedBox(
             width: 90.w,
-            child: Text(
-              label,
-              style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary),
-            ),
+            child: Text(label,
+                style: GoogleFonts.poppins(
+                    fontSize: 11.sp, color: textSecondary)),
           ),
           Expanded(
-            child: Text(
-              value,
-              style: GoogleFonts.poppins(
-                fontSize: 12.sp,
-                color: Colors.black,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            child: Text(value,
+                style: GoogleFonts.poppins(
+                    fontSize: 12.sp,
+                    color: Colors.black,
+                    fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -788,13 +1029,9 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
         Icon(icon, color: color, size: 16.sp),
         8.width,
         Expanded(
-          child: Text(
-            msg,
-            style: GoogleFonts.poppins(
-              fontSize: 11.sp,
-              color: color.withOpacity(0.85),
-            ),
-          ),
+          child: Text(msg,
+              style: GoogleFonts.poppins(
+                  fontSize: 11.sp, color: color.withOpacity(0.85))),
         ),
       ],
     ),
@@ -812,18 +1049,14 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
         String? Function(String?)? customValidator,
       }) {
     String fieldName = label.replaceAll(RegExp(r'[\*\s]'), '');
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 12.sp,
-            color: textSecondary,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
+        Text(label,
+            style: GoogleFonts.poppins(
+                fontSize: 12.sp,
+                color: textSecondary,
+                fontWeight: FontWeight.w500)),
         6.height,
         TextFormField(
           controller: ctrl,
@@ -831,49 +1064,42 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
           keyboardType: keyboardType,
           obscureText: obscureText,
           autovalidateMode: AutovalidateMode.onUserInteraction,
-          validator: customValidator ?? (v) {
-            if (!required) return null;
-
-            if (label.contains("Email")) {
-              return AppValidator.validateEmail(v);
-            }
-            if (label.contains("Phone") || label.contains("WhatsApp") || label.contains("Emergency")) {
-              return AppValidator.validatePhone(v);
-            }
-            if (label.contains("Password")) {
-              return AppValidator.validatePassword(v);
-            }
-            if (label.contains("Name") || label.contains("Full Name")) {
-              return AppValidator.validateName(v, fieldName: "Full Name");
-            }
-            return AppValidator.validateRequired(v, fieldName);
-          },
+          validator: customValidator ??
+                  (v) {
+                if (!required) return null;
+                if (label.contains("Email"))
+                  return AppValidator.validateEmail(v);
+                if (label.contains("Phone") ||
+                    label.contains("WhatsApp") ||
+                    label.contains("Emergency"))
+                  return AppValidator.validatePhone(v);
+                if (label.contains("Password"))
+                  return AppValidator.validatePassword(v);
+                if (label.contains("Name") || label.contains("Full Name"))
+                  return AppValidator.validateName(v, fieldName: "Full Name");
+                return AppValidator.validateRequired(v, fieldName);
+              },
           style: GoogleFonts.poppins(fontSize: 13.sp, color: Colors.black),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: GoogleFonts.poppins(
-              fontSize: 12.sp,
-              color: textSecondary.withOpacity(0.5),
-            ),
+                fontSize: 12.sp, color: textSecondary.withOpacity(0.5)),
             prefixIcon: Icon(icon, color: textSecondary, size: 18.sp),
             suffixIcon: label.contains("Password")
                 ? IconButton(
               icon: Icon(
-                _isPasswordVisible
-                    ? Icons.visibility
-                    : Icons.visibility_off,
-                color: textSecondary,
-              ),
-              onPressed: () {
-                setState(() {
-                  _isPasswordVisible = !_isPasswordVisible;
-                });
-              },
+                  _isPasswordVisible
+                      ? Icons.visibility
+                      : Icons.visibility_off,
+                  color: textSecondary),
+              onPressed: () =>
+                  setState(() => _isPasswordVisible = !_isPasswordVisible),
             )
                 : null,
             filled: true,
             fillColor: Colors.white,
-            contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
+            contentPadding:
+            EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
               borderSide: BorderSide(color: Colors.grey.shade300),
@@ -896,39 +1122,16 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
     );
   }
 
-  static String emailPattern =
-      r"^((([a-z]|\d|[!#\$%&'\*\+\-\/=\?\^_`{\|}~]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])+(\.([a-z]|\d|[!#\$%&'\*\+\-\/=\?\^_`{\|}~]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])+)*)|((\x22)((((\x20|\x09)*(\x0d\x0a))?(\x20|\x09)+)?(([\x01-\x08\x0b\x0c\x0e-\x1f\x7f]|\x21|[\x23-\x5b]|[\x5d-\x7e]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(\\([\x01-\x09\x0b\x0c\x0d-\x7f]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]))))*(((\x20|\x09)*(\x0d\x0a))?(\x20|\x09)+)?(\x22)))@((([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.)+(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))$";
-  static RegExp emailRegEx = RegExp(emailPattern);
-  static bool isEmail(String value) {
-    if (emailRegEx.hasMatch(value.trim())) {
-      return true;
-    }
-    return false;
-  }
-
-  static String? validateEmail(String value) {
-    String email = value.trim();
-    if (email.isEmpty) {
-      return 'Email field is required';
-    }
-    if (!isEmail(email)) {
-      return 'Email error valid';
-    }
-    return null;
-  }
-
-  Widget _dateField(String label, TextEditingController ctrl, IconData icon) {
+  Widget _dateField(
+      String label, TextEditingController ctrl, IconData icon) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 12.sp,
-            color: textSecondary,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
+        Text(label,
+            style: GoogleFonts.poppins(
+                fontSize: 12.sp,
+                color: textSecondary,
+                fontWeight: FontWeight.w500)),
         6.height,
         TextFormField(
           controller: ctrl,
@@ -941,7 +1144,8 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
               lastDate: DateTime(2040),
               builder: (ctx, child) => Theme(
                 data: Theme.of(ctx).copyWith(
-                  colorScheme: const ColorScheme.light(primary: accentGreen),
+                  colorScheme:
+                  const ColorScheme.light(primary: accentGreen),
                 ),
                 child: child!,
               ),
@@ -955,21 +1159,14 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
           decoration: InputDecoration(
             hintText: 'DD/MM/YYYY',
             hintStyle: GoogleFonts.poppins(
-              fontSize: 12.sp,
-              color: textSecondary.withOpacity(0.5),
-            ),
+                fontSize: 12.sp, color: textSecondary.withOpacity(0.5)),
             prefixIcon: Icon(icon, color: textSecondary, size: 18.sp),
-            suffixIcon: Icon(
-              Icons.calendar_today_rounded,
-              color: accentGreen,
-              size: 18.sp,
-            ),
+            suffixIcon: Icon(Icons.calendar_today_rounded,
+                color: accentGreen, size: 18.sp),
             filled: true,
             fillColor: Colors.white,
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: 14.w,
-              vertical: 13.h,
-            ),
+            contentPadding:
+            EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
               borderSide: BorderSide(color: Colors.grey.shade300),
@@ -998,35 +1195,26 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 12.sp,
-            color: textSecondary,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
+        Text(label,
+            style: GoogleFonts.poppins(
+                fontSize: 12.sp,
+                color: textSecondary,
+                fontWeight: FontWeight.w500)),
         6.height,
         DropdownButtonFormField<String>(
           value: value,
           onChanged: onChange,
-          hint:  Text(
-            text,
-            style: GoogleFonts.poppins(
-              fontSize: 12.sp,
-              color: textSecondary.withOpacity(0.5),
-              //fontWeight: FontWeight.w500,
-            ),
-          ),
+          hint: Text(text,
+              style: GoogleFonts.poppins(
+                  fontSize: 12.sp,
+                  color: textSecondary.withOpacity(0.5))),
           validator: (v) => v == null ? 'Required' : null,
           style: GoogleFonts.poppins(fontSize: 13.sp, color: Colors.black),
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.white,
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: 14.w,
-              vertical: 13.h,
-            ),
+            contentPadding:
+            EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
               borderSide: BorderSide(color: Colors.grey.shade300),
@@ -1041,18 +1229,12 @@ class _ClubAdminAddMemberScreenState extends State<ClubAdminAddMemberScreen> {
             ),
           ),
           items: items
-              .map(
-                (i) => DropdownMenuItem(
-              value: i,
-              child: Text(
-                i,
+              .map((i) => DropdownMenuItem(
+            value: i,
+            child: Text(i,
                 style: GoogleFonts.poppins(
-                  fontSize: 13.sp,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-          )
+                    fontSize: 13.sp, color: Colors.black)),
+          ))
               .toList(),
         ),
       ],

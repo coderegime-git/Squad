@@ -61,6 +61,8 @@ class ApiBaseHelper {
   // static const _baseUrl = "http://13.55.87.147/api/";
   static const _baseUrl =
       "http://clubmvp-env.eba-uvibktrv.ap-south-1.elasticbeanstalk.com/";
+  bool _isRefreshing = false;
+  Completer<bool>? _refreshCompleter;
 
   // static const _baseUrl = "http://192.168.0.11:9000/api/";
   final Dio dio = Dio(
@@ -105,16 +107,77 @@ class ApiBaseHelper {
         throw FetchDataException('Server error,Please try again later');
     }
   }
-
+  Future<dynamic> _retry(RequestOptions requestOptions) async {
+    final newToken = SharedPreferenceHelper.getToken() ?? '';
+    requestOptions.headers['Authorization'] = 'Bearer $newToken';
+    final response = await dio.request(
+      requestOptions.path,
+      data: requestOptions.data,
+      queryParameters: requestOptions.queryParameters,
+      options: Options(
+        method: requestOptions.method,
+        headers: requestOptions.headers,
+      ),
+    );
+    return _returnResponse(response);
+  }
   Map<String, String> getMainHeaders() {
     String? token = SharedPreferenceHelper.getToken() ?? "";
-    print("Print ${token}");
     Map<String, String> headers = {'Content-Type': 'application/json'};
-
     if (token != "") {
-      headers['Authorization'] = '$token';
+      headers['Authorization'] = 'Bearer $token';
     }
     return headers;
+  }
+  Future<bool> _refreshToken() async {
+    if (_isRefreshing) {
+      return await _refreshCompleter!.future;
+    }
+    _isRefreshing = true;
+    _refreshCompleter = Completer<bool>();
+
+    try {
+      final refreshToken = SharedPreferenceHelper.getRefreshToken() ?? '';
+      if (refreshToken.isEmpty) {
+        print("❌ No refresh token available");
+        _isRefreshing = false;
+        _refreshCompleter!.complete(false);
+        return false;
+      }
+
+      print("🔄 Attempting token refresh with: $refreshToken");
+      final refreshDio = Dio(BaseOptions(baseUrl: _baseUrl));
+      final response = await refreshDio.post(
+        'auth/refresh',
+        options: Options(
+          headers: {
+            'Cookie': 'refresh_token=$refreshToken',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        final rawToken = response.data['data']['accessToken'] as String?;
+        if (rawToken != null && rawToken.isNotEmpty) {
+          final cleanToken = rawToken.startsWith('Bearer ') ? rawToken.substring(7) : rawToken;
+          SharedPreferenceHelper.setToken(cleanToken);
+          print("✅ Token refreshed successfully!");
+          _isRefreshing = false;
+          _refreshCompleter!.complete(true);
+          return true;
+        }
+      }
+
+      _isRefreshing = false;
+      _refreshCompleter!.complete(false);
+      return false;
+    } catch (e) {
+      print("❌ Refresh exception: $e");
+      _isRefreshing = false;
+      _refreshCompleter!.complete(false);
+      return false;
+    }
   }
 
   Future<dynamic> get(String url) async {
@@ -134,59 +197,29 @@ class ApiBaseHelper {
       responseJson = _returnResponse(response);
       print("responseJson ${responseJson}");
     } catch (e) {
-      print("sfsdsdsd");
-      print(e.toString());
-      if (e.toString().contains("401")) {
-        clearUserData();
-        throw Exception('token_expired');
-      } else if (e.toString().contains("403")) {
-        /* _showToast(
-          _navigatorKey.currentContext!,
-          "your_account_is_disabled_Please_contact_admin".tr(),
-        );*/
-        clearUserData();
-        throw Exception('user_inactive');
-      } else if (e.toString().contains("500")) {
-        /* _showToast(
-          _navigatorKey.currentContext!,
-          "your_account_is_disabled_Please_contact_admin".tr(),
-        );*/
-        print(e.toString().contains("500"));
-        print("50000");
-        // ScaffoldMessenger.of(
-        //   _navigatorKey.currentContext!,
-        // ).showSnackBar(SnackBar(content: Text("Server error")));
-
-        throw Exception('user_inactive');
-      } else if (e.toString().contains("400")) {
-        if (e is DioException) {
-          final responseData = e.response?.data;
-          print('❌ 400 Bad Request');
-          print('   Status : ${e.response?.statusCode}');
-          print('   URL    : ${e.requestOptions.uri}');
-          print('   Body   : $responseData');
-
-          // Extract the message if it's a Map
-          final message = responseData is Map
-              ? responseData['message']?.toString() ?? 'Bad request'
-              : responseData?.toString() ?? 'Bad request';
-
-          throw Exception(message); // ← throws the actual server message
+      print("GET error: $e");
+      if (e is DioException) {
+        final status = e.response?.statusCode;
+        if (status == 401) {
+          final refreshed = await _refreshToken();
+          if (refreshed) {
+            return await _retry(e.requestOptions);
+          } else {
+            clearUserData();
+            throw Exception('token_expired');
+          }
+        } else if (status == 403) {
+          clearUserData();
+          throw Exception('user_inactive');
+        } else if (status == 500) {
+          throw Exception('server_error');
+        } else if (status == 400 || status == 409) {
+          final serverMessage =
+              e.response?.data?['message']?.toString() ?? 'Bad request';
+          throw Exception(serverMessage);
         }
-        throw Exception('Bad request');
-        /* _showToast(
-          _navigatorKey.currentContext!,
-          "your_account_is_disabled_Please_contact_admin".tr(),
-        );*/
-        print(e.toString().contains("500"));
-        print("50000");
-        ScaffoldMessenger.of(
-          _navigatorKey.currentContext!,
-        ).showSnackBar(SnackBar(content: Text("Failed to load")));
-        throw Exception('user_inactive');
-      } else {
-        throw Exception(e.toString());
       }
+      throw Exception(e.toString());
     }
 
     return responseJson;
@@ -219,8 +252,13 @@ class ApiBaseHelper {
       if (e is DioException) {
         final status = e.response?.statusCode;
         if (status == 401) {
-          clearUserData();
-          throw Exception('token_expired');
+          final refreshed = await _refreshToken();
+          if (refreshed) {
+            return await _retry(e.requestOptions);
+          } else {
+            clearUserData();
+            throw Exception('token_expired');
+          }
         } else if (status == 403) {
           clearUserData();
           throw Exception('user_inactive');
@@ -252,6 +290,31 @@ class ApiBaseHelper {
     }
 
     return responseJson;
+  }
+  Future<Response> posts(String url, [dynamic body]) async {
+    String params = "";
+
+    var apiUrl = _baseUrl + url + params;
+    dynamic responseJson;
+    print("apiUrl ${apiUrl}");
+    print("apiurl ${apiUrl}");
+    try {
+      final response = await dio.post(
+        apiUrl,
+        data: body,
+        options: Options(headers: {"Content-Type": "application/json"}),
+      );
+
+      print("responseresponse ${response}");
+      print("Status code: ${response.statusCode}");
+      print("Response body: ${response.data}");
+      //await _refreshToken();
+      responseJson = _returnResponse(response);
+      return response;
+    } catch (e) {
+      print(e.toString());
+      rethrow;
+    }
   }
 
   Future<dynamic> patch(String url, [dynamic body]) async {
@@ -407,26 +470,34 @@ class ClubApiService {
     try {
       print("Login data: $data");
 
-      final fullResponse = await _helper.post("auth/login", data);
-      final jsonResponse = jsonEncode(fullResponse);
+      final Response fullResponse = await _helper.posts("auth/login", data);
+      final jsonResponse = fullResponse.data;
 
-      print("jsonResponse  ${jsonResponse}");
-      if (fullResponse['success'] == true) {
-        print("Login successful → ${fullResponse['message']}");
-        SharedPreferenceHelper.setToken(fullResponse['data']['accessToken']);
-        print("tokentoken");
-        print(SharedPreferenceHelper.getToken());
-        return true;
-      } else {
-        print("Body says failure: ${fullResponse['message']}");
+      if (jsonResponse['success'] != true) {
+        print("Login failed: ${jsonResponse['message']}");
         return false;
       }
+
+      final rawToken = jsonResponse['data']['accessToken'] as String;
+      final cleanToken = rawToken.startsWith('Bearer ') ? rawToken.substring(7) : rawToken;
+      SharedPreferenceHelper.setToken(cleanToken);
+
+      final setCookie = fullResponse.headers.value('set-cookie');
+      if (setCookie != null) {
+        final match = RegExp(r'refresh_token=([^;]+)').firstMatch(setCookie);
+        if (match != null) {
+          SharedPreferenceHelper.setRefreshToken(match.group(1)!);
+          print("RefreshToken saved: ${SharedPreferenceHelper.getRefreshToken()}");
+        }
+      }
+
+      print("Token saved: ${SharedPreferenceHelper.getToken()}");
+      return true;
     } catch (e) {
       print("Login failed: $e");
       return false;
     }
   }
-
   Future<String?> AddMember(Map<String, dynamic> data) async {
     try {
       final fullResponse = await _helper.post("api/members", data);

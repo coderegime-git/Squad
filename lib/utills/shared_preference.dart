@@ -45,7 +45,13 @@ class SharedPreferenceHelper {
       setString("access_token", access_token);
 
   static String? getToken() => getString('access_token') ?? "";
+  static void setRefreshToken(String access_token) {
+    setString("access_token_refresh", access_token);
+  }
 
+  static String? getRefreshToken() {
+    return getString('access_token_refresh');
+  }
   static void setClubId(String access_token) =>
       setString("club_id", access_token);
 

@@ -32,7 +32,12 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
 
   Set<int> _deletingMemberIds = {};
   Set<int> _deletingGuardianIds = {};
-  Set<int> _deletingCoachIds = {};     // ← add this
+  Set<int> _deletingCoachIds = {};
+
+  // ── Search state ──────────────────────────────────────────────────────────
+  bool _searchActive = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   final ClubApiService _apiService = ClubApiService();
 
@@ -43,20 +48,33 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
     _membersFuture = _fetchMembers();
     _coachesFuture = _fetchCoaches();
     _guardiansFuture = _fetchGuardians();
+
+    _searchController.addListener(() {
+      setState(() => _searchQuery = _searchController.text.trim().toLowerCase());
+    });
+
+    // Clear search query when switching tabs
+    _tab.addListener(() {
+      if (_tab.indexIsChanging) {
+        _searchController.clear();
+      }
+    });
   }
 
   @override
   void dispose() {
     _tab.dispose();
+    _searchController.dispose();
     super.dispose();
   }
+
+  // ── Fetch helpers ─────────────────────────────────────────────────────────
 
   Future<List<Data>> _fetchMembers() async {
     final result = await _apiService.getMembers();
     return result.data;
   }
 
-// With real API call:
   Future<List<CoachData>> _fetchCoaches() async {
     final result = await _apiService.getCoaches();
     return result.data;
@@ -66,6 +84,44 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
     final result = await _apiService.getGuardians();
     return result.data;
   }
+
+  // ── Filter helpers ────────────────────────────────────────────────────────
+
+  List<Data> _filteredMembers(List<Data> all) {
+    if (_searchQuery.isEmpty) return all;
+    return all.where((m) {
+      return m.username.toLowerCase().contains(_searchQuery) ||
+          m.email.toLowerCase().contains(_searchQuery) ||
+          m.gender.toLowerCase().contains(_searchQuery) ||
+          (m.dob ?? '').toLowerCase().contains(_searchQuery) ||
+          m.medicalNotes.toLowerCase().contains(_searchQuery) ||
+          m.memberId.toString().contains(_searchQuery);
+    }).toList();
+  }
+
+  List<CoachData> _filteredCoaches(List<CoachData> all) {
+    if (_searchQuery.isEmpty) return all;
+    return all.where((c) {
+      return c.username.toLowerCase().contains(_searchQuery) ||
+          c.specialization.toLowerCase().contains(_searchQuery) ||
+          c.bio.toLowerCase().contains(_searchQuery) ||
+          c.status.toLowerCase().contains(_searchQuery) ||
+          c.experienceYears.toString().contains(_searchQuery) ||
+          c.coachId.toString().contains(_searchQuery);
+    }).toList();
+  }
+
+  List<GuardianData> _filteredGuardians(List<GuardianData> all) {
+    if (_searchQuery.isEmpty) return all;
+    return all.where((g) {
+      return g.username.toLowerCase().contains(_searchQuery) ||
+          g.relation.toLowerCase().contains(_searchQuery) ||
+          g.emergencyContact.toLowerCase().contains(_searchQuery) ||
+          g.guardianId.toString().contains(_searchQuery);
+    }).toList();
+  }
+
+  // ── Delete handlers ───────────────────────────────────────────────────────
 
   Future<void> _confirmDeleteMember(Data m) async {
     final confirmed = await showDialog<bool>(
@@ -98,13 +154,51 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
       final success = await _apiService.deleteMembers(m.memberId);
       setState(() => _deletingMemberIds.remove(m.memberId));
       if (success) {
-        setState(() => _coachesFuture = _fetchCoaches());
+        setState(() => _membersFuture = _fetchMembers());
         toast('Member "${m.username}" deleted successfully');
       } else {
         toast('Failed to delete member');
       }
     }
+  }
 
+  Future<void> _confirmDeleteCoach(CoachData c) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: Colors.grey.shade200,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+        title: Text('Delete Coach',
+            style: GoogleFonts.montserrat(fontWeight: FontWeight.w700, fontSize: 16.sp)),
+        content: Text(
+          'Are you sure you want to delete "${c.username}"?',
+          style: GoogleFonts.poppins(fontSize: 13.sp, color: textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel',
+                style: GoogleFonts.poppins(color: textSecondary, fontWeight: FontWeight.w500)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Delete',
+                style: GoogleFonts.poppins(color: Colors.red, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      setState(() => _deletingCoachIds.add(c.coachId));
+      final success = await _apiService.deleteCoaches(c.coachId);
+      setState(() => _deletingCoachIds.remove(c.coachId));
+      if (success) {
+        setState(() => _coachesFuture = _fetchCoaches());
+        toast('Coach "${c.username}" deleted successfully');
+      } else {
+        toast('Failed to delete coach');
+      }
+    }
   }
 
   Future<void> _confirmDeleteGuardian(GuardianData g) async {
@@ -133,7 +227,6 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
         ],
       ),
     );
-
     if (confirmed == true) {
       setState(() => _deletingGuardianIds.add(g.guardianId));
       final success = await _apiService.deleteGuardians(g.guardianId);
@@ -147,6 +240,8 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
     }
   }
 
+  // ── Build ─────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -158,7 +253,7 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
         backgroundColor: Colors.grey.shade100,
         body: Column(
           children: [
-            // ── Header ──────────────────────────────────────────────────
+            // ── Header ───────────────────────────────────────────────────
             Container(
               height: 85.h,
               width: double.infinity,
@@ -181,18 +276,49 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text(
-                        'Manage Members',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: Colors.white,
-                          fontSize: 20.sp,
-                          fontWeight: FontWeight.bold,
+                      // Title or inline search field
+                      Expanded(
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 250),
+                          child: _searchActive
+                              ? _buildSearchField()
+                              : Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Manage Members',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineMedium
+                                  ?.copyWith(
+                                color: Colors.white,
+                                fontSize: 20.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                      const Spacer(),
+                      // Search / Close toggle
                       IconButton(
-                        icon: Icon(Icons.search_rounded, color: Colors.white, size: 22.sp),
-                        onPressed: () => toast('Search members'),
+                        icon: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          child: Icon(
+                            _searchActive
+                                ? Icons.close_rounded
+                                : Icons.search_rounded,
+                            key: ValueKey(_searchActive),
+                            color: Colors.white,
+                            size: 22.sp,
+                          ),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _searchActive = !_searchActive;
+                            if (!_searchActive) {
+                              _searchController.clear();
+                            }
+                          });
+                        },
                       ),
                     ],
                   ),
@@ -252,6 +378,57 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
     );
   }
 
+  // ── Search field widget ───────────────────────────────────────────────────
+
+  Widget _buildSearchField() {
+    return TextField(
+      controller: _searchController,
+      autofocus: true,
+      style: GoogleFonts.poppins(color: Colors.white, fontSize: 14.sp),
+      cursorColor: accentGreen,
+      decoration: InputDecoration(
+        hintText: _hintForCurrentTab(),
+        hintStyle: GoogleFonts.poppins(color: Colors.grey.shade500, fontSize: 13.sp),
+        border: InputBorder.none,
+        isDense: true,
+        contentPadding: EdgeInsets.symmetric(vertical: 6.h),
+      ),
+    );
+  }
+
+  String _hintForCurrentTab() {
+    switch (_tab.index) {
+      case 0:
+        return 'Search members…';
+      case 1:
+        return 'Search coaches…';
+      case 2:
+        return 'Search guardians…';
+      default:
+        return 'Search…';
+    }
+  }
+
+  // ── Empty search result placeholder ──────────────────────────────────────
+
+  Widget _emptySearch(String label) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.search_off_rounded, size: 48.sp, color: Colors.grey.shade400),
+          10.height,
+          Text(
+            'No $label match "$_searchQuery"',
+            style: GoogleFonts.poppins(fontSize: 13.sp, color: Colors.grey.shade500),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── List builders ─────────────────────────────────────────────────────────
+
   Widget _membersList() {
     return FutureBuilder<List<Data>>(
       future: _membersFuture,
@@ -265,14 +442,17 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const Center(child: Text('No members found'));
         }
+        final filtered = _filteredMembers(snapshot.data!);
         return RefreshIndicator(
           onRefresh: () async => setState(() => _membersFuture = _fetchMembers()),
           color: accentGreen,
-          child: ListView.separated(
+          child: filtered.isEmpty
+              ? _emptySearch('members')
+              : ListView.separated(
             padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
-            itemCount: snapshot.data!.length,
+            itemCount: filtered.length,
             separatorBuilder: (_, __) => 10.height,
-            itemBuilder: (_, i) => _memberCard(snapshot.data![i]),
+            itemBuilder: (_, i) => _memberCard(filtered[i]),
           ),
         );
       },
@@ -292,15 +472,17 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const Center(child: Text('No coaches found'));
         }
-
+        final filtered = _filteredCoaches(snapshot.data!);
         return RefreshIndicator(
           onRefresh: () async => setState(() => _coachesFuture = _fetchCoaches()),
           color: accentGreen,
-          child: ListView.separated(
+          child: filtered.isEmpty
+              ? _emptySearch('coaches')
+              : ListView.separated(
             padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
-            itemCount: snapshot.data!.length,
+            itemCount: filtered.length,
             separatorBuilder: (_, __) => 10.height,
-            itemBuilder: (_, i) => _coachCard(snapshot.data![i]),
+            itemBuilder: (_, i) => _coachCard(filtered[i]),
           ),
         );
       },
@@ -320,19 +502,24 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const Center(child: Text('No guardians found'));
         }
+        final filtered = _filteredGuardians(snapshot.data!);
         return RefreshIndicator(
           onRefresh: () async => setState(() => _guardiansFuture = _fetchGuardians()),
           color: accentGreen,
-          child: ListView.separated(
+          child: filtered.isEmpty
+              ? _emptySearch('guardians')
+              : ListView.separated(
             padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
-            itemCount: snapshot.data!.length,
+            itemCount: filtered.length,
             separatorBuilder: (_, __) => 10.height,
-            itemBuilder: (_, i) => _guardianCard(snapshot.data![i]),
+            itemBuilder: (_, i) => _guardianCard(filtered[i]),
           ),
         );
       },
     );
   }
+
+  // ── Card widgets ──────────────────────────────────────────────────────────
 
   Widget _memberCard(Data m) {
     final isDeleting = _deletingMemberIds.contains(m.memberId);
@@ -359,12 +546,12 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(m.username,
-                    style: GoogleFonts.montserrat(
+                _highlightText(m.username,
+                    GoogleFonts.montserrat(
                         fontSize: 13.sp, fontWeight: FontWeight.w700, color: Colors.black)),
                 4.height,
-                Text(m.email,
-                    style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary)),
+                _highlightText(m.email,
+                    GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary)),
                 4.height,
                 Text('Gender: ${m.gender}  •  DOB: ${m.dob ?? 'N/A'}',
                     style: GoogleFonts.poppins(fontSize: 10.sp, color: textSecondary)),
@@ -403,9 +590,8 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
                   ),
                   child: isDeleting
                       ? Padding(
-                    padding: EdgeInsets.all(7.w),
-                    child: AppUI.buttonSpinner()
-                  )
+                      padding: EdgeInsets.all(7.w),
+                      child: AppUI.buttonSpinner())
                       : Icon(Icons.delete_forever,
                       color: Colors.red.shade600, size: 18.sp),
                 ),
@@ -416,48 +602,9 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
       ),
     );
   }
-  Future<void> _confirmDeleteCoach(CoachData c) async {    // ← change Data → CoachData
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: Colors.grey.shade200,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-        title: Text('Delete Coach',
-            style: GoogleFonts.montserrat(fontWeight: FontWeight.w700, fontSize: 16.sp)),
-        content: Text(
-          'Are you sure you want to delete "${c.username}"?',
-          style: GoogleFonts.poppins(fontSize: 13.sp, color: textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel',
-                style: GoogleFonts.poppins(color: textSecondary, fontWeight: FontWeight.w500)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('Delete',
-                style: GoogleFonts.poppins(color: Colors.red, fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
-    );
 
-    if (confirmed == true) {
-      setState(() => _deletingCoachIds.add(c.coachId));
-      final success = await _apiService.deleteCoaches(c.coachId);
-      setState(() => _deletingCoachIds.remove(c.coachId));
-      if (success) {
-        setState(() => _coachesFuture = _fetchCoaches());
-        toast('Coach "${c.username}" deleted successfully');
-      } else {
-        toast('Failed to delete coach');
-      }
-    }
-  }
   Widget _coachCard(CoachData c) {
     final isDeleting = _deletingCoachIds.contains(c.coachId);
-
     return Container(
       padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
@@ -484,23 +631,21 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(c.username,
-                    style: GoogleFonts.montserrat(
+                _highlightText(c.username,
+                    GoogleFonts.montserrat(
                         fontSize: 13.sp, fontWeight: FontWeight.w700, color: Colors.black)),
                 4.height,
-                Text(c.specialization,
-                    style: GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary)),
+                _highlightText(c.specialization,
+                    GoogleFonts.poppins(fontSize: 11.sp, color: textSecondary)),
                 4.height,
                 Text('${c.experienceYears} years experience',
                     style: GoogleFonts.poppins(fontSize: 10.sp, color: textSecondary)),
                 4.height,
                 if (c.bio.isNotEmpty)
-                  Text(
-                    c.bio,
-                    style: GoogleFonts.poppins(fontSize: 10.sp, color: textSecondary),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  Text(c.bio,
+                      style: GoogleFonts.poppins(fontSize: 10.sp, color: textSecondary),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis),
                 4.height,
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
@@ -508,14 +653,11 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
                     color: accentOrange.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12.r),
                   ),
-                  child: Text(
-                    c.status,
-                    style: GoogleFonts.poppins(
-                      fontSize: 10.sp,
-                      color: accentOrange,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  child: Text(c.status,
+                      style: GoogleFonts.poppins(
+                          fontSize: 10.sp,
+                          color: accentOrange,
+                          fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
@@ -529,14 +671,11 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
                   color: accentOrange.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(20.r),
                 ),
-                child: Text(
-                  'ID: ${c.coachId}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 10.sp,
-                    color: accentOrange,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                child: Text('ID: ${c.coachId}',
+                    style: GoogleFonts.poppins(
+                        fontSize: 10.sp,
+                        color: accentOrange,
+                        fontWeight: FontWeight.w600)),
               ),
               20.height,
               GestureDetector(
@@ -550,14 +689,10 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
                   ),
                   child: isDeleting
                       ? Padding(
-                    padding: EdgeInsets.all(7.w),
-                    child: AppUI.buttonSpinner(),
-                  )
-                      : Icon(
-                    Icons.delete_forever,
-                    color: Colors.red.shade600,
-                    size: 18.sp,
-                  ),
+                      padding: EdgeInsets.all(7.w),
+                      child: AppUI.buttonSpinner())
+                      : Icon(Icons.delete_forever,
+                      color: Colors.red.shade600, size: 18.sp),
                 ),
               ),
             ],
@@ -592,8 +727,8 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(g.username,
-                    style: GoogleFonts.montserrat(
+                _highlightText(g.username,
+                    GoogleFonts.montserrat(
                         fontSize: 13.sp, fontWeight: FontWeight.w700, color: Colors.black)),
                 4.height,
                 Text('Relation: ${g.relation}',
@@ -630,9 +765,8 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
                   ),
                   child: isDeleting
                       ? Padding(
-                    padding: EdgeInsets.all(7.w),
-                    child: AppUI.buttonSpinner()
-                  )
+                      padding: EdgeInsets.all(7.w),
+                      child: AppUI.buttonSpinner())
                       : Icon(Icons.delete_forever,
                       color: Colors.red.shade600, size: 18.sp),
                 ),
@@ -644,13 +778,46 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
     );
   }
 
+  // ── Highlight matched text ────────────────────────────────────────────────
+
+  /// Wraps matched portions of [text] in a yellow highlight span.
+  Widget _highlightText(String text, TextStyle baseStyle) {
+    if (_searchQuery.isEmpty) {
+      return Text(text, style: baseStyle);
+    }
+    final lower = text.toLowerCase();
+    final matchStart = lower.indexOf(_searchQuery);
+    if (matchStart == -1) {
+      return Text(text, style: baseStyle);
+    }
+    final matchEnd = matchStart + _searchQuery.length;
+    return RichText(
+      text: TextSpan(
+        style: baseStyle,
+        children: [
+          if (matchStart > 0) TextSpan(text: text.substring(0, matchStart)),
+          TextSpan(
+            text: text.substring(matchStart, matchEnd),
+            style: baseStyle.copyWith(
+              backgroundColor: accentGreen.withOpacity(0.30),
+              color: Colors.black,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          if (matchEnd < text.length) TextSpan(text: text.substring(matchEnd)),
+        ],
+      ),
+    );
+  }
+
+  // ── Add menu ──────────────────────────────────────────────────────────────
+
   void _addMenu(BuildContext context) {
     showModalBottomSheet(
       context: context,
       backgroundColor: cardDark,
       shape: RoundedRectangleBorder(
-          borderRadius:
-          BorderRadius.vertical(top: Radius.circular(24.r))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r))),
       builder: (_) => Padding(
         padding: EdgeInsets.all(20.w),
         child: Column(
@@ -668,35 +835,21 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
                 style: GoogleFonts.montserrat(
                     fontSize: 17.sp, fontWeight: FontWeight.w700)),
             16.height,
-            _menuTile(Icons.person_add_rounded, 'Add Member',
-                accentGreen, () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) =>
-                          const ClubAdminAddMemberScreen()));
-                }),
-            _menuTile(
-                Icons.people_rounded, 'Add Coach', accentOrange,
-                    () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) =>
-                          const ClubAdminAddCoachScreen()));
-                }),
-            _menuTile(
-                Icons.group_add_rounded, 'Add Guardian', Colors.blue,
-                    () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) =>
-                          const ClubAdminAddGuardianScreen()));
-                }),
+            _menuTile(Icons.person_add_rounded, 'Add Member', accentGreen, () {
+              Navigator.pop(context);
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const ClubAdminAddMemberScreen()));
+            }),
+            _menuTile(Icons.people_rounded, 'Add Coach', accentOrange, () {
+              Navigator.pop(context);
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const ClubAdminAddCoachScreen()));
+            }),
+            _menuTile(Icons.group_add_rounded, 'Add Guardian', Colors.blue, () {
+              Navigator.pop(context);
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const ClubAdminAddGuardianScreen()));
+            }),
             20.height,
           ],
         ),
@@ -718,11 +871,3 @@ class _ClubAdminMembersScreenState extends State<ClubAdminMembersScreen>
     );
   }
 }
-
-// Coach model (dummy for now)
-// class Coach {
-//   final String id, name, specialization;
-//   final List<String> groupsAssigned;
-//   final int membersCount;
-//   Coach(this.id, this.name, this.specialization, this.groupsAssigned, this.membersCount);
-// }
